@@ -11,8 +11,8 @@ COPY pyproject.toml poetry.lock* ./
 # Configure poetry to not create a virtual environment
 RUN poetry config virtualenvs.create false
 
-# Install dependencies (excluding optional google group)
-RUN poetry install --no-dev --without google --no-root --no-interaction --no-ansi
+# Install dependencies (excluding optional google group and dev dependencies)
+RUN poetry install --without google --without dev --no-root --no-interaction --no-ansi
 
 # Copy application code
 COPY . .
