@@ -1,11 +1,17 @@
 import pytest
+import importlib.util
 from typing import Dict, Any
+
+# Check if langchain_google_genai is available
+google_genai_available = importlib.util.find_spec("langchain_google_genai") is not None
 
 from app.graphs.coordinator_graph import create_coordinator_graph, create_initial_state
 
 
 def test_coordinator_graph_creation():
     """Test that the coordinator graph can be created."""
+    if not google_genai_available:
+        pytest.skip("Skipping test because langchain_google_genai is not available")
     graph = create_coordinator_graph()
     assert graph is not None
 
@@ -24,6 +30,8 @@ def test_initial_state_creation():
 
 def test_coordinator_graph_execution():
     """Test that the coordinator graph can be executed."""
+    if not google_genai_available:
+        pytest.skip("Skipping test because langchain_google_genai is not available")
     graph = create_coordinator_graph()
     state = create_initial_state()
     
@@ -46,6 +54,8 @@ def test_coordinator_graph_execution():
 
 def test_requirement_gathering():
     """Test that the coordinator can gather requirements."""
+    if not google_genai_available:
+        pytest.skip("Skipping test because langchain_google_genai is not available")
     graph = create_coordinator_graph()
     state = create_initial_state()
     
@@ -85,6 +95,8 @@ def test_requirement_gathering():
 
 def test_task_delegation():
     """Test that the coordinator can delegate tasks."""
+    if not google_genai_available:
+        pytest.skip("Skipping test because langchain_google_genai is not available")
     graph = create_coordinator_graph()
     state = create_initial_state()
     

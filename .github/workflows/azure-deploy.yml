@@ -25,6 +25,7 @@ jobs:
     
     - name: Run tests
       run: |
+        cp .env.test .env
         poetry run pytest
     
     - name: Log in to Azure
