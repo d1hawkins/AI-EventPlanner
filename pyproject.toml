@@ -8,7 +8,6 @@ authors = ["Your Name <your.email@example.com>"]
 python = "^3.10"
 langgraph = "0.1.17"
 langchain-core = "0.2.22"
-langchain-google-genai = "0.0.5"
 fastapi = "^0.109.0"
 uvicorn = "^0.25.0"
 sqlalchemy = "^2.0.25"
@@ -28,7 +27,7 @@ isort = "^5.12.0"
 mypy = "^1.5.1"
 
 [tool.poetry.group.google.dependencies]
-langchain-google-genai = "^0.0.5"
+langchain-google-genai = "^2.0.11"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
