@@ -1,0 +1,14 @@
+{
+  "name": "ai-event-planner",
+  "version": "0.1.0",
+  "description": "An AI-powered event planning system using LangGraph",
+  "main": "index.js",
+  "scripts": {
+    "start": "echo 'This is a Python project. Use poetry run uvicorn app.main:app --reload to start'"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

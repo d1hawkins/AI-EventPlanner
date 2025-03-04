@@ -1,0 +1,359 @@
+from typing import Dict, List, Any, TypedDict, Literal, Optional
+from datetime import datetime
+
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.tools import BaseTool
+from langgraph.graph import StateGraph, END
+from langgraph.prebuilt import ToolNode
+
+from app.config import OPENAI_API_KEY, LLM_MODEL
+from app.tools.event_tools import RequirementsTool, DelegationTool, MonitoringTool, ReportingTool
+from app.schemas.event import EventDetails, Requirements, AgentAssignment
+
+
+# Define the state schema
+class CoordinatorStateDict(TypedDict):
+    """State for the coordinator agent."""
+    
+    messages: List[Dict[str, str]]
+    event_details: Dict[str, Any]
+    requirements: Dict[str, List[str]]
+    agent_assignments: List[Dict[str, str]]
+    current_phase: str
+    next_steps: List[str]
+
+
+# Define the system prompt
+COORDINATOR_SYSTEM_PROMPT = """You are the Frontend Coordinator Agent for an event planning system. Your role is to:
+
+1. Interface with users to understand their event planning needs
+2. Gather initial requirements for events
+3. Delegate tasks to specialized agents
+4. Monitor progress and provide status updates
+5. Ensure a cohesive event planning experience
+
+You have access to the following specialized agents:
+- Resource Planning Agent: Handles venue selection, service providers, equipment
+- Financial Agent: Manages budget, payments, contracts
+- Stakeholder Management Agent: Coordinates sponsors, speakers, volunteers
+- Marketing & Communications Agent: Manages campaigns, website, attendee communications
+- Project Management Agent: Tracks tasks, timeline, risks
+- Analytics Agent: Collects data, analyzes performance
+- Compliance & Security Agent: Ensures legal requirements, security protocols
+
+Your current conversation state:
+Current phase: {current_phase}
+Event details: {event_details}
+Requirements: {requirements}
+Agent assignments: {agent_assignments}
+Next steps: {next_steps}
+
+Respond to the user in a helpful, professional manner. Ask clarifying questions when needed to gather complete requirements. Provide clear updates on the event planning progress.
+"""
+
+
+def create_coordinator_graph():
+    """
+    Create the coordinator agent graph.
+    
+    Returns:
+        Compiled LangGraph for the coordinator agent
+    """
+    # Initialize the LLM
+    llm = ChatOpenAI(api_key=OPENAI_API_KEY, model=LLM_MODEL, temperature=0.2)
+    
+    # Initialize tools
+    tools = [
+        RequirementsTool(),
+        DelegationTool(),
+        MonitoringTool(),
+        ReportingTool()
+    ]
+    
+    # Create the tool node
+    tool_node = ToolNode(tools)
+    
+    # Define the nodes
+    def assess_request(state: CoordinatorStateDict) -> Literal["gather_requirements", "delegate_tasks", "provide_status", "generate_response"]:
+        """
+        Assess the user's request and determine the next action.
+        
+        Args:
+            state: Current state
+            
+        Returns:
+            Next node to execute
+        """
+        # Get the last message
+        last_message = state["messages"][-1]["content"]
+        current_phase = state["current_phase"]
+        
+        # Simple keyword-based routing
+        if any(keyword in last_message.lower() for keyword in ["what type", "when is", "how many", "requirements", "details"]):
+            return "gather_requirements"
+        elif any(keyword in last_message.lower() for keyword in ["assign", "delegate", "task", "responsibility"]):
+            return "delegate_tasks"
+        elif any(keyword in last_message.lower() for keyword in ["status", "progress", "update", "report"]):
+            return "provide_status"
+        else:
+            # Default to generate response
+            return "generate_response"
+    
+    def gather_requirements(state: CoordinatorStateDict) -> CoordinatorStateDict:
+        """
+        Gather event requirements.
+        
+        Args:
+            state: Current state
+            
+        Returns:
+            Updated state
+        """
+        # Create a prompt for the LLM to extract requirements
+        prompt = ChatPromptTemplate.from_messages([
+            SystemMessage(content="You are an AI assistant that helps extract event planning requirements from user messages. Extract any details about event type, scale, budget, timeline, stakeholders, resources, risks, and success criteria."),
+            MessagesPlaceholder(variable_name="messages"),
+            HumanMessage(content="Based on the conversation, extract the event requirements in JSON format with the following fields: event_type, scale, budget, timeline_start, timeline_end, stakeholders, resources, risks, success_criteria. If a field is not mentioned, leave it as null.")
+        ])
+        
+        # Extract requirements using the LLM
+        chain = prompt | llm
+        result = chain.invoke({"messages": [{"role": m["role"], "content": m["content"]} for m in state["messages"]]})
+        
+        # Parse the result
+        try:
+            import json
+            requirements_data = json.loads(result.content)
+            
+            # Update event details
+            if requirements_data.get("event_type"):
+                state["event_details"]["event_type"] = requirements_data["event_type"]
+            if requirements_data.get("scale"):
+                state["event_details"]["scale"] = requirements_data["scale"]
+            if requirements_data.get("budget"):
+                state["event_details"]["budget"] = requirements_data["budget"]
+            if requirements_data.get("timeline_start"):
+                state["event_details"]["timeline_start"] = requirements_data["timeline_start"]
+            if requirements_data.get("timeline_end"):
+                state["event_details"]["timeline_end"] = requirements_data["timeline_end"]
+            
+            # Update requirements
+            if requirements_data.get("stakeholders"):
+                state["requirements"]["stakeholders"] = requirements_data["stakeholders"]
+            if requirements_data.get("resources"):
+                state["requirements"]["resources"] = requirements_data["resources"]
+            if requirements_data.get("risks"):
+                state["requirements"]["risks"] = requirements_data["risks"]
+            if requirements_data.get("success_criteria"):
+                state["requirements"]["success_criteria"] = requirements_data["success_criteria"]
+            
+            # Update phase and next steps
+            state["current_phase"] = "requirement_analysis"
+            state["next_steps"] = ["confirm_requirements", "delegate_initial_tasks"]
+            
+        except Exception as e:
+            # If parsing fails, add an error message
+            state["messages"].append({
+                "role": "system",
+                "content": f"Error extracting requirements: {str(e)}"
+            })
+        
+        return state
+    
+    def delegate_tasks(state: CoordinatorStateDict) -> CoordinatorStateDict:
+        """
+        Delegate tasks to specialized agents.
+        
+        Args:
+            state: Current state
+            
+        Returns:
+            Updated state
+        """
+        # Create a prompt for the LLM to determine task delegation
+        prompt = ChatPromptTemplate.from_messages([
+            SystemMessage(content="""You are an AI assistant that helps delegate event planning tasks to specialized agents.
+            
+Available agents:
+- resource_planning: Handles venue selection, service providers, equipment
+- financial: Manages budget, payments, contracts
+- stakeholder_management: Coordinates sponsors, speakers, volunteers
+- marketing_communications: Manages campaigns, website, attendee communications
+- project_management: Tracks tasks, timeline, risks
+- analytics: Collects data, analyzes performance
+- compliance_security: Ensures legal requirements, security protocols
+
+Based on the event details and requirements, determine which tasks should be delegated to which agents."""),
+            MessagesPlaceholder(variable_name="messages"),
+            HumanMessage(content=f"""Event details: {state['event_details']}
+Requirements: {state['requirements']}
+Current assignments: {state['agent_assignments']}
+
+Determine up to 3 new tasks that should be delegated to specialized agents. Return the result as a JSON array with objects containing 'agent_type' and 'task' fields.""")
+        ])
+        
+        # Determine task delegation using the LLM
+        chain = prompt | llm
+        result = chain.invoke({"messages": [{"role": m["role"], "content": m["content"]} for m in state["messages"]]})
+        
+        # Parse the result
+        try:
+            import json
+            delegation_data = json.loads(result.content)
+            
+            # Add new assignments
+            for assignment in delegation_data:
+                if isinstance(assignment, dict) and "agent_type" in assignment and "task" in assignment:
+                    state["agent_assignments"].append({
+                        "agent_type": assignment["agent_type"],
+                        "task": assignment["task"],
+                        "status": "pending",
+                        "assigned_at": datetime.utcnow().isoformat()
+                    })
+            
+            # Update phase and next steps
+            state["current_phase"] = "coordination"
+            state["next_steps"] = ["monitor_progress", "provide_status_update"]
+            
+        except Exception as e:
+            # If parsing fails, add an error message
+            state["messages"].append({
+                "role": "system",
+                "content": f"Error delegating tasks: {str(e)}"
+            })
+        
+        return state
+    
+    def provide_status(state: CoordinatorStateDict) -> CoordinatorStateDict:
+        """
+        Provide status updates.
+        
+        Args:
+            state: Current state
+            
+        Returns:
+            Updated state
+        """
+        # Create a prompt for the LLM to generate a status report
+        prompt = ChatPromptTemplate.from_messages([
+            SystemMessage(content="You are an AI assistant that generates status reports for event planning. Create a concise but informative status update based on the current state of the event planning process."),
+            MessagesPlaceholder(variable_name="messages"),
+            HumanMessage(content=f"""Event details: {state['event_details']}
+Requirements: {state['requirements']}
+Agent assignments: {state['agent_assignments']}
+
+Generate a status report for the event planning process. Include progress on key tasks, upcoming milestones, and any issues that need attention.""")
+        ])
+        
+        # Generate status report using the LLM
+        chain = prompt | llm
+        result = chain.invoke({"messages": [{"role": m["role"], "content": m["content"]} for m in state["messages"]]})
+        
+        # Add the status report to messages
+        state["messages"].append({
+            "role": "assistant",
+            "content": result.content
+        })
+        
+        # Update phase and next steps
+        state["current_phase"] = "status_reporting"
+        state["next_steps"] = ["continue_monitoring", "address_issues"]
+        
+        return state
+    
+    def generate_response(state: CoordinatorStateDict) -> CoordinatorStateDict:
+        """
+        Generate a response to the user.
+        
+        Args:
+            state: Current state
+            
+        Returns:
+            Updated state
+        """
+        # Create the coordinator prompt
+        prompt = ChatPromptTemplate.from_messages([
+            SystemMessage(content=COORDINATOR_SYSTEM_PROMPT.format(
+                current_phase=state["current_phase"],
+                event_details=state["event_details"],
+                requirements=state["requirements"],
+                agent_assignments=state["agent_assignments"],
+                next_steps=state["next_steps"]
+            )),
+            MessagesPlaceholder(variable_name="messages"),
+        ])
+        
+        # Generate response using the LLM
+        chain = prompt | llm
+        result = chain.invoke({"messages": [{"role": m["role"], "content": m["content"]} for m in state["messages"]]})
+        
+        # Add the response to messages
+        state["messages"].append({
+            "role": "assistant",
+            "content": result.content
+        })
+        
+        return state
+    
+    # Create the graph
+    workflow = StateGraph(CoordinatorStateDict)
+    
+    # Add nodes
+    workflow.add_node("assess_request", assess_request)
+    workflow.add_node("gather_requirements", gather_requirements)
+    workflow.add_node("delegate_tasks", delegate_tasks)
+    workflow.add_node("provide_status", provide_status)
+    workflow.add_node("generate_response", generate_response)
+    workflow.add_node("tools", tool_node)
+    
+    # Add edges
+    workflow.add_conditional_edges(
+        "assess_request",
+        {
+            "gather_requirements": lambda state: state["current_phase"] == "initial_assessment" or "gather_requirements" in state["next_steps"],
+            "delegate_tasks": lambda state: "delegate_tasks" in state["next_steps"] or state["current_phase"] == "requirement_analysis",
+            "provide_status": lambda state: "provide_status" in state["next_steps"] or state["current_phase"] == "coordination",
+            "generate_response": lambda state: True  # Default case
+        }
+    )
+    
+    workflow.add_edge("gather_requirements", "generate_response")
+    workflow.add_edge("delegate_tasks", "generate_response")
+    workflow.add_edge("provide_status", "generate_response")
+    workflow.add_edge("generate_response", END)
+    
+    # Set the entry point
+    workflow.set_entry_point("assess_request")
+    
+    return workflow.compile()
+
+
+def create_initial_state() -> CoordinatorStateDict:
+    """
+    Create the initial state for the coordinator agent.
+    
+    Returns:
+        Initial state dictionary
+    """
+    return {
+        "messages": [],
+        "event_details": {
+            "event_type": None,
+            "scale": None,
+            "budget": None,
+            "timeline_start": None,
+            "timeline_end": None
+        },
+        "requirements": {
+            "stakeholders": [],
+            "resources": [],
+            "risks": [],
+            "success_criteria": []
+        },
+        "agent_assignments": [],
+        "current_phase": "initial_assessment",
+        "next_steps": ["gather_event_details"]
+    }
