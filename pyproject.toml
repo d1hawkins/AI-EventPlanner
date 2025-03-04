@@ -6,8 +6,10 @@ authors = ["Your Name <your.email@example.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-langgraph = "0.1.17"
-langchain-core = "0.2.22"
+langgraph = "^0.2.74"
+langchain = "^0.3.19"
+langchain-core = "^0.3.40"
+langchain-openai = "^0.3.7"
 fastapi = "^0.109.0"
 uvicorn = "^0.25.0"
 sqlalchemy = "^2.0.25"
