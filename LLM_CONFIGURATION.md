@@ -82,6 +82,38 @@ The system uses a factory pattern to create the appropriate LLM instance based o
 - `app/utils/llm_factory.py` contains the `get_llm()` function that returns the configured LLM
 - All agent graphs use this factory function to get the LLM instance
 
+## Dependency Management
+
+The project uses Poetry for dependency management. The Google AI dependencies are now optional to avoid dependency conflicts during deployment:
+
+```toml
+[tool.poetry.dependencies]
+# Main dependencies
+python = "^3.10"
+langgraph = "^0.1.11"
+langchain = "^0.1.0"
+langchain-openai = "^0.0.5"
+# ... other dependencies
+
+[tool.poetry.group.google.dependencies]
+langchain-google-genai = "^0.0.5"
+```
+
+### Installing Dependencies
+
+- **For development with OpenAI only**:
+  ```bash
+  poetry install --without google
+  ```
+
+- **For development with both OpenAI and Google AI**:
+  ```bash
+  poetry install
+  ```
+
+- **For production deployment** (Azure):
+  The deployment automatically excludes Google AI dependencies to avoid conflicts.
+
 ## Troubleshooting
 
 ### Common Issues
@@ -93,6 +125,16 @@ The system uses a factory pattern to create the appropriate LLM instance based o
 2. **"Provider not supported" error**:
    - Check that `LLM_PROVIDER` is set to either "openai" or "google"
 
-3. **Rate limiting or quota issues**:
+3. **"Module not found" error for Google AI**:
+   - If you're trying to use Google AI, make sure you've installed the Google dependencies:
+     ```bash
+     poetry install --with google
+     ```
+
+4. **Rate limiting or quota issues**:
    - Check your API usage on the provider's dashboard
    - Consider upgrading your API plan if you're hitting limits
+
+5. **Dependency conflicts during deployment**:
+   - The deployment is configured to use only OpenAI dependencies
+   - If you need to use Google AI in production, you'll need to modify the Dockerfile and GitHub workflow

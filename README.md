@@ -48,16 +48,36 @@ ai-event-planner/
 
 ```bash
 pip install poetry
+
+# For OpenAI only (default)
+poetry install --without google
+
+# For both OpenAI and Google AI
 poetry install
 ```
 
 2. Create a `.env` file with your configuration:
 
 ```
+# LLM Provider (options: "openai" or "google")
+LLM_PROVIDER=openai
+
+# OpenAI Configuration
 OPENAI_API_KEY=your_openai_api_key
+LLM_MODEL=gpt-4
+
+# Google AI Configuration (if using Google AI)
+# GOOGLE_API_KEY=your_google_api_key
+# GOOGLE_MODEL=gemini-pro
+
+# JWT Authentication
 SECRET_KEY=your_secret_key_for_jwt
+
+# Database
 DATABASE_URL=sqlite:///./app.db
 ```
+
+For detailed information about LLM configuration and dependency management, see [LLM_CONFIGURATION.md](LLM_CONFIGURATION.md).
 
 3. Run the application:
 
