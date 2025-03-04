@@ -32,6 +32,12 @@ ai-event-planner/
 │   ├── utils/        # Helper utilities
 │   └── web/          # Web interface
 ├── tests/            # Test suite
+├── .github/
+│   └── workflows/    # GitHub Actions workflows for CI/CD
+├── migrations/       # Database migration scripts
+├── scripts/          # Utility scripts
+├── Dockerfile        # Container definition
+├── azure-deploy.sh   # Azure deployment script
 ├── pyproject.toml    # Project dependencies
 └── README.md         # This file
 ```
@@ -65,6 +71,55 @@ poetry run uvicorn app.main:app --reload
 
 - Run tests: `poetry run pytest`
 - Format code: `poetry run black .`
+
+## Azure Deployment
+
+This project is configured for deployment to Azure using GitHub Actions for CI/CD. The deployment uses:
+
+- **Azure App Service** with Web App for Containers
+- **Azure Database for PostgreSQL** for production database
+- **Azure Container Registry** for Docker images
+- **Azure Key Vault** for secure storage of secrets
+
+### Deployment Steps
+
+1. Set up Azure resources:
+
+```bash
+./azure-deploy.sh
+```
+
+This script creates all necessary Azure resources including resource group, app service plan, web app, PostgreSQL database, and key vault.
+
+2. Configure GitHub repository secrets:
+
+- `AZURE_CREDENTIALS`: Azure service principal credentials
+- `ACR_LOGIN_SERVER`: Azure Container Registry login server
+- `ACR_USERNAME`: Azure Container Registry username
+- `ACR_PASSWORD`: Azure Container Registry password
+- `AZURE_RESOURCE_GROUP`: Azure resource group name
+
+3. Push changes to the main branch to trigger the CI/CD pipeline.
+
+The GitHub Actions workflow will:
+- Build and test the application
+- Build and push the Docker image to Azure Container Registry
+- Deploy the image to Azure App Service
+- Run database migrations
+
+### Database Migrations
+
+Database migrations are managed with Alembic. To create a new migration:
+
+```bash
+# Generate a migration script
+alembic revision --autogenerate -m "Description of changes"
+
+# Apply migrations
+alembic upgrade head
+```
+
+In production, migrations are automatically applied during deployment.
 
 ## Enhanced Coordinator Agent
 

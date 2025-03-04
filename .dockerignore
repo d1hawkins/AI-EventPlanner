@@ -1,3 +1,8 @@
+# Git
+.git
+.gitignore
+.github
+
 # Python
 __pycache__/
 *.py[cod]
@@ -5,6 +10,8 @@ __pycache__/
 *.so
 .Python
 env/
+venv/
+ENV/
 build/
 develop-eggs/
 dist/
@@ -20,11 +27,6 @@ var/
 .installed.cfg
 *.egg
 
-# Virtual Environment
-venv/
-ENV/
-.env
-
 # IDE
 .idea/
 .vscode/
@@ -36,6 +38,7 @@ ENV/
 *.sqlite3
 
 # Logs
+logs/
 *.log
 
 # OS specific
@@ -46,9 +49,19 @@ Thumbs.db
 .coverage
 htmlcov/
 .pytest_cache/
-
-# Azure specific
+.env
 .env.azure
 .azure/
 azuredeployment.json
 *.publishsettings
+
+# Documentation
+README.md
+AZURE_DEPLOYMENT.md
+*.md
+
+# Scripts
+azure-deploy.sh
+
+# Tests
+tests/
