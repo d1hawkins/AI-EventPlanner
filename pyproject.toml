@@ -3,6 +3,7 @@ name = "ai-event-planner"
 version = "0.1.0"
 description = "An AI-powered event planning system using LangGraph"
 authors = ["Your Name <your.email@example.com>"]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
