@@ -62,7 +62,7 @@ jobs:
         RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
           https://ai-event-planner.scm.azurewebsites.net/api/command \
-          -d "{\"command\":\"cd /home/site/wwwroot && python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
+          -d "{\"command\":\"python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
         
         # Extract status code and response body
         HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)

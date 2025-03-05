@@ -96,6 +96,24 @@ curl -X POST -u "username:password" \
   -d "{\"command\":\"your command\", \"dir\":\"/home/site/wwwroot\"}"
 ```
 
+### "cd command not found" Error
+
+If you encounter an error like `/opt/Kudu/Scripts/starter.sh: line 2: exec: cd: not found` when using the Kudu REST API, it means the `cd` command is not available in the Kudu environment. Instead of using `cd` in your command, set the `dir` parameter to the directory where you want to execute the command:
+
+```bash
+# Instead of this:
+curl -X POST -u "username:password" \
+  -H "Content-Type: application/json" \
+  https://your-app.scm.azurewebsites.net/api/command \
+  -d "{\"command\":\"cd /home/site/wwwroot && python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
+
+# Do this:
+curl -X POST -u "username:password" \
+  -H "Content-Type: application/json" \
+  https://your-app.scm.azurewebsites.net/api/command \
+  -d "{\"command\":\"python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
+```
+
 ## Deployment Process
 
 To deploy the application to Azure:
