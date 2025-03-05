@@ -7,10 +7,10 @@ from fastapi.responses import HTMLResponse
 
 from app.auth.router import router as auth_router
 from app.web.router import router as web_router
-from app.db.base import Base, engine
+from app.db.base import engine
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Database tables are created by migrations
+# Base.metadata.create_all(bind=engine)
 
 # Create FastAPI app
 app = FastAPI(title="AI Event Planner")
