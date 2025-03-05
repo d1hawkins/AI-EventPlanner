@@ -116,26 +116,40 @@ curl -X POST -u "username:password" \
 
 ### "python command not found" Error
 
-If you encounter an error like `/opt/Kudu/Scripts/starter.sh: line 2: exec: python: not found` when using the Kudu REST API, it means the `python` command is not in the PATH in the Kudu environment. Use the full path to the Python executable instead:
+If you encounter an error like `/opt/Kudu/Scripts/starter.sh: line 2: exec: python: not found` when using the Kudu REST API, it means the `python` command is not in the PATH in the Kudu environment. The best approach is to first find the Python executable path and then use it:
 
 ```bash
-# Instead of this:
+# Step 1: Find the Python executable path
 curl -X POST -u "username:password" \
   -H "Content-Type: application/json" \
   https://your-app.scm.azurewebsites.net/api/command \
-  -d "{\"command\":\"python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
+  -d "{\"command\":\"find / -name python3 2>/dev/null | head -n 1\", \"dir\":\"/home/site/wwwroot\"}"
 
-# Do this:
+# Step 2: Use the found path in your command
 curl -X POST -u "username:password" \
   -H "Content-Type: application/json" \
   https://your-app.scm.azurewebsites.net/api/command \
-  -d "{\"command\":\"/usr/local/bin/python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
+  -d "{\"command\":\"/path/to/python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
 ```
 
-The exact path to Python may vary depending on your container image. Common paths include:
-- `/usr/local/bin/python`
-- `/usr/bin/python`
+Common Python executable paths in Azure App Service containers include:
+- `/usr/local/bin/python3`
+- `/usr/bin/python3`
 - `/home/site/wwwroot/env/bin/python` (if using a virtual environment)
+
+Our deployment scripts now automatically find the Python executable path before running migrations, making them more robust across different container environments. The scripts use a reliable regex pattern to extract the Python path from the command output:
+
+```bash
+# Extract Python path using grep
+PYTHON_PATH=$(echo "$RESPONSE_BODY" | grep -o '/[a-zA-Z0-9/_.-]*python3' | head -n 1 || echo "")
+
+# Or using Python's re module
+import re
+python_path_match = re.search(r'/[a-zA-Z0-9/_.-]*python3', response_body)
+python_path = python_path_match.group(0) if python_path_match else "python3"
+```
+
+This pattern handles various path formats and ensures we get the correct Python executable path.
 
 ## Deployment Process
 

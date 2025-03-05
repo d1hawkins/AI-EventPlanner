@@ -191,8 +191,31 @@ def run_migrations(resource_group: str, web_app_name: str) -> bool:
         print(f"Failed to parse publishing credentials for web app '{web_app_name}'.")
         return False
     
+    # First, find the Python executable path
+    print("Finding Python executable path...")
+    find_python_command = f"curl -s -w \"\\n%{{http_code}}\" -X POST -u \"{username}:{password}\" -H \"Content-Type: application/json\" https://{web_app_name}.scm.azurewebsites.net/api/command -d \"{{\\\"command\\\":\\\"find / -name python3 2>/dev/null | head -n 1\\\", \\\"dir\\\":\\\"/home/site/wwwroot\\\"}}\""
+    output, success = run_command(find_python_command)
+    if not success:
+        print(f"Failed to find Python executable for web app '{web_app_name}'.")
+        return False
+    
+    # Extract status code and response body
+    lines = output.strip().split("\n")
+    http_status = lines[-1]
+    response_body = "\n".join(lines[:-1])
+    
+    print(f"Find Python response: {response_body}")
+    print(f"HTTP status: {http_status}")
+    
+    # Extract Python path from the response
+    import re
+    python_path_match = re.search(r'/[a-zA-Z0-9/_.-]*python3', response_body)
+    python_path = python_path_match.group(0) if python_path_match else "python3"
+    
+    print(f"Using Python path: {python_path}")
+    
     # Run migrations using Kudu REST API
-    command = f"curl -s -w \"\\n%{{http_code}}\" -X POST -u \"{username}:{password}\" -H \"Content-Type: application/json\" https://{web_app_name}.scm.azurewebsites.net/api/command -d \"{{\\\"command\\\":\\\"/usr/local/bin/python -m scripts.migrate\\\", \\\"dir\\\":\\\"/home/site/wwwroot\\\"}}\""
+    command = f"curl -s -w \"\\n%{{http_code}}\" -X POST -u \"{username}:{password}\" -H \"Content-Type: application/json\" https://{web_app_name}.scm.azurewebsites.net/api/command -d \"{{\\\"command\\\":\\\"{python_path} -m scripts.migrate\\\", \\\"dir\\\":\\\"/home/site/wwwroot\\\"}}\""
     output, success = run_command(command)
     if not success:
         print(f"Failed to run migrations for web app '{web_app_name}'.")

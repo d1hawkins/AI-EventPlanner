@@ -13,11 +13,36 @@ CREDS=$(az webapp deployment list-publishing-credentials --resource-group $RESOU
 USERNAME=$(echo $CREDS | jq -r '.username')
 PASSWORD=$(echo $CREDS | jq -r '.password')
 
-echo "Running migration script via Kudu REST API..."
+# First, find the Python executable path
+echo "Finding Python executable path..."
+FIND_PYTHON_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+  -H "Content-Type: application/json" \
+  https://$WEB_APP_NAME.scm.azurewebsites.net/api/command \
+  -d "{\"command\":\"find / -name python3 2>/dev/null | head -n 1\", \"dir\":\"/home/site/wwwroot\"}")
+
+# Extract status code and response body
+HTTP_STATUS=$(echo "$FIND_PYTHON_RESPONSE" | tail -n1)
+RESPONSE_BODY=$(echo "$FIND_PYTHON_RESPONSE" | sed '$d')
+
+echo "Find Python response: $RESPONSE_BODY"
+echo "HTTP status: $HTTP_STATUS"
+
+# Extract Python path from the response
+PYTHON_PATH=$(echo "$RESPONSE_BODY" | grep -o '/[a-zA-Z0-9/_.-]*python3' | head -n 1 || echo "")
+
+if [ -z "$PYTHON_PATH" ]; then
+  echo "Could not find Python executable. Trying with 'python3' command..."
+  PYTHON_PATH="python3"
+else
+  echo "Found Python executable at: $PYTHON_PATH"
+fi
+
+# Use Kudu REST API to run the migration script with better error handling
+echo "Running migrations with Python path: $PYTHON_PATH"
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
   -H "Content-Type: application/json" \
   https://$WEB_APP_NAME.scm.azurewebsites.net/api/command \
-  -d "{\"command\":\"/usr/local/bin/python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
+  -d "{\"command\":\"$PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
 
 # Extract status code and response body
 HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
