@@ -53,4 +53,4 @@ jobs:
     
     - name: Run database migrations
       run: |
-        az webapp ssh --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ai-event-planner --command "python scripts/migrate.py"
+        az webapp run-command --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ai-event-planner --command "python scripts/migrate.py"
