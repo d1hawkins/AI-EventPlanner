@@ -114,6 +114,29 @@ curl -X POST -u "username:password" \
   -d "{\"command\":\"python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
 ```
 
+### "python command not found" Error
+
+If you encounter an error like `/opt/Kudu/Scripts/starter.sh: line 2: exec: python: not found` when using the Kudu REST API, it means the `python` command is not in the PATH in the Kudu environment. Use the full path to the Python executable instead:
+
+```bash
+# Instead of this:
+curl -X POST -u "username:password" \
+  -H "Content-Type: application/json" \
+  https://your-app.scm.azurewebsites.net/api/command \
+  -d "{\"command\":\"python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
+
+# Do this:
+curl -X POST -u "username:password" \
+  -H "Content-Type: application/json" \
+  https://your-app.scm.azurewebsites.net/api/command \
+  -d "{\"command\":\"/usr/local/bin/python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
+```
+
+The exact path to Python may vary depending on your container image. Common paths include:
+- `/usr/local/bin/python`
+- `/usr/bin/python`
+- `/home/site/wwwroot/env/bin/python` (if using a virtual environment)
+
 ## Deployment Process
 
 To deploy the application to Azure:

@@ -192,7 +192,7 @@ def run_migrations(resource_group: str, web_app_name: str) -> bool:
         return False
     
     # Run migrations using Kudu REST API
-    command = f"curl -s -w \"\\n%{{http_code}}\" -X POST -u \"{username}:{password}\" -H \"Content-Type: application/json\" https://{web_app_name}.scm.azurewebsites.net/api/command -d \"{{\\\"command\\\":\\\"python -m scripts.migrate\\\", \\\"dir\\\":\\\"/home/site/wwwroot\\\"}}\""
+    command = f"curl -s -w \"\\n%{{http_code}}\" -X POST -u \"{username}:{password}\" -H \"Content-Type: application/json\" https://{web_app_name}.scm.azurewebsites.net/api/command -d \"{{\\\"command\\\":\\\"/usr/local/bin/python -m scripts.migrate\\\", \\\"dir\\\":\\\"/home/site/wwwroot\\\"}}\""
     output, success = run_command(command)
     if not success:
         print(f"Failed to run migrations for web app '{web_app_name}'.")

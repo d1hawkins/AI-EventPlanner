@@ -17,7 +17,7 @@ echo "Running migration script via Kudu REST API..."
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
   -H "Content-Type: application/json" \
   https://$WEB_APP_NAME.scm.azurewebsites.net/api/command \
-  -d "{\"command\":\"python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
+  -d "{\"command\":\"/usr/local/bin/python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
 
 # Extract status code and response body
 HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
