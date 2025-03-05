@@ -137,19 +137,17 @@ Common Python executable paths in Azure App Service containers include:
 - `/usr/bin/python3`
 - `/home/site/wwwroot/env/bin/python` (if using a virtual environment)
 
-Our deployment scripts now automatically find the Python executable path before running migrations, making them more robust across different container environments. The scripts use a reliable regex pattern to extract the Python path from the command output:
+Our deployment scripts now use a simpler and more reliable approach to run migrations:
 
 ```bash
-# Extract Python path using grep
-PYTHON_PATH=$(echo "$RESPONSE_BODY" | grep -o '/[a-zA-Z0-9/_.-]*python3' | head -n 1 || echo "")
-
-# Or using Python's re module
-import re
-python_path_match = re.search(r'/[a-zA-Z0-9/_.-]*python3', response_body)
-python_path = python_path_match.group(0) if python_path_match else "python3"
+# Use a simpler approach to run the migration script
+curl -X POST -u "username:password" \
+  -H "Content-Type: application/json" \
+  https://your-app.scm.azurewebsites.net/api/command \
+  -d "{\"command\":\"cd /home/site/wwwroot && python -m scripts.migrate\", \"dir\":\"/\"}"
 ```
 
-This pattern handles various path formats and ensures we get the correct Python executable path.
+This approach uses the root directory as the working directory and then changes to the wwwroot directory in the command itself, which is more compatible with the Kudu environment.
 
 ## Deployment Process
 
