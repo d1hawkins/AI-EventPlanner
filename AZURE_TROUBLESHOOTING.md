@@ -81,6 +81,21 @@ We've made several improvements to make the deployment more robust:
 
 4. **Better Error Handling**: Added more robust error handling in the GitHub Actions workflow.
 
+5. **Fixed Content-Type Issue**: Added proper Content-Type headers to API requests to fix 415 Unsupported Media Type errors.
+
+## Common Errors
+
+### HTTP 415 Unsupported Media Type
+
+If you encounter a 415 Unsupported Media Type error when running migrations or using the Kudu REST API, it means the API is expecting a specific content type. Make sure to include the Content-Type header in your requests:
+
+```bash
+curl -X POST -u "username:password" \
+  -H "Content-Type: application/json" \
+  https://your-app.scm.azurewebsites.net/api/command \
+  -d "{\"command\":\"your command\", \"dir\":\"/home/site/wwwroot\"}"
+```
+
 ## Deployment Process
 
 To deploy the application to Azure:
