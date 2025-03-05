@@ -53,4 +53,10 @@ jobs:
     
     - name: Run database migrations
       run: |
-        az webapp run-command --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ai-event-planner --command "python scripts/migrate.py"
+        # Get publishing credentials
+        CREDS=$(az webapp deployment list-publishing-credentials --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ai-event-planner --query "{username:publishingUserName, password:publishingPassword}" -o json)
+        USERNAME=$(echo $CREDS | jq -r '.username')
+        PASSWORD=$(echo $CREDS | jq -r '.password')
+        
+        # Use Kudu REST API to run the migration script
+        curl -X POST -u "$USERNAME:$PASSWORD" https://ai-event-planner.scm.azurewebsites.net/api/command -d "{\"command\":\"python scripts/migrate.py\", \"dir\":\"/home/site/wwwroot\"}"
