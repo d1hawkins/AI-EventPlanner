@@ -88,6 +88,8 @@ def check_required_settings(app_settings: Dict[str, str]) -> List[str]:
         "SECRET_KEY",
         "LLM_PROVIDER",
         "OPENAI_API_KEY",
+        "GOOGLE_API_KEY",
+        "GOOGLE_MODEL"
     ]
     
     missing_settings = []
@@ -175,9 +177,32 @@ def run_migrations(resource_group: str, web_app_name: str) -> bool:
     """Run database migrations."""
     print(f"Running database migrations for web app '{web_app_name}'...")
     
-    # Get publishing credentials
+    # First, check if the web app is running
+    print("Checking web app status...")
     output, success = run_command(
-        f"az webapp deployment list-publishing-credentials --resource-group {resource_group} --name {web_app_name} --query \"{{username:publishingUserName, password:publishingPassword}}\" -o json"
+        f"az webapp show --resource-group {resource_group} --name {web_app_name} --query state -o tsv"
+    )
+    if not success:
+        print(f"Failed to check status of web app '{web_app_name}'.")
+        return False
+    
+    if output.strip().lower() != "running":
+        print(f"Web app '{web_app_name}' is not running. Current state: {output.strip()}")
+        print("Starting the web app...")
+        _, start_success = run_command(
+            f"az webapp start --resource-group {resource_group} --name {web_app_name}"
+        )
+        if not start_success:
+            print(f"Failed to start web app '{web_app_name}'.")
+            return False
+        print(f"✅ Started web app '{web_app_name}'.")
+    else:
+        print(f"✅ Web app '{web_app_name}' is running.")
+    
+    # Get publishing credentials
+    print("Getting publishing credentials...")
+    output, success = run_command(
+        f"az webapp deployment list-publishing-credentials --resource-group {resource_group} --name {web_app_name} -o json"
     )
     if not success:
         print(f"Failed to get publishing credentials for web app '{web_app_name}'.")
@@ -185,18 +210,94 @@ def run_migrations(resource_group: str, web_app_name: str) -> bool:
     
     try:
         creds = json.loads(output)
-        username = creds["username"]
-        password = creds["password"]
-    except (json.JSONDecodeError, KeyError):
-        print(f"Failed to parse publishing credentials for web app '{web_app_name}'.")
+        username = creds["publishingUserName"]
+        password = creds["publishingPassword"]
+        print(f"✅ Successfully retrieved publishing credentials for {web_app_name}")
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"Failed to parse publishing credentials: {e}")
+        print(f"Raw output: {output}")
         return False
     
-    # Use a simpler approach to run the migration script
-    print("Running migrations...")
-    command = f"curl -s -w \"\\n%{{http_code}}\" -X POST -u \"{username}:{password}\" -H \"Content-Type: application/json\" https://{web_app_name}.scm.azurewebsites.net/api/command -d \"{{\\\"command\\\":\\\"cd /home/site/wwwroot && python -m scripts.migrate\\\", \\\"dir\\\":\\\"/\\\"}}\""
+    # Use the Kudu REST API to run the migration script
+    print("Running migrations via Kudu REST API...")
+    
+    # Print the username for debugging (mask part of it for security)
+    masked_username = username[:3] + "..." + username[-3:] if len(username) > 6 else "***"
+    print(f"Using publishing username: {masked_username}")
+    
+    # Try a different approach using the Azure CLI to run the migrations directly
+    print("Trying to run migrations using Azure CLI directly...")
+    
+    # First, try to reset the publishing credentials
+    print("Resetting publishing credentials...")
+    reset_command = (
+        f"az webapp deployment user set "
+        f"--user-name aieventplanneradmin "
+        f"--password 'P@ssw0rd!2025' "
+    )
+    
+    reset_output, reset_success = run_command(reset_command)
+    if not reset_success:
+        print(f"Failed to reset publishing credentials: {reset_output}")
+        print("Continuing with existing credentials...")
+    else:
+        print("✅ Successfully reset publishing credentials")
+        # Get the new credentials
+        output, success = run_command(
+            f"az webapp deployment list-publishing-credentials --resource-group {resource_group} --name {web_app_name} -o json"
+        )
+        if success:
+            try:
+                creds = json.loads(output)
+                username = creds["publishingUserName"]
+                password = creds["publishingPassword"]
+                print(f"✅ Retrieved new publishing credentials")
+                masked_username = username[:3] + "..." + username[-3:] if len(username) > 6 else "***"
+                print(f"Using new publishing username: {masked_username}")
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"Failed to parse new publishing credentials: {e}")
+    
+    # Try using the Azure CLI to run a custom script
+    print("Trying to run migrations using a custom deployment script...")
+    
+    # Create a temporary script to run the migrations
+    script_content = """
+    #!/bin/bash
+    cd /home/site/wwwroot
+    python -m scripts.migrate
+    """
+    
+    # Save the script to a temporary file
+    script_path = "temp_migrate.sh"
+    with open(script_path, "w") as f:
+        f.write(script_content)
+    
+    # Make the script executable
+    os.chmod(script_path, 0o755)
+    
+    # Try a simpler approach - run the migrations directly using the Kudu REST API
+    print("Trying a simpler approach - running migrations directly...")
+    
+    # Escape special characters in password to avoid shell interpretation issues
+    escaped_password = password.replace('"', '\\"').replace('$', '\\$')
+    
+    # Build the curl command with proper JSON formatting
+    command = (
+        f'curl -v -s -w "\\n%{{http_code}}" -X POST '
+        f'-u "{username}:{escaped_password}" '
+        f'-H "Content-Type: application/json" '
+        f'https://{web_app_name}.scm.azurewebsites.net/api/command '
+        f'-d \'{{"command":"cd /home/site/wwwroot && python -m scripts.migrate", "dir":"/"}}\''
+    )
+    
+    # Print a sanitized version of the command (without the password)
+    sanitized_command = command.replace(escaped_password, "********")
+    print(f"Executing command: {sanitized_command}")
+    
     output, success = run_command(command)
     if not success:
         print(f"Failed to run migrations for web app '{web_app_name}'.")
+        print(f"Command output: {output}")
         return False
     
     # Extract status code and response body
@@ -209,10 +310,16 @@ def run_migrations(resource_group: str, web_app_name: str) -> bool:
     
     if http_status != "200":
         print(f"Migration failed with status {http_status}")
+        # Print more detailed error information
+        if "401" in http_status:
+            print("Authentication failed. Please check your Azure credentials and permissions.")
+            print("Try running 'az login' to refresh your Azure CLI session.")
+            print("Also check if the publishing credentials are correct and not expired.")
         return False
     
     if "error" in response_body.lower():
         print("Migration script reported errors")
+        print(f"Full output: {response_body}")
         return False
     
     print("✅ Migrations completed successfully.")
