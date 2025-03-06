@@ -12,6 +12,7 @@ import sys
 import json
 import subprocess
 import argparse
+import re
 from typing import Dict, List, Optional, Tuple
 
 
@@ -282,12 +283,39 @@ def run_migrations(resource_group: str, web_app_name: str) -> bool:
     escaped_password = password.replace('"', '\\"').replace('$', '\\$')
     
     # Build the curl command with proper JSON formatting
+    # First, find the Python executable path
+    print("Finding Python executable path...")
+    find_python_command = (
+        f'curl -v -s -w "\\n%{{http_code}}" -X POST '
+        f'-u "{username}:{escaped_password}" '
+        f'-H "Content-Type: application/json" '
+        f'https://{web_app_name}.scm.azurewebsites.net/api/command '
+        f'-d \'{{"command":"find / -name python3 2>/dev/null | head -n 1", "dir":"/"}}\''
+    )
+    
+    # Print a sanitized version of the command (without the password)
+    sanitized_find_python_command = find_python_command.replace(escaped_password, "********")
+    print(f"Executing command: {sanitized_find_python_command}")
+    
+    find_python_output, find_python_success = run_command(find_python_command)
+    if not find_python_success:
+        print(f"Failed to find Python path for web app '{web_app_name}'.")
+        print(f"Command output: {find_python_output}")
+        print("Using default Python path: /usr/local/bin/python3")
+        python_path = "/usr/local/bin/python3"
+    else:
+        # Extract Python path from the response
+        python_path_match = re.search(r'/[a-zA-Z0-9/_.-]*python3', find_python_output)
+        python_path = python_path_match.group(0) if python_path_match else "/usr/local/bin/python3"
+        print(f"Found Python path: {python_path}")
+    
+    # Now run the migration script with the found Python path
     command = (
         f'curl -v -s -w "\\n%{{http_code}}" -X POST '
         f'-u "{username}:{escaped_password}" '
         f'-H "Content-Type: application/json" '
         f'https://{web_app_name}.scm.azurewebsites.net/api/command '
-        f'-d \'{{"command":"python -m scripts.migrate", "dir":"/home/site/wwwroot"}}\''
+        f'-d \'{{"command":"{python_path} -m scripts.migrate", "dir":"/home/site/wwwroot"}}\''
     )
     
     # Print a sanitized version of the command (without the password)

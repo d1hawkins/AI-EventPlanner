@@ -118,38 +118,36 @@ This approach sets the working directory directly using the `dir` parameter, whi
 
 ### "python command not found" Error
 
-If you encounter an error like `/opt/Kudu/Scripts/starter.sh: line 2: exec: python: not found` when using the Kudu REST API, it means the `python` command is not in the PATH in the Kudu environment. The best approach is to first find the Python executable path and then use it:
+If you encounter an error like `/opt/Kudu/Scripts/starter.sh: line 2: exec: python: not found` when using the Kudu REST API, it means the `python` command is not in the PATH in the Kudu environment. The best approach is to use the full path to the Python executable:
 
 ```bash
-# Step 1: Find the Python executable path
+# Instead of this:
+curl -X POST -u "username:password" \
+  -H "Content-Type: application/json" \
+  https://your-app.scm.azurewebsites.net/api/command \
+  -d "{\"command\":\"python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
+
+# Do this:
+curl -X POST -u "username:password" \
+  -H "Content-Type: application/json" \
+  https://your-app.scm.azurewebsites.net/api/command \
+  -d "{\"command\":\"/usr/local/bin/python3 -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
+```
+
+Common Python executable paths in Azure App Service containers include:
+- `/usr/local/bin/python3` (most common in Docker containers)
+- `/usr/bin/python3`
+- `/home/site/wwwroot/env/bin/python` (if using a virtual environment)
+
+If you're not sure which path to use, you can first find the Python executable path:
+
+```bash
+# Find the Python executable path
 curl -X POST -u "username:password" \
   -H "Content-Type: application/json" \
   https://your-app.scm.azurewebsites.net/api/command \
   -d "{\"command\":\"find / -name python3 2>/dev/null | head -n 1\", \"dir\":\"/home/site/wwwroot\"}"
-
-# Step 2: Use the found path in your command
-curl -X POST -u "username:password" \
-  -H "Content-Type: application/json" \
-  https://your-app.scm.azurewebsites.net/api/command \
-  -d "{\"command\":\"/path/to/python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
 ```
-
-Common Python executable paths in Azure App Service containers include:
-- `/usr/local/bin/python3`
-- `/usr/bin/python3`
-- `/home/site/wwwroot/env/bin/python` (if using a virtual environment)
-
-Our deployment scripts now use a simpler and more reliable approach to run migrations:
-
-```bash
-# Use a simpler approach to run the migration script
-curl -X POST -u "username:password" \
-  -H "Content-Type: application/json" \
-  https://your-app.scm.azurewebsites.net/api/command \
-  -d "{\"command\":\"cd /home/site/wwwroot && python -m scripts.migrate\", \"dir\":\"/\"}"
-```
-
-This approach uses the root directory as the working directory and then changes to the wwwroot directory in the command itself, which is more compatible with the Kudu environment.
 
 ## Deployment Process
 
