@@ -287,7 +287,7 @@ def run_migrations(resource_group: str, web_app_name: str) -> bool:
         f'-u "{username}:{escaped_password}" '
         f'-H "Content-Type: application/json" '
         f'https://{web_app_name}.scm.azurewebsites.net/api/command '
-        f'-d \'{{"command":"cd /home/site/wwwroot && python -m scripts.migrate", "dir":"/"}}\''
+        f'-d \'{{"command":"python -m scripts.migrate", "dir":"/home/site/wwwroot"}}\''
     )
     
     # Print a sanitized version of the command (without the password)

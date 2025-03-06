@@ -105,7 +105,7 @@ If you encounter an error like `/opt/Kudu/Scripts/starter.sh: line 2: exec: cd: 
 curl -X POST -u "username:password" \
   -H "Content-Type: application/json" \
   https://your-app.scm.azurewebsites.net/api/command \
-  -d "{\"command\":\"cd /home/site/wwwroot && python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
+  -d "{\"command\":\"cd /home/site/wwwroot && python -m scripts.migrate\", \"dir\":\"/\"}"
 
 # Do this:
 curl -X POST -u "username:password" \
@@ -113,6 +113,8 @@ curl -X POST -u "username:password" \
   https://your-app.scm.azurewebsites.net/api/command \
   -d "{\"command\":\"python -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}"
 ```
+
+This approach sets the working directory directly using the `dir` parameter, which is more compatible with the Kudu environment.
 
 ### "python command not found" Error
 
