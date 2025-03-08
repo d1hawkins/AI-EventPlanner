@@ -3,7 +3,7 @@ from typing import Optional, Literal
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # LLM Provider
 LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "openai")  # Default to OpenAI
