@@ -17,6 +17,7 @@ from app.tools.stakeholder_tools import (
     StakeholderPlanGenerationTool
 )
 from app.tools.event_tools import RequirementsTool, MonitoringTool, ReportingTool
+from app.tools.stakeholder_search_tool import StakeholderSearchTool
 
 
 # Define the state schema for the Stakeholder Management Agent
@@ -109,7 +110,8 @@ def create_stakeholder_management_graph():
         StakeholderPlanGenerationTool(),
         RequirementsTool(),
         MonitoringTool(),
-        ReportingTool()
+        ReportingTool(),
+        StakeholderSearchTool()
     ]
     
     # Create the tool node

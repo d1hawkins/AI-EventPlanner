@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from app.utils.llm_factory import get_llm
 from app.tools.event_tools import RequirementsTool, MonitoringTool, ReportingTool
+from app.tools.resource_planning_search_tool import ResourcePlanningSearchTool
 
 
 # Define the state schema for the Resource Planning Agent
@@ -847,7 +848,8 @@ def create_resource_planning_graph():
         ResourcePlanGenerationTool(),
         RequirementsTool(),
         MonitoringTool(),
-        ReportingTool()
+        ReportingTool(),
+        ResourcePlanningSearchTool()
     ]
     
     # Create the tool node

@@ -814,6 +814,100 @@ class ProjectPlanGenerationTool(BaseTool):
             risk_result = risk_tool._run(action="list")
             risks = risk_result["risks"]
         
+        # Add validation tasks for resources mentioned in the proposal
+        validation_tasks = [
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Validate Venue Availability",
+                "description": "Confirm availability of recommended venue(s) for the event dates",
+                "status": "not_started",
+                "priority": "high",
+                "assigned_to": "Resource Planning Agent",
+                "dependencies": [],
+                "start_date": (datetime.now() + timedelta(days=1)).isoformat(),
+                "end_date": (datetime.now() + timedelta(days=5)).isoformat(),
+                "actual_start_date": None,
+                "actual_end_date": None,
+                "completion_percentage": 0,
+                "notes": "Validate availability of venues recommended in the proposal"
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Validate Speaker Availability",
+                "description": "Confirm availability of recommended speakers for the event dates",
+                "status": "not_started",
+                "priority": "high",
+                "assigned_to": "Stakeholder Management Agent",
+                "dependencies": [],
+                "start_date": (datetime.now() + timedelta(days=1)).isoformat(),
+                "end_date": (datetime.now() + timedelta(days=7)).isoformat(),
+                "actual_start_date": None,
+                "actual_end_date": None,
+                "completion_percentage": 0,
+                "notes": "Validate availability of speakers recommended in the proposal"
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Validate Vendor Availability",
+                "description": "Confirm availability of recommended service providers for the event dates",
+                "status": "not_started",
+                "priority": "medium",
+                "assigned_to": "Resource Planning Agent",
+                "dependencies": [],
+                "start_date": (datetime.now() + timedelta(days=3)).isoformat(),
+                "end_date": (datetime.now() + timedelta(days=10)).isoformat(),
+                "actual_start_date": None,
+                "actual_end_date": None,
+                "completion_percentage": 0,
+                "notes": "Validate availability of vendors and service providers recommended in the proposal"
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Validate Equipment Availability",
+                "description": "Confirm availability of recommended equipment for the event dates",
+                "status": "not_started",
+                "priority": "medium",
+                "assigned_to": "Resource Planning Agent",
+                "dependencies": [],
+                "start_date": (datetime.now() + timedelta(days=5)).isoformat(),
+                "end_date": (datetime.now() + timedelta(days=12)).isoformat(),
+                "actual_start_date": None,
+                "actual_end_date": None,
+                "completion_percentage": 0,
+                "notes": "Validate availability of equipment recommended in the proposal"
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "name": "Validate Sponsor Availability",
+                "description": "Confirm availability and interest of recommended sponsors",
+                "status": "not_started",
+                "priority": "medium",
+                "assigned_to": "Stakeholder Management Agent",
+                "dependencies": [],
+                "start_date": (datetime.now() + timedelta(days=3)).isoformat(),
+                "end_date": (datetime.now() + timedelta(days=14)).isoformat(),
+                "actual_start_date": None,
+                "actual_end_date": None,
+                "completion_percentage": 0,
+                "notes": "Validate availability and interest of sponsors recommended in the proposal"
+            }
+        ]
+        
+        # Add validation tasks to the task list
+        tasks.extend(validation_tasks)
+        
+        # Add validation milestone
+        validation_milestone = {
+            "id": str(uuid.uuid4()),
+            "name": "Resource Availability Validated",
+            "description": "All resource availability validations completed",
+            "date": (datetime.now() + timedelta(days=14)).isoformat(),
+            "status": "not_reached",
+            "associated_tasks": [task["id"] for task in validation_tasks]
+        }
+        
+        milestones.append(validation_milestone)
+        
         # Calculate overall status
         completed_tasks = sum(1 for task in tasks if task["status"] == "completed")
         in_progress_tasks = sum(1 for task in tasks if task["status"] == "in_progress")

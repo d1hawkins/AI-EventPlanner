@@ -19,6 +19,7 @@ from app.tools.marketing_tools import (
     MarketingPlanGenerationTool,
     CommunicationPlanGenerationTool
 )
+from app.tools.marketing_search_tool import MarketingSearchTool
 from app.schemas.marketing import (
     MarketingChannel,
     MarketingContent,
@@ -95,7 +96,8 @@ def create_marketing_communications_graph():
         RegistrationFormCreationTool(),
         CampaignCreationTool(),
         MarketingPlanGenerationTool(),
-        CommunicationPlanGenerationTool()
+        CommunicationPlanGenerationTool(),
+        MarketingSearchTool()
     ]
     
     # Create the tool node

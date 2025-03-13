@@ -1013,13 +1013,13 @@ async function fetchTasks() {
     }
     
     // Add debug info to the UI
-    const projectPlanContent = document.getElementById('project-plan-content');
-    if (projectPlanContent) {
-        const debugInfo = document.createElement('div');
-        debugInfo.className = 'debug-info';
-        debugInfo.innerHTML = `<strong>Debug Info:</strong> Fetching tasks for Event ID: ${currentEventId}`;
-        projectPlanContent.appendChild(debugInfo);
-    }
+    // const projectPlanContent = document.getElementById('project-plan-content');
+    // if (projectPlanContent) {
+    //     const debugInfo = document.createElement('div');
+    //     debugInfo.className = 'debug-info';
+    //     debugInfo.innerHTML = `<strong>Debug Info:</strong> Fetching tasks for Event ID: ${currentEventId}`;
+    //     projectPlanContent.appendChild(debugInfo);
+    // }
     
     try {
         const url = `/api/events/${currentEventId}/tasks`;
@@ -1043,12 +1043,12 @@ async function fetchTasks() {
         console.log(`Received ${tasks.length} tasks from API`);
         
         // Add debug info to the UI
-        if (projectPlanContent) {
-            const tasksDebugInfo = document.createElement('div');
-            tasksDebugInfo.className = 'debug-info';
-            tasksDebugInfo.innerHTML = `<strong>Debug Info:</strong> Received ${tasks.length} tasks from API`;
-            projectPlanContent.appendChild(tasksDebugInfo);
-        }
+        // if (projectPlanContent) {
+        //     const tasksDebugInfo = document.createElement('div');
+        //     tasksDebugInfo.className = 'debug-info';
+        //     tasksDebugInfo.innerHTML = `<strong>Debug Info:</strong> Received ${tasks.length} tasks from API`;
+        //     projectPlanContent.appendChild(tasksDebugInfo);
+        // }
         
         currentTasks = tasks;
         renderTasks(tasks);
@@ -1393,13 +1393,13 @@ function displayProjectPlan(content) {
     console.log('Displaying project plan:', content.substring(0, 100) + '...');
     
     // Add the full content to the UI for debugging
-    const projectPlanContent = document.getElementById('project-plan-content');
-    if (projectPlanContent) {
-        const fullContentDebug = document.createElement('div');
-        fullContentDebug.className = 'debug-info';
-        fullContentDebug.innerHTML = `<strong>Debug Info:</strong> Full content length: ${content.length} characters`;
-        projectPlanContent.appendChild(fullContentDebug);
-    }
+    // const projectPlanContent = document.getElementById('project-plan-content');
+    // if (projectPlanContent) {
+    //     const fullContentDebug = document.createElement('div');
+    //     fullContentDebug.className = 'debug-info';
+    //     fullContentDebug.innerHTML = `<strong>Debug Info:</strong> Full content length: ${content.length} characters`;
+    //     projectPlanContent.appendChild(fullContentDebug);
+    // }
     
     // Try multiple regex patterns to extract event ID
     let eventIdMatch = content.match(/Event ID: ([a-f0-9\-]+|\d+)/i);
@@ -1419,18 +1419,18 @@ function displayProjectPlan(content) {
         console.log('Extracted event ID:', currentEventId);
         
         // Add debug info to the UI
-        if (projectPlanContent) {
-            const debugInfo = document.createElement('div');
-            debugInfo.className = 'debug-info';
-            debugInfo.innerHTML = `<strong>Debug Info:</strong> Extracted Event ID: ${currentEventId}`;
-            projectPlanContent.appendChild(debugInfo);
+        // if (projectPlanContent) {
+        //     const debugInfo = document.createElement('div');
+        //     debugInfo.className = 'debug-info';
+        //     debugInfo.innerHTML = `<strong>Debug Info:</strong> Extracted Event ID: ${currentEventId}`;
+        //     projectPlanContent.appendChild(debugInfo);
             
-            // Add the regex match info
-            const matchInfo = document.createElement('div');
-            matchInfo.className = 'debug-info';
-            matchInfo.innerHTML = `<strong>Debug Info:</strong> Regex match: ${eventIdMatch[0]}`;
-            projectPlanContent.appendChild(matchInfo);
-        }
+        //     // Add the regex match info
+        //     const matchInfo = document.createElement('div');
+        //     matchInfo.className = 'debug-info';
+        //     matchInfo.innerHTML = `<strong>Debug Info:</strong> Regex match: ${eventIdMatch[0]}`;
+        //     projectPlanContent.appendChild(matchInfo);
+        // }
         
         // Fetch tasks for this event
         fetchTasks();
@@ -1457,12 +1457,12 @@ function displayProjectPlan(content) {
         currentEventId = "1"; // Try with the first event
         console.log('Using hardcoded event ID for testing:', currentEventId);
         
-        if (projectPlanContent) {
-            const fallbackInfo = document.createElement('div');
-            fallbackInfo.className = 'debug-info';
-            fallbackInfo.innerHTML = `<strong>Debug Info:</strong> Using fallback Event ID: ${currentEventId}`;
-            projectPlanContent.appendChild(fallbackInfo);
-        }
+        // if (projectPlanContent) {
+        //     const fallbackInfo = document.createElement('div');
+        //     fallbackInfo.className = 'debug-info';
+        //     fallbackInfo.innerHTML = `<strong>Debug Info:</strong> Using fallback Event ID: ${currentEventId}`;
+        //     projectPlanContent.appendChild(fallbackInfo);
+        // }
         
         // Fetch tasks with the hardcoded ID
         fetchTasks();

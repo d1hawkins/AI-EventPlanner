@@ -17,6 +17,7 @@ from app.tools.project_tools import (
     ProjectPlanGenerationTool
 )
 from app.tools.event_tools import RequirementsTool, MonitoringTool, ReportingTool
+from app.tools.project_management_search_tool import ProjectManagementSearchTool
 
 
 # Define the state schema for the Project Management Agent
@@ -104,7 +105,8 @@ def create_project_management_graph():
         ProjectPlanGenerationTool(),
         RequirementsTool(),
         MonitoringTool(),
-        ReportingTool()
+        ReportingTool(),
+        ProjectManagementSearchTool()
     ]
     
     # Create the tool node

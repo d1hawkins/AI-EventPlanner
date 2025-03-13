@@ -10,6 +10,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 
 from app.utils.llm_factory import get_llm
+from app.tools.compliance_search_tool import ComplianceSearchTool
 
 
 # Define the state schema
@@ -219,7 +220,7 @@ def plan_security(state: ComplianceSecurityState) -> ComplianceSecurityState:
         Updated state
     """
     # Get the LLM
-    llm = create_llm()
+    llm = get_llm()
     
     # Create the prompt
     prompt = ChatPromptTemplate.from_messages([
@@ -297,7 +298,7 @@ def implement_data_protection(state: ComplianceSecurityState) -> ComplianceSecur
         Updated state
     """
     # Get the LLM
-    llm = create_llm()
+    llm = get_llm()
     
     # Create the prompt
     prompt = ChatPromptTemplate.from_messages([
@@ -374,7 +375,7 @@ def conduct_audit(state: ComplianceSecurityState) -> ComplianceSecurityState:
         Updated state
     """
     # Get the LLM
-    llm = create_llm()
+    llm = get_llm()
     
     # Create the prompt
     prompt = ChatPromptTemplate.from_messages([
@@ -470,7 +471,7 @@ def plan_incident_response(state: ComplianceSecurityState) -> ComplianceSecurity
         Updated state
     """
     # Get the LLM
-    llm = create_llm()
+    llm = get_llm()
     
     # Create the prompt
     prompt = ChatPromptTemplate.from_messages([
@@ -565,7 +566,7 @@ def generate_report(state: ComplianceSecurityState) -> ComplianceSecurityState:
         Updated state
     """
     # Get the LLM
-    llm = create_llm()
+    llm = get_llm()
     
     # Create the prompt
     prompt = ChatPromptTemplate.from_messages([
@@ -687,7 +688,7 @@ def monitor_updates(state: ComplianceSecurityState) -> ComplianceSecurityState:
         Updated state
     """
     # Get the LLM
-    llm = create_llm()
+    llm = get_llm()
     
     # Create the prompt
     prompt = ChatPromptTemplate.from_messages([
@@ -775,7 +776,7 @@ def generate_response(state: ComplianceSecurityState) -> ComplianceSecurityState
         Updated state
     """
     # Get the LLM
-    llm = create_llm()
+    llm = get_llm()
     
     # Create the prompt
     prompt = ChatPromptTemplate.from_messages([
@@ -864,6 +865,17 @@ def create_compliance_security_graph() -> StateGraph:
     Returns:
         StateGraph for the Compliance & Security Agent
     """
+    # Initialize the LLM
+    llm = get_llm(temperature=0.2)
+    
+    # Initialize tools
+    tools = [
+        ComplianceSearchTool()
+    ]
+    
+    # Create the tool node
+    tool_node = ToolNode(tools)
+    
     # Create the workflow
     workflow = StateGraph(ComplianceSecurityState)
     
@@ -877,6 +889,7 @@ def create_compliance_security_graph() -> StateGraph:
     workflow.add_node("generate_report", generate_report)
     workflow.add_node("monitor_updates", monitor_updates)
     workflow.add_node("generate_response", generate_response)
+    workflow.add_node("tools", tool_node)
     
     # Set the entry point
     workflow.set_entry_point("analyze_requirements")

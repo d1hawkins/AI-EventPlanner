@@ -3,7 +3,7 @@ name = "ai-event-planner"
 version = "0.1.0"
 description = "An AI-powered event planning system using LangGraph"
 authors = ["Your Name <your.email@example.com>"]
-packages = []
+packages = [{include = "app"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -12,7 +12,7 @@ langchain = "^0.3.19"
 langchain-core = "^0.3.40"
 langchain-openai = "^0.3.7"
 fastapi = "^0.109.0"
-uvicorn = "^0.25.0"
+uvicorn = "^0.26.0"
 sqlalchemy = "^2.0.25"
 pydantic = "^2.5.3"
 python-jose = "^3.3.0"
@@ -22,6 +22,7 @@ websockets = "^12.0"
 python-dotenv = "^1.0.0"
 alembic = "^1.13.1"
 psycopg2-binary = "^2.9.9"
+tavily-python = "^0.3.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.0"

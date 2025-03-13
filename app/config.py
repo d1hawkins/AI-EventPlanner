@@ -37,3 +37,8 @@ PORT: int = int(os.getenv("PORT", "8000"))
 # LLM Configuration
 LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4")  # OpenAI model
 GOOGLE_MODEL: str = os.getenv("GOOGLE_MODEL", "gemini-pro")  # Google AI model
+
+# Search API Configuration
+TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
+if not TAVILY_API_KEY:
+    print("WARNING: TAVILY_API_KEY environment variable is not set. Internet search functionality will be disabled.")

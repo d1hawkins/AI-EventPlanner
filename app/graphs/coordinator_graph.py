@@ -11,6 +11,7 @@ from langgraph.prebuilt import ToolNode
 from app.utils.llm_factory import get_llm
 from app.tools.event_tools import RequirementsTool, DelegationTool, MonitoringTool, ReportingTool
 from app.tools.agent_communication_tools import ResourcePlanningTaskTool, FinancialTaskTool, StakeholderManagementTaskTool, MarketingCommunicationsTaskTool, ProjectManagementTaskTool
+from app.tools.coordinator_search_tool import CoordinatorSearchTool
 from app.schemas.event import EventDetails, Requirements, AgentAssignment
 
 
@@ -34,8 +35,8 @@ COORDINATOR_SYSTEM_PROMPT = """You are the Frontend Coordinator Agent for an eve
 
 1. Interface with users to understand their event planning needs
 2. Gather comprehensive requirements for events
-3. Create detailed event proposals
-4. Delegate tasks to specialized agents
+3. Create detailed event proposals with recommendations (without validating availability)
+4. Delegate tasks to specialized agents, including validation tasks
 5. Monitor progress and provide status updates
 6. Ensure a cohesive event planning experience
 
@@ -62,11 +63,16 @@ IMPORTANT: Your primary goal is to collect comprehensive information about the e
 2. Systematically collect information in all required categories (see information_collected status).
 3. Ask focused questions to gather missing information.
 4. Once all required information is collected, generate a comprehensive detailed proposal with recommendations.
+   - When making recommendations for venues, dates, speakers, vendors, or any other resources, DO NOT validate their availability.
+   - Simply recommend possibilities that match the requirements.
+   - Clearly indicate in the proposal that all recommendations are subject to availability validation.
 5. Ask the user for approval on the proposal before proceeding.
 6. Make revisions to the proposal if needed.
 7. After the proposal is approved, create a detailed comprehensive project plan.
+   - Include specific validation tasks for all recommended resources (venues, speakers, vendors, etc.).
+   - These validation tasks will be assigned to the appropriate specialized agents.
 8. Ask the user for approval on the project plan before proceeding.
-9. Delegate tasks to specialized agents based on the project plan.
+9. Delegate tasks to specialized agents based on the project plan, including validation tasks.
 
 Respond to the user in a helpful, professional manner. Ask clarifying questions when needed to gather complete requirements. Provide clear updates on the event planning progress.
 """
@@ -104,7 +110,8 @@ def create_coordinator_graph():
         FinancialTaskTool(),
         StakeholderManagementTaskTool(),
         MarketingCommunicationsTaskTool(),
-        ProjectManagementTaskTool()
+        ProjectManagementTaskTool(),
+        CoordinatorSearchTool()
     ]
     
     # Create the tool node
@@ -332,23 +339,28 @@ For each field, extract the information if available in the conversation. For th
         prompt = ChatPromptTemplate.from_messages([
             SystemMessage(content="""You are an AI assistant that generates comprehensive event planning proposals. 
 Create a detailed, well-structured proposal based on the information collected about the event.
+
+IMPORTANT: When making recommendations for venues, dates, speakers, vendors, or any other resources, DO NOT validate their availability. 
+Simply recommend possibilities that match the requirements. Actual availability validation will be performed later as part of the project plan.
+
 The proposal should include:
 1. Executive summary
 2. Detailed event description
 3. Timeline with milestones
 4. Budget breakdown
-5. Resource allocation plan
-6. Stakeholder management approach
+5. Resource allocation plan (recommended options without availability validation)
+6. Stakeholder management approach (recommended speakers/participants without availability validation)
 7. Risk management strategy
 8. Success metrics
 9. Next steps
 
-Format the proposal with clear headings, bullet points where appropriate, and a professional tone."""),
+Format the proposal with clear headings, bullet points where appropriate, and a professional tone.
+Include a note in the proposal that all recommendations are subject to availability validation during the implementation phase."""),
             MessagesPlaceholder(variable_name="messages"),
             HumanMessage(content=f"""Event details: {state['event_details']}
 Requirements: {state['requirements']}
 
-Generate a comprehensive event proposal based on this information. The proposal should be well-structured, detailed, and ready to present to stakeholders.""")
+Generate a comprehensive event proposal based on this information. The proposal should be well-structured, detailed, and ready to present to stakeholders. Remember to clearly indicate that all venue, speaker, vendor, and date recommendations are subject to availability validation during the implementation phase.""")
         ])
         
         # Generate proposal using the LLM
@@ -397,14 +409,23 @@ Available agents:
 - analytics: Collects data, analyzes performance
 - compliance_security: Ensures legal requirements, security protocols
 
-Based on the event details, requirements, and approved proposal, determine which tasks should be delegated to which agents."""),
+Based on the event details, requirements, and approved proposal, determine which tasks should be delegated to which agents.
+
+IMPORTANT: Include validation tasks for resources mentioned in the proposal. These should include:
+1. Validating venue availability for the proposed dates
+2. Validating speaker availability for the proposed dates
+3. Validating vendor/service provider availability
+4. Validating equipment availability
+5. Validating sponsor availability and interest
+
+These validation tasks are critical as the proposal contains recommendations that have not yet been validated for availability."""),
             MessagesPlaceholder(variable_name="messages"),
             HumanMessage(content=f"""Event details: {state['event_details']}
 Requirements: {state['requirements']}
 Current assignments: {state['agent_assignments']}
 Proposal: {state['proposal']['content'] if 'proposal' in state else 'Not yet generated'}
 
-Determine up to 5 new tasks that should be delegated to specialized agents. Return the result as a JSON array with objects containing 'agent_type' and 'task' fields.""")
+Determine up to 8 new tasks that should be delegated to specialized agents, including necessary validation tasks for resources mentioned in the proposal. Return the result as a JSON array with objects containing 'agent_type' and 'task' fields.""")
         ])
         
         # Determine task delegation using the LLM

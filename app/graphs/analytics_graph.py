@@ -19,6 +19,7 @@ from app.tools.analytics_tools import (
     AttendeeAnalyticsTool,
     InsightGenerationTool
 )
+from app.tools.analytics_search_tool import AnalyticsSearchTool
 from app.schemas.analytics import (
     DataSource,
     Metric,
@@ -138,7 +139,8 @@ def create_analytics_graph():
         ReportGenerationTool(),
         ROICalculationTool(),
         AttendeeAnalyticsTool(),
-        InsightGenerationTool()
+        InsightGenerationTool(),
+        AnalyticsSearchTool()
     ]
     
     # Create the tool node

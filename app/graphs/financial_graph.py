@@ -16,6 +16,7 @@ from app.tools.financial_tools import (
     FinancialReportingTool,
     FinancialPlanGenerationTool
 )
+from app.tools.financial_search_tool import FinancialSearchTool
 
 
 # Define the state schema for the Financial Agent
@@ -99,7 +100,8 @@ def create_financial_graph():
         PaymentTrackingTool(),
         ContractGenerationTool(),
         FinancialReportingTool(),
-        FinancialPlanGenerationTool()
+        FinancialPlanGenerationTool(),
+        FinancialSearchTool()
     ]
     
     # Create the tool node
