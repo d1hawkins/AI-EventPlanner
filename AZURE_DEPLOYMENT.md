@@ -31,6 +31,65 @@ az ad sp create-for-rbac --name "ai-event-planner-github" \
                          --sdk-auth
 ```
 
+## Setting Up API Keys in Azure Key Vault
+
+For enhanced security, it's recommended to store API keys in Azure Key Vault:
+
+1. Create a Key Vault if you don't already have one:
+
+```bash
+az keyvault create --name ai-event-planner-kv --resource-group ai-event-planner-rg --location eastus
+```
+
+2. Add your API keys to the Key Vault:
+
+```bash
+az keyvault secret set --vault-name ai-event-planner-kv --name OPENAI-API-KEY --value "your_openai_api_key"
+az keyvault secret set --vault-name ai-event-planner-kv --name SENDGRID-API-KEY --value "your_sendgrid_api_key"
+az keyvault secret set --vault-name ai-event-planner-kv --name OPENWEATHER-API-KEY --value "your_openweather_api_key"
+```
+
+3. Configure your App Service to access Key Vault using managed identity:
+
+```bash
+# Enable managed identity for your App Service
+az webapp identity assign --name ai-event-planner --resource-group ai-event-planner-rg
+
+# Get the principal ID of the managed identity
+principalId=$(az webapp identity show --name ai-event-planner --resource-group ai-event-planner-rg --query principalId -o tsv)
+
+# Grant the managed identity access to Key Vault
+az keyvault set-policy --name ai-event-planner-kv --object-id $principalId --secret-permissions get list
+```
+
+4. Configure your App Service to use Key Vault references:
+
+```bash
+az webapp config appsettings set --name ai-event-planner --resource-group ai-event-planner-rg --settings @"keyvault-references.json"
+```
+
+Where `keyvault-references.json` contains:
+
+```json
+[
+  {
+    "name": "OPENAI_API_KEY",
+    "value": "@Microsoft.KeyVault(SecretUri=https://ai-event-planner-kv.vault.azure.net/secrets/OPENAI-API-KEY/)",
+    "slotSetting": false
+  },
+  {
+    "name": "SENDGRID_API_KEY",
+    "value": "@Microsoft.KeyVault(SecretUri=https://ai-event-planner-kv.vault.azure.net/secrets/SENDGRID-API-KEY/)",
+    "slotSetting": false
+  },
+  {
+    "name": "OPENWEATHER_API_KEY",
+    "value": "@Microsoft.KeyVault(SecretUri=https://ai-event-planner-kv.vault.azure.net/secrets/OPENWEATHER-API-KEY/)",
+    "slotSetting": false
+  }
+]
+```
+
 3. The command will output a JSON object like this:
 
 ```json
@@ -121,6 +180,14 @@ Monitor your application using Azure Application Insights:
 3. Click on "Application Insights" in the left menu
 4. View metrics, logs, and performance data
 
+### Monitoring MCP Servers
+
+The MCP servers run within the same container as the main application and can be monitored using the same tools. To view MCP server logs:
+
+```bash
+az webapp log tail --resource-group ai-event-planner-rg --name ai-event-planner | grep -E "SendGrid MCP|OpenWeather MCP"
+```
+
 ## Scaling
 
 To scale your application:
@@ -129,3 +196,5 @@ To scale your application:
 2. Go to your App Service resource
 3. Click on "Scale up (App Service plan)" to change the instance size
 4. Click on "Scale out (App Service plan)" to change the number of instances
+
+Since the MCP servers run within the same container as the main application, they will automatically scale with the App Service.

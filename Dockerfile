@@ -5,6 +5,12 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js for MCP servers
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -40,9 +46,29 @@ echo "Starting application..."\n\
 echo "Environment: DATABASE_URL=${DATABASE_URL}"\n\
 echo "Environment: LLM_PROVIDER=${LLM_PROVIDER}"\n\
 echo "Checking if OpenAI API key is set: ${OPENAI_API_KEY:+true}"\n\
-echo "Starting server..."\n\
+\n\
+# Start MCP servers in background\n\
+echo "Starting SendGrid MCP server..."\n\
+node /app/mcp-servers/sendgrid-mcp/build/index.js &\n\
+SENDGRID_PID=$!\n\
+\n\
+echo "Starting OpenWeather MCP server..."\n\
+node /app/mcp-servers/openweather-mcp/build/index.js &\n\
+OPENWEATHER_PID=$!\n\
+\n\
+# Setup trap to kill MCP servers on exit\n\
+trap "kill $SENDGRID_PID $OPENWEATHER_PID" EXIT\n\
+\n\
+echo "Starting main application server..."\n\
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000\n\
 ' > /app/start.sh && chmod +x /app/start.sh
+
+# Install MCP server dependencies
+WORKDIR /app/mcp-servers/sendgrid-mcp
+RUN npm install
+WORKDIR /app/mcp-servers/openweather-mcp
+RUN npm install
+WORKDIR /app
 
 # Run the application
 CMD ["/app/start.sh"]
