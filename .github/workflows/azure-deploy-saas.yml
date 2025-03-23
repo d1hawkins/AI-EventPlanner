@@ -1,0 +1,122 @@
+name: Deploy AI Event Planner SaaS to Azure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - 'migrations/**'
+      - 'alembic.ini'
+      - 'requirements.txt'
+      - '.github/workflows/azure-deploy-saas.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      run: |
+        pytest -xvs tests/
+      env:
+        DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+    
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Set up environment variables
+      run: |
+        echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env.azure
+        echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env.azure
+        echo "STORAGE_CONNECTION_STRING=${{ secrets.STORAGE_CONNECTION_STRING }}" >> .env.azure
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env.azure
+        echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}" >> .env.azure
+    
+    - name: Create deployment package
+      run: |
+        mkdir -p deploy
+        cp -r app deploy/
+        cp -r migrations deploy/
+        cp alembic.ini deploy/
+        cp requirements.txt deploy/
+        
+        # Create deployment script
+        cat > deploy/deploy.sh << 'EOF'
+        #!/bin/bash
+        set -e
+        
+        # Install dependencies
+        pip install -r requirements.txt
+        
+        # Run database migrations
+        alembic upgrade head
+        
+        # Start the application
+        gunicorn app.main_saas:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+        EOF
+        
+        chmod +x deploy/deploy.sh
+        
+        # Create zip file
+        cd deploy
+        zip -r ../deploy.zip .
+        cd ..
+    
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'ai-event-planner-saas'
+        slot-name: 'production'
+        package: './deploy.zip'
+    
+    - name: Configure Azure Web App
+      run: |
+        az webapp config set --name ai-event-planner-saas --resource-group ai-event-planner-rg --startup-file "gunicorn app.main_saas:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
+        
+        # Set environment variables
+        while IFS='=' read -r key value; do
+          # Skip empty lines and comments
+          if [[ -z "$key" || "$key" == \#* ]]; then
+            continue
+          fi
+          
+          # Set environment variable
+          az webapp config appsettings set --name ai-event-planner-saas --resource-group ai-event-planner-rg --settings "$key=$value"
+        done < .env.azure
+    
+    - name: Run database migrations
+      run: |
+        # Install Azure CLI extensions
+        az extension add --name db-up
+        
+        # Run migrations
+        az webapp ssh --name ai-event-planner-saas --resource-group ai-event-planner-rg --command "cd /home/site/wwwroot && alembic upgrade head"
+    
+    - name: Logout from Azure
+      run: |
+        az logout
+      if: always()
+    
+    - name: Cleanup
+      run: |
+        rm -rf deploy
+        rm deploy.zip
+      if: always()

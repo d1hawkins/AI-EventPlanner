@@ -1,0 +1,283 @@
+/* AI Event Planner SaaS - Main Stylesheet */
+
+/* Base Styles */
+:root {
+    --primary-color: #4e73df;
+    --primary-dark: #2e59d9;
+    --primary-light: #6f8be8;
+    --secondary-color: #f8f9fc;
+    --success-color: #1cc88a;
+    --info-color: #36b9cc;
+    --warning-color: #f6c23e;
+    --danger-color: #e74a3b;
+    --dark-color: #5a5c69;
+    --light-color: #f8f9fc;
+    --body-color: #858796;
+    --body-bg: #fff;
+    --border-color: #e3e6f0;
+}
+
+body {
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: var(--body-color);
+    background-color: var(--body-bg);
+    line-height: 1.6;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+a:hover {
+    color: var(--primary-dark);
+    text-decoration: none;
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    padding: 100px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/static/saas/img/pattern.svg');
+    background-size: cover;
+    opacity: 0.1;
+}
+
+/* Feature Icons */
+.feature-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: var(--primary-light);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.feature-icon i {
+    font-size: 28px;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.2);
+}
+
+.card-header {
+    border-bottom: none;
+    border-top-left-radius: 10px !important;
+    border-top-right-radius: 10px !important;
+}
+
+/* Pricing */
+.price {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--dark-color);
+}
+
+.currency {
+    font-size: 1.5rem;
+    position: relative;
+    top: -10px;
+}
+
+.period {
+    font-size: 1rem;
+    color: var(--body-color);
+}
+
+/* Demo Video */
+.demo-video {
+    position: relative;
+    cursor: pointer;
+}
+
+.play-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    color: white;
+    opacity: 0.8;
+    transition: all 0.3s;
+}
+
+.demo-video:hover .play-button {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* Testimonials */
+.avatar img {
+    object-fit: cover;
+}
+
+/* Social Icons */
+.social-icons a {
+    color: white;
+    font-size: 1.5rem;
+    transition: all 0.2s;
+}
+
+.social-icons a:hover {
+    color: var(--primary-light);
+}
+
+/* Dashboard Styles */
+.sidebar {
+    min-height: 100vh;
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.sidebar-brand {
+    padding: 1.5rem 1rem;
+    font-size: 1.2rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+}
+
+.sidebar-divider {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    margin: 0 1rem;
+}
+
+.sidebar-heading {
+    padding: 0 1rem;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.13rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.nav-item .nav-link {
+    padding: 0.75rem 1rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.nav-item .nav-link:hover {
+    color: white;
+}
+
+.nav-item .nav-link i {
+    margin-right: 0.5rem;
+}
+
+.nav-item .nav-link.active {
+    color: white;
+    font-weight: 700;
+}
+
+/* Dashboard Content */
+.dashboard-content {
+    flex: 1;
+}
+
+.topbar {
+    height: 4.375rem;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+.dropdown-menu {
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    border: none;
+}
+
+.dropdown-item:active {
+    background-color: var(--primary-color);
+}
+
+/* Dashboard Cards */
+.card-dashboard {
+    border-left: 4px solid var(--primary-color);
+}
+
+.card-dashboard.card-primary {
+    border-left-color: var(--primary-color);
+}
+
+.card-dashboard.card-success {
+    border-left-color: var(--success-color);
+}
+
+.card-dashboard.card-info {
+    border-left-color: var(--info-color);
+}
+
+.card-dashboard.card-warning {
+    border-left-color: var(--warning-color);
+}
+
+.card-dashboard.card-danger {
+    border-left-color: var(--danger-color);
+}
+
+/* Login & Signup Pages */
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+}
+
+.auth-card {
+    max-width: 450px;
+    width: 100%;
+    padding: 2rem;
+}
+
+.auth-logo {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.auth-logo img {
+    height: 60px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 60px 0;
+    }
+    
+    .price {
+        font-size: 2rem;
+    }
+    
+    .currency {
+        font-size: 1.2rem;
+    }
+    
+    .play-button {
+        font-size: 3rem;
+    }
+}
