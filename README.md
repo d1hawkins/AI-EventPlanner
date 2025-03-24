@@ -113,11 +113,16 @@ This script creates all necessary Azure resources including resource group, app 
 
 2. Configure GitHub repository secrets:
 
-- `AZURE_CREDENTIALS`: Azure service principal credentials
+- `AZURE_CREDENTIALS`: Azure service principal credentials (JSON content from AZURE_CREDENTIALS.json)
 - `ACR_LOGIN_SERVER`: Azure Container Registry login server
 - `ACR_USERNAME`: Azure Container Registry username
 - `ACR_PASSWORD`: Azure Container Registry password
 - `AZURE_RESOURCE_GROUP`: Azure resource group name
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `SENDGRID_API_KEY`: Your SendGrid API key
+- `GOOGLE_API_KEY`: Your Google API key
+- `STRIPE_API_KEY`: Your Stripe API key
+- `STRIPE_WEBHOOK_SECRET`: Your Stripe webhook secret
 
 3. Push changes to the main branch to trigger the CI/CD pipeline.
 
@@ -140,6 +145,29 @@ alembic upgrade head
 ```
 
 In production, migrations are automatically applied during deployment.
+
+## Secrets Management
+
+This project uses environment variables for sensitive information. To set up:
+
+1. Copy template files to create your configuration:
+   ```bash
+   cp AZURE_CREDENTIALS.template.json AZURE_CREDENTIALS.json
+   cp .env.saas.template .env.saas
+   cp .env.backup.template .env.backup
+   ```
+
+2. Edit these files to add your actual credentials
+
+3. For GitHub Actions deployment, add these secrets to your repository:
+   - `AZURE_CREDENTIALS`: The entire JSON content from your AZURE_CREDENTIALS.json file
+   - `OPENAI_API_KEY`: Your OpenAI API key
+   - `SENDGRID_API_KEY`: Your SendGrid API key
+   - `GOOGLE_API_KEY`: Your Google API key
+   - `STRIPE_API_KEY`: Your Stripe API key
+   - `STRIPE_WEBHOOK_SECRET`: Your Stripe webhook secret
+
+These files are in .gitignore to prevent accidental commits of sensitive information.
 
 ## Enhanced Coordinator Agent
 

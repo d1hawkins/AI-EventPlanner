@@ -54,3 +54,14 @@ azuredeployment.json
 *.publishsettings
 deployments/
 LogFiles/
+
+# Sensitive files with credentials
+AZURE_CREDENTIALS.json
+azure-credentials.json
+.env.saas
+.env.backup*
+
+# Keep templates
+!AZURE_CREDENTIALS.template.json
+!.env.saas.template
+!.env.backup.template

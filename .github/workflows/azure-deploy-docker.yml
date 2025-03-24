@@ -46,6 +46,12 @@ jobs:
         file: ./Dockerfile.saas
         push: true
         tags: aieventplannerregistry.azurecr.io/ai-event-planner-saas:latest
+        build-args: |
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}
+          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+          STRIPE_API_KEY=${{ secrets.STRIPE_API_KEY }}
+          STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
         
     - name: Create App Service Plan
       run: |
@@ -63,7 +69,12 @@ jobs:
           WEBSITES_PORT=8000 \
           DOCKER_REGISTRY_SERVER_URL=https://aieventplannerregistry.azurecr.io \
           DOCKER_REGISTRY_SERVER_USERNAME=${{ steps.acr-creds.outputs.username }} \
-          DOCKER_REGISTRY_SERVER_PASSWORD=${{ steps.acr-creds.outputs.password }}
+          DOCKER_REGISTRY_SERVER_PASSWORD=${{ steps.acr-creds.outputs.password }} \
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+          SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }} \
+          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }} \
+          STRIPE_API_KEY=${{ secrets.STRIPE_API_KEY }} \
+          STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
           
     - name: Configure environment variables
       run: |
