@@ -32,6 +32,7 @@ app.middleware("http")(tenant_middleware)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="app/web/static"), name="static")
+app.mount("/saas", StaticFiles(directory="app/web/static/saas"), name="saas_static")
 
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])

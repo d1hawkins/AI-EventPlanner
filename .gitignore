@@ -52,3 +52,5 @@ htmlcov/
 .azure/
 azuredeployment.json
 *.publishsettings
+deployments/
+LogFiles/

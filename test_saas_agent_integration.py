@@ -15,7 +15,7 @@ import requests
 from typing import Dict, Any, List, Optional
 
 # Set up test environment
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8002"
 AUTH_HEADERS = {}
 
 

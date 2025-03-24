@@ -36,6 +36,8 @@ jobs:
       env:
         DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
         SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
     
     - name: Login to Azure
       uses: azure/login@v1
@@ -55,6 +57,7 @@ jobs:
         mkdir -p deploy
         cp -r app deploy/
         cp -r migrations deploy/
+        cp -r scripts deploy/
         cp alembic.ini deploy/
         cp requirements.txt deploy/
         
@@ -66,8 +69,8 @@ jobs:
         # Install dependencies
         pip install -r requirements.txt
         
-        # Run database migrations
-        alembic upgrade head
+        # Run database migrations using the migrate.py script
+        python -m scripts.migrate
         
         # Start the application
         gunicorn app.main_saas:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
@@ -107,8 +110,72 @@ jobs:
         # Install Azure CLI extensions
         az extension add --name db-up
         
-        # Run migrations
-        az webapp ssh --name ai-event-planner-saas --resource-group ai-event-planner-rg --command "cd /home/site/wwwroot && alembic upgrade head"
+        # Check if jq is installed
+        if ! command -v jq &> /dev/null; then
+          echo "Warning: jq is not installed. Using alternative approach."
+          
+          # Get publishing credentials using direct Azure CLI queries
+          USERNAME=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas --query publishingUserName -o tsv)
+          PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas --query publishingPassword -o tsv)
+        else
+          # Get publishing credentials using jq
+          CREDS=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas --query "{username:publishingUserName, password:publishingPassword}" -o json)
+          USERNAME=$(echo $CREDS | jq -r '.username')
+          PASSWORD=$(echo $CREDS | jq -r '.password')
+        fi
+        
+        # First, find the Python executable path
+        echo "Finding Python executable path..."
+        FIND_PYTHON_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+          -H "Content-Type: application/json" \
+          https://ai-event-planner-saas.scm.azurewebsites.net/api/command \
+          -d "{\"command\":\"find / -name python3 2>/dev/null | head -n 1\", \"dir\":\"/\"}")
+        
+        # Extract status code and response body
+        FIND_PYTHON_HTTP_STATUS=$(echo "$FIND_PYTHON_RESPONSE" | tail -n1)
+        FIND_PYTHON_BODY=$(echo "$FIND_PYTHON_RESPONSE" | sed '$d')
+        
+        echo "Find Python response: $FIND_PYTHON_BODY"
+        echo "HTTP status: $FIND_PYTHON_HTTP_STATUS"
+        
+        # Extract Python path from the response
+        PYTHON_PATH=$(echo "$FIND_PYTHON_BODY" | grep -o '/[a-zA-Z0-9/_.-]*python3' | head -n 1 || echo "")
+        
+        if [ -z "$PYTHON_PATH" ]; then
+          echo "Python path not found, using default /usr/local/bin/python3"
+          PYTHON_PATH="/usr/local/bin/python3"
+        else
+          echo "Found Python path: $PYTHON_PATH"
+        fi
+        
+        # Use the Python path to run the migration script
+        echo "Running migrations..."
+        RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+          -H "Content-Type: application/json" \
+          https://ai-event-planner-saas.scm.azurewebsites.net/api/command \
+          -d "{\"command\":\"$PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
+        
+        # Extract status code and response body
+        HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+        RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
+        
+        echo "Migration response: $RESPONSE_BODY"
+        echo "HTTP status: $HTTP_STATUS"
+        
+        # Check if the request was successful
+        if [ "$HTTP_STATUS" -ne 200 ]; then
+          echo "Migration failed with status $HTTP_STATUS"
+          echo "Response: $RESPONSE_BODY"
+          exit 1
+        fi
+        
+        # Check if the response contains error messages
+        if echo "$RESPONSE_BODY" | grep -i "error"; then
+          echo "Migration script reported errors"
+          exit 1
+        fi
+        
+        echo "Migration completed successfully"
     
     - name: Logout from Azure
       run: |

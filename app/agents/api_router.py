@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from app.db.session import get_db
 from app.auth.dependencies import get_current_user
 from app.middleware.tenant import get_tenant_id, require_tenant
+from app.subscription.feature_control import get_feature_control
 from app.agents.agent_router import (
     get_agent_response,
     get_conversation_history,
@@ -37,6 +38,25 @@ class AgentMessageResponse(BaseModel):
     conversation_id: str = Field(..., description="Conversation ID")
     agent_type: str = Field(..., description="Type of agent used")
     organization_id: Optional[int] = Field(None, description="Organization ID")
+
+
+class AgentMetadata(BaseModel):
+    """Agent metadata model."""
+    
+    agent_type: str = Field(..., description="Type of agent")
+    name: str = Field(..., description="Display name of the agent")
+    description: str = Field(..., description="Description of the agent's capabilities")
+    icon: str = Field(..., description="Icon identifier for the agent")
+    available: bool = Field(..., description="Whether the agent is available for the current subscription")
+    subscription_tier: str = Field(..., description="Minimum subscription tier required for this agent")
+
+
+class AgentAvailabilityResponse(BaseModel):
+    """Agent availability response model."""
+    
+    agents: List[AgentMetadata] = Field(..., description="List of agents with availability information")
+    organization_id: Optional[int] = Field(None, description="Organization ID")
+    subscription_tier: str = Field(..., description="Current subscription tier")
 
 
 class ConversationHistoryResponse(BaseModel):
@@ -66,8 +86,152 @@ class DeleteConversationResponse(BaseModel):
     organization_id: Optional[int] = Field(None, description="Organization ID")
 
 
+# Agent metadata definitions
+AGENT_METADATA = {
+    "coordinator": {
+        "name": "Event Coordinator",
+        "description": "Orchestrates the event planning process and delegates tasks to specialized agents",
+        "icon": "bi-diagram-3",
+        "subscription_tier": "free"
+    },
+    "resource_planning": {
+        "name": "Resource Planner",
+        "description": "Plans and manages resources needed for your event",
+        "icon": "bi-calendar-check",
+        "subscription_tier": "free"
+    },
+    "financial": {
+        "name": "Financial Advisor",
+        "description": "Handles budgeting, cost estimation, and financial planning",
+        "icon": "bi-cash-coin",
+        "subscription_tier": "professional"
+    },
+    "stakeholder_management": {
+        "name": "Stakeholder Manager",
+        "description": "Manages communication and relationships with event stakeholders",
+        "icon": "bi-people",
+        "subscription_tier": "professional"
+    },
+    "marketing_communications": {
+        "name": "Marketing Specialist",
+        "description": "Creates marketing strategies and communication plans",
+        "icon": "bi-megaphone",
+        "subscription_tier": "professional"
+    },
+    "project_management": {
+        "name": "Project Manager",
+        "description": "Manages timelines, tasks, and overall project execution",
+        "icon": "bi-kanban",
+        "subscription_tier": "professional"
+    },
+    "analytics": {
+        "name": "Analytics Expert",
+        "description": "Analyzes event data and provides insights for improvement",
+        "icon": "bi-graph-up",
+        "subscription_tier": "enterprise"
+    },
+    "compliance_security": {
+        "name": "Compliance & Security Specialist",
+        "description": "Ensures event compliance with regulations and security requirements",
+        "icon": "bi-shield-check",
+        "subscription_tier": "enterprise"
+    }
+}
+
+# Subscription tier hierarchy
+SUBSCRIPTION_TIERS = {
+    "free": 0,
+    "professional": 1,
+    "enterprise": 2
+}
+
 # Create router
 router = APIRouter()
+
+
+@router.get("/agents/available", response_model=AgentAvailabilityResponse)
+async def get_available_agents(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get available agents for the current subscription tier.
+    
+    Args:
+        request: FastAPI request
+        db: Database session
+        current_user_id: Current user ID
+        
+    Returns:
+        List of available agents with metadata
+    """
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Default to free tier
+        subscription_tier = "free"
+        
+        try:
+            # Get feature control with tenant context
+            feature_control = get_feature_control(db=db, organization_id=organization_id)
+            
+            # Get current subscription tier
+            subscription_tier = feature_control.get_subscription_tier()
+        except Exception as feature_error:
+            # Log the error but continue with free tier
+            print(f"Error getting subscription tier: {str(feature_error)}")
+            # Default to free tier
+            subscription_tier = "free"
+        
+        tier_level = SUBSCRIPTION_TIERS.get(subscription_tier, 0)
+        
+        # Build list of agents with availability information
+        agents = []
+        for agent_type, metadata in AGENT_METADATA.items():
+            agent_tier = metadata["subscription_tier"]
+            agent_tier_level = SUBSCRIPTION_TIERS.get(agent_tier, 0)
+            
+            # Check if agent is available for current subscription
+            available = tier_level >= agent_tier_level
+            
+            agents.append(AgentMetadata(
+                agent_type=agent_type,
+                name=metadata["name"],
+                description=metadata["description"],
+                icon=metadata["icon"],
+                available=available,
+                subscription_tier=agent_tier
+            ))
+        
+        return {
+            "agents": agents,
+            "organization_id": organization_id,
+            "subscription_tier": subscription_tier
+        }
+        
+    except Exception as e:
+        # Handle errors
+        print(f"Error in get_available_agents: {str(e)}")
+        
+        # Return a default response with all agents
+        agents = []
+        for agent_type, metadata in AGENT_METADATA.items():
+            agents.append(AgentMetadata(
+                agent_type=agent_type,
+                name=metadata["name"],
+                description=metadata["description"],
+                icon=metadata["icon"],
+                available=True,  # Default to available
+                subscription_tier=metadata["subscription_tier"]
+            ))
+        
+        return {
+            "agents": agents,
+            "organization_id": None,
+            "subscription_tier": "free"
+        }
 
 
 @router.post("/agents/message", response_model=AgentMessageResponse)

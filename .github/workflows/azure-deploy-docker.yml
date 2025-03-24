@@ -1,0 +1,91 @@
+name: Deploy to Azure with Docker
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+      
+    - name: Log in to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Create Azure Container Registry
+      run: |
+        az acr create --resource-group ai-event-planner-rg --name aieventplannerregistry --sku Basic --admin-enabled true
+      continue-on-error: true
+        
+    - name: Get ACR credentials
+      id: acr-creds
+      run: |
+        ACR_USERNAME=$(az acr credential show --name aieventplannerregistry --query "username" -o tsv)
+        ACR_PASSWORD=$(az acr credential show --name aieventplannerregistry --query "passwords[0].value" -o tsv)
+        echo "::set-output name=username::$ACR_USERNAME"
+        echo "::set-output name=password::$ACR_PASSWORD"
+        
+    - name: Log in to ACR
+      uses: docker/login-action@v1
+      with:
+        registry: aieventplannerregistry.azurecr.io
+        username: ${{ steps.acr-creds.outputs.username }}
+        password: ${{ steps.acr-creds.outputs.password }}
+        
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./Dockerfile.saas
+        push: true
+        tags: aieventplannerregistry.azurecr.io/ai-event-planner-saas:latest
+        
+    - name: Create App Service Plan
+      run: |
+        az appservice plan create --name ai-event-planner-saas-plan --resource-group ai-event-planner-rg --is-linux --sku B1
+      continue-on-error: true
+        
+    - name: Create Web App
+      run: |
+        az webapp create --resource-group ai-event-planner-rg --plan ai-event-planner-saas-plan --name ai-event-planner-saas --deployment-container-image-name aieventplannerregistry.azurecr.io/ai-event-planner-saas:latest
+      continue-on-error: true
+        
+    - name: Configure Web App
+      run: |
+        az webapp config appsettings set --resource-group ai-event-planner-rg --name ai-event-planner-saas --settings \
+          WEBSITES_PORT=8000 \
+          DOCKER_REGISTRY_SERVER_URL=https://aieventplannerregistry.azurecr.io \
+          DOCKER_REGISTRY_SERVER_USERNAME=${{ steps.acr-creds.outputs.username }} \
+          DOCKER_REGISTRY_SERVER_PASSWORD=${{ steps.acr-creds.outputs.password }}
+          
+    - name: Configure environment variables
+      run: |
+        # Get environment variables from .env.azure file
+        while IFS= read -r line || [[ -n "$line" ]]; do
+          # Skip comments and empty lines
+          [[ "$line" =~ ^#.*$ ]] && continue
+          [[ -z "$line" ]] && continue
+          
+          # Extract key and value
+          key=$(echo "$line" | cut -d= -f1)
+          value=$(echo "$line" | cut -d= -f2-)
+          
+          # Set app setting
+          az webapp config appsettings set --resource-group ai-event-planner-rg --name ai-event-planner-saas --settings "$key=$value"
+        done < .env.azure
+        
+    - name: Restart Web App
+      run: |
+        az webapp restart --resource-group ai-event-planner-rg --name ai-event-planner-saas
+        
+    - name: Output deployment URL
+      run: |
+        echo "Application deployed to: https://ai-event-planner-saas.azurewebsites.net/"
+        echo "SaaS application available at: https://ai-event-planner-saas.azurewebsites.net/static/saas/index.html"

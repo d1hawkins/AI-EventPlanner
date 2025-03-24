@@ -9,6 +9,7 @@ class User(Base):
     """User model for authentication and conversation ownership."""
     
     __tablename__ = "users"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
@@ -111,6 +112,7 @@ class Conversation(Base):
     """Conversation model for tracking chat sessions."""
     
     __tablename__ = "conversations"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
@@ -131,6 +133,7 @@ class Message(Base):
     """Message model for storing chat messages."""
     
     __tablename__ = "messages"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"))
@@ -146,6 +149,7 @@ class AgentState(Base):
     """AgentState model for storing the state of the agent."""
     
     __tablename__ = "agent_states"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"), unique=True)
@@ -160,6 +164,7 @@ class Event(Base):
     """Event model for storing event details."""
     
     __tablename__ = "events"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"), unique=True)
@@ -186,6 +191,7 @@ class Task(Base):
     """Task model for tracking event planning tasks."""
     
     __tablename__ = "tasks"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("events.id"))
@@ -205,6 +211,7 @@ class Stakeholder(Base):
     """Stakeholder model for tracking event stakeholders."""
     
     __tablename__ = "stakeholders"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("events.id"))

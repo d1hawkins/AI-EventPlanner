@@ -189,6 +189,7 @@ echo "Created temporary directory: $DEPLOY_DIR"
 # Copy application files to the deployment directory
 cp -r app $DEPLOY_DIR/
 cp -r migrations $DEPLOY_DIR/
+cp -r scripts $DEPLOY_DIR/
 cp -r alembic.ini $DEPLOY_DIR/
 cp -r requirements.txt $DEPLOY_DIR/
 
@@ -200,8 +201,8 @@ set -e
 # Install dependencies
 pip install -r requirements.txt
 
-# Run database migrations
-alembic upgrade head
+# Run database migrations using the migrate.py script
+python -m scripts.migrate
 
 # Start the application
 gunicorn app.main_saas:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000

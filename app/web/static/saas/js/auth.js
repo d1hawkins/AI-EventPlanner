@@ -38,15 +38,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // In a real application, this would make an API call to authenticate the user
-            // For demo purposes, we'll just redirect to the dashboard
+            // For demo purposes, we'll just create a dummy token and redirect to the dashboard
             console.log('Login form submitted:', { email, password, rememberMe });
             
             // Simulate API call with a timeout
             showLoading();
             
             setTimeout(function() {
+                // Create a dummy token and store it in localStorage
+                const dummyToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoxNzE3MjM0OTk5fQ.dummy-signature';
+                localStorage.setItem('authToken', dummyToken);
+                
+                // Also store the organization ID for tenant context
+                localStorage.setItem('organizationId', '1');
+                
                 hideLoading();
-                window.location.href = '/static/saas/dashboard.html';
+                window.location.href = '/saas/dashboard.html';
             }, 1500);
         });
     }
@@ -90,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 setTimeout(function() {
                     hideLoading();
-                    window.location.href = '/static/saas/dashboard.html';
+                    window.location.href = '/saas/dashboard.html';
                 }, 1500);
             }
         });

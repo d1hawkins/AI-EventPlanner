@@ -13,11 +13,11 @@ from app.state.manager import StateManager
 from app.db.models_saas import Organization
 
 
-class TenantAwareStateManager(StateManager):
+class TenantAwareStateManager:
     """
     Tenant-aware state manager for multi-tenant agent operations.
     
-    This class extends the base StateManager to include organization/tenant context,
+    This class provides organization/tenant context for state management,
     ensuring proper data isolation between different organizations.
     """
     
@@ -28,8 +28,8 @@ class TenantAwareStateManager(StateManager):
         Args:
             organization_id: The organization ID for tenant context
         """
-        super().__init__()
         self.organization_id = organization_id
+        self._conversations = {}
     
     def get_conversation_state(self, conversation_id: str) -> Dict[str, Any]:
         """
@@ -41,8 +41,8 @@ class TenantAwareStateManager(StateManager):
         Returns:
             The conversation state
         """
-        # Get the base state
-        state = super().get_conversation_state(conversation_id)
+        # Get the state from in-memory storage
+        state = self._conversations.get(conversation_id, {})
         
         # Add organization context if not present
         if self.organization_id and "organization_id" not in state:
@@ -62,8 +62,8 @@ class TenantAwareStateManager(StateManager):
         if self.organization_id:
             state["organization_id"] = self.organization_id
         
-        # Update the state
-        super().update_conversation_state(conversation_id, state)
+        # Update the state in in-memory storage
+        self._conversations[conversation_id] = state
     
     def list_conversations(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         """
@@ -76,20 +76,38 @@ class TenantAwareStateManager(StateManager):
         Returns:
             List of conversations
         """
-        # Get all conversations
-        all_conversations = super().list_conversations(limit=None, offset=0)
-        
-        # Filter by organization if organization_id is set
-        if self.organization_id:
-            filtered_conversations = [
-                conv for conv in all_conversations 
-                if conv.get("organization_id") == self.organization_id
-            ]
+        # Convert conversations to list of dicts with metadata
+        all_conversations = []
+        for conv_id, state in self._conversations.items():
+            # Skip if organization_id doesn't match
+            if self.organization_id and state.get("organization_id") != self.organization_id:
+                continue
+                
+            # Extract basic metadata
+            conversation = {
+                "id": conv_id,
+                "organization_id": state.get("organization_id"),
+                "agent_type": state.get("agent_type", "unknown"),
+                "created_at": state.get("created_at", datetime.utcnow().isoformat()),
+                "last_message": None
+            }
             
-            # Apply pagination
-            paginated = filtered_conversations[offset:offset+limit] if limit else filtered_conversations
-            return paginated
+            # Extract last message if available
+            messages = state.get("messages", [])
+            if messages:
+                last_message = messages[-1]
+                conversation["last_message"] = {
+                    "content": last_message.get("content", ""),
+                    "role": last_message.get("role", "user"),
+                    "timestamp": last_message.get("timestamp", datetime.utcnow().isoformat())
+                }
+            
+            all_conversations.append(conversation)
         
+        # Sort by created_at (newest first)
+        all_conversations.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        
+        # Apply pagination
         return all_conversations[offset:offset+limit] if limit else all_conversations
     
     def delete_conversation(self, conversation_id: str) -> bool:
@@ -102,13 +120,19 @@ class TenantAwareStateManager(StateManager):
         Returns:
             True if deleted, False otherwise
         """
+        # Check if the conversation exists
+        if conversation_id not in self._conversations:
+            return False
+            
         # Check if the conversation belongs to this organization
-        state = self.get_conversation_state(conversation_id)
+        state = self._conversations.get(conversation_id, {})
         if self.organization_id and state.get("organization_id") != self.organization_id:
             # Cannot delete conversations from other organizations
             return False
         
-        return super().delete_conversation(conversation_id)
+        # Delete the conversation
+        del self._conversations[conversation_id]
+        return True
     
     def create_initial_state(self, conversation_id: str, initial_state: Dict[str, Any]) -> None:
         """
@@ -125,8 +149,8 @@ class TenantAwareStateManager(StateManager):
         # Add creation timestamp
         initial_state["created_at"] = datetime.utcnow().isoformat()
         
-        # Create the initial state
-        super().create_initial_state(conversation_id, initial_state)
+        # Store the initial state
+        self._conversations[conversation_id] = initial_state
 
 
 def get_tenant_aware_state_manager(organization_id: Optional[int] = None) -> TenantAwareStateManager:

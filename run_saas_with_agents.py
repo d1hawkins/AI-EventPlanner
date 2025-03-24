@@ -16,7 +16,7 @@ load_dotenv(".env.saas")
 if not os.getenv("HOST"):
     os.environ["HOST"] = "0.0.0.0"
 if not os.getenv("PORT"):
-    os.environ["PORT"] = "8000"
+    os.environ["PORT"] = "8002"
 if not os.getenv("ENVIRONMENT"):
     os.environ["ENVIRONMENT"] = "development"
 if not os.getenv("APP_VERSION"):

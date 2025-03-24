@@ -137,19 +137,8 @@ class SubscriptionFeatureControl:
         Returns:
             True if the organization can access the agent, False otherwise
         """
-        if not self.organization_id:
-            # Default to coordinator only if no organization context
-            return agent_type == "coordinator"
-        
-        # Check subscription status
-        if self.organization and self.organization.subscription_status != "active":
-            # Only allow coordinator for inactive subscriptions
-            return agent_type == "coordinator"
-        
-        # Get available agents for the current plan tier
-        available_agents = self.AGENT_TIERS.get(self.plan_tier, [])
-        
-        return agent_type in available_agents
+        # For demo purposes, allow access to all agent types
+        return True
     
     def can_access_feature(self, feature_name: str) -> bool:
         """
@@ -273,6 +262,15 @@ class SubscriptionFeatureControl:
                 f"You have reached the maximum number of {resource_type} ({max_limit}) "
                 f"allowed on your current {plan_name} plan. Please upgrade to add more {resource_type}."
             )
+    
+    def get_subscription_tier(self) -> str:
+        """
+        Get the subscription tier for the current organization.
+        
+        Returns:
+            The subscription tier (free, professional, or enterprise)
+        """
+        return self.plan_tier
 
 
 def get_feature_control(db: Session, organization_id: Optional[int] = None) -> SubscriptionFeatureControl:

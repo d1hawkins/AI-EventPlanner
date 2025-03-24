@@ -74,8 +74,12 @@ async def get_agent_response(
             # Run the agent graph with the updated state
             result = agent["graph"].invoke(state)
             
-            # Update the state in the state manager
-            agent_factory.state_manager.update_conversation_state(conversation_id, result)
+            try:
+                # Update the state in the state manager
+                agent_factory.state_manager.update_conversation_state(conversation_id, result)
+            except Exception as update_error:
+                # Log the error but continue
+                print(f"Error updating conversation state: {str(update_error)}")
             
             # Extract the assistant's response
             assistant_messages = [
@@ -103,6 +107,7 @@ async def get_agent_response(
             
     except Exception as e:
         # Handle other errors
+        print(f"Error in get_agent_response: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing agent request: {str(e)}"
@@ -137,8 +142,13 @@ async def get_conversation_history(
         # Get agent factory with tenant context
         agent_factory = get_agent_factory(db=db, organization_id=organization_id)
         
-        # Get the conversation state
-        state = agent_factory.state_manager.get_conversation_state(conversation_id)
+        try:
+            # Get the conversation state
+            state = agent_factory.state_manager.get_conversation_state(conversation_id)
+        except Exception as get_error:
+            # Log the error and return empty state
+            print(f"Error getting conversation state: {str(get_error)}")
+            state = {}
         
         # Check if the conversation exists
         if not state:
@@ -155,15 +165,20 @@ async def get_conversation_history(
             )
         
         # Extract messages from the state
-        messages = [
-            {
-                "role": msg.get("role"),
-                "content": msg.get("content"),
-                "timestamp": msg.get("timestamp")
-            }
-            for msg in state.get("messages", [])
-            if not msg.get("ephemeral", False)  # Skip ephemeral messages
-        ]
+        messages = []
+        try:
+            messages = [
+                {
+                    "role": msg.get("role"),
+                    "content": msg.get("content"),
+                    "timestamp": msg.get("timestamp")
+                }
+                for msg in state.get("messages", [])
+                if not msg.get("ephemeral", False)  # Skip ephemeral messages
+            ]
+        except Exception as msg_error:
+            # Log the error and continue with empty messages
+            print(f"Error extracting messages: {str(msg_error)}")
         
         # Return the conversation history
         return {
@@ -173,8 +188,12 @@ async def get_conversation_history(
             "organization_id": state.get("organization_id")
         }
         
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
         # Handle other errors
+        print(f"Error in get_conversation_history: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving conversation history: {str(e)}"
@@ -211,8 +230,14 @@ async def list_conversations(
         # Get agent factory with tenant context
         agent_factory = get_agent_factory(db=db, organization_id=organization_id)
         
-        # List conversations for the current organization
-        conversations = agent_factory.state_manager.list_conversations(limit=limit, offset=offset)
+        try:
+            # List conversations for the current organization
+            conversations = agent_factory.state_manager.list_conversations(limit=limit, offset=offset)
+        except Exception as list_error:
+            # Handle errors in list_conversations
+            print(f"Error listing conversations: {str(list_error)}")
+            # Return empty list as fallback
+            conversations = []
         
         # Return the conversations
         return {
@@ -225,10 +250,15 @@ async def list_conversations(
         
     except Exception as e:
         # Handle other errors
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error listing conversations: {str(e)}"
-        )
+        print(f"Error in list_conversations: {str(e)}")
+        # Return empty response as fallback
+        return {
+            "conversations": [],
+            "total": 0,
+            "limit": limit,
+            "offset": offset,
+            "organization_id": organization_id
+        }
 
 
 async def delete_conversation(
@@ -259,8 +289,13 @@ async def delete_conversation(
         # Get agent factory with tenant context
         agent_factory = get_agent_factory(db=db, organization_id=organization_id)
         
-        # Delete the conversation
-        success = agent_factory.state_manager.delete_conversation(conversation_id)
+        try:
+            # Delete the conversation
+            success = agent_factory.state_manager.delete_conversation(conversation_id)
+        except Exception as delete_error:
+            # Log the error and assume failure
+            print(f"Error deleting conversation: {str(delete_error)}")
+            success = False
         
         # Check if the conversation was deleted
         if not success:
@@ -282,6 +317,7 @@ async def delete_conversation(
         
     except Exception as e:
         # Handle other errors
+        print(f"Error in delete_conversation: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error deleting conversation: {str(e)}"

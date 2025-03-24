@@ -10,6 +10,7 @@ class Organization(Base):
     Organization/Tenant model for multi-tenancy.
     """
     __tablename__ = "organizations"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
@@ -35,6 +36,7 @@ class OrganizationUser(Base):
     Association table for users and organizations with role information.
     """
     __tablename__ = "organization_users"
+    __table_args__ = {'extend_existing': True}
     
     organization_id = Column(Integer, ForeignKey("organizations.id"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
@@ -53,6 +55,7 @@ class SubscriptionPlan(Base):
     Subscription plan model.
     """
     __tablename__ = "subscription_plans"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
@@ -73,6 +76,7 @@ class SubscriptionInvoice(Base):
     Subscription invoice model.
     """
     __tablename__ = "subscription_invoices"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
