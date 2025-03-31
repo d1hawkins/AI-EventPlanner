@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional
 import json
 from sqlalchemy.orm import Session
 
-from app.db.models_saas import Organization, SubscriptionPlan
+from app.db.models_updated import Organization, SubscriptionPlan
 
 
 class FeatureNotAvailableError(Exception):

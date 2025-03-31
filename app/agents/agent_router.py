@@ -71,6 +71,62 @@ async def get_agent_response(
                 "content": message
             })
             
+            # Ensure required fields are present in the state
+            if agent_type == "coordinator":
+                # Set default phase if missing
+                if "current_phase" not in state:
+                    state["current_phase"] = "information_collection"
+                    print(f"Added missing 'current_phase' field to coordinator state: {conversation_id}")
+                
+                # Set default event_details if missing
+                if "event_details" not in state:
+                    state["event_details"] = {
+                        "event_type": None,
+                        "title": None,
+                        "description": None,
+                        "attendee_count": None,
+                        "scale": None,
+                        "timeline_start": None,
+                        "timeline_end": None
+                    }
+                    print(f"Added missing 'event_details' field to coordinator state: {conversation_id}")
+                
+                # Set default requirements if missing
+                if "requirements" not in state:
+                    state["requirements"] = {
+                        "stakeholders": [],
+                        "resources": [],
+                        "risks": [],
+                        "success_criteria": [],
+                        "budget": {},
+                        "location": {}
+                    }
+                    print(f"Added missing 'requirements' field to coordinator state: {conversation_id}")
+                
+                # Set default information_collected if missing
+                if "information_collected" not in state:
+                    state["information_collected"] = {
+                        "basic_details": False,
+                        "timeline": False,
+                        "budget": False,
+                        "location": False,
+                        "stakeholders": False,
+                        "resources": False,
+                        "success_criteria": False,
+                        "risks": False
+                    }
+                    print(f"Added missing 'information_collected' field to coordinator state: {conversation_id}")
+                
+                # Set default agent_assignments if missing
+                if "agent_assignments" not in state:
+                    state["agent_assignments"] = []
+                    print(f"Added missing 'agent_assignments' field to coordinator state: {conversation_id}")
+                
+                # Set default next_steps if missing
+                if "next_steps" not in state:
+                    state["next_steps"] = ["gather_event_details"]
+                    print(f"Added missing 'next_steps' field to coordinator state: {conversation_id}")
+            
             # Run the agent graph with the updated state
             result = agent["graph"].invoke(state)
             

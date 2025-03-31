@@ -3,7 +3,8 @@ from typing import Dict, Any, Optional
 
 from sqlalchemy.orm import Session
 
-from app.db.models import AgentState, Conversation
+from app.db.models_updated import AgentState
+from app.db.models_updated import Conversation as ConversationModel
 
 
 class StateManager:
@@ -51,8 +52,8 @@ class StateManager:
             Updated AgentState object
         """
         # Check if conversation exists
-        conversation = self.db.query(Conversation).filter(
-            Conversation.id == conversation_id
+        conversation = self.db.query(ConversationModel).filter(
+            ConversationModel.id == conversation_id
         ).first()
         
         if not conversation:

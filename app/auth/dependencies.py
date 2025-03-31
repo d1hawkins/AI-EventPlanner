@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.db.session import get_db
-from app.db.models import User
+from app.db.models_updated import User
 from app.schemas.user import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
@@ -37,7 +37,7 @@ def create_access_token(subject: str, expires_delta: Optional[timedelta] = None)
 
 def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
-) -> int:
+) -> User:
     """
     Get the current authenticated user.
     
@@ -46,12 +46,12 @@ def get_current_user(
         token: JWT token
         
     Returns:
-        User ID
+        User object
         
     Raises:
         HTTPException: If authentication fails
     """
-    # For demo purposes, bypass authentication and return a dummy user ID
+    # For demo purposes, bypass authentication and return a dummy user
     # In a real application, this would validate the token and return the actual user
     
     try:
@@ -59,10 +59,30 @@ def get_current_user(
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_signature": False})
         user_id = payload.get("sub")
         if user_id:
-            return int(user_id)
+            user_id = int(user_id)
+            # Try to get the user from the database
+            user = db.query(User).filter(User.id == user_id).first()
+            if user:
+                return user
     except Exception:
-        # If token decoding fails, just return a dummy user ID
+        # If token decoding fails, just return a dummy user
         pass
     
-    # Return a dummy user ID for demo purposes
-    return 1
+    # Return a dummy user for demo purposes
+    # First check if user with ID 1 exists
+    user = db.query(User).filter(User.id == 1).first()
+    if user:
+        return user
+    
+    # If no user exists, create a dummy user
+    dummy_user = User(
+        id=1,
+        email="demo@example.com",
+        username="demo",
+        hashed_password="dummy_hash",
+        is_active=True
+    )
+    db.add(dummy_user)
+    db.commit()
+    db.refresh(dummy_user)
+    return dummy_user

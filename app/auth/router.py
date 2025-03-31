@@ -8,7 +8,7 @@ from passlib.context import CryptContext
 
 from app.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from app.db.session import get_db
-from app.db.models import User
+from app.db.models_updated import User
 from app.schemas.user import User as UserSchema, UserCreate, Token
 from app.auth.dependencies import create_access_token, get_current_user
 

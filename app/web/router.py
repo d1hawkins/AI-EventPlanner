@@ -7,7 +7,8 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.db.models import User, Conversation, Message, AgentState, Event, Task
+from app.db.models_updated import User, Message, AgentState, Event, Task
+from app.db.models_updated import Conversation as ConversationModel
 from app.auth.dependencies import get_current_user
 from app.schemas.event import ConversationCreate, Conversation as ConversationSchema, ConversationMessage
 from app.schemas.project import TaskUpdateSchema
@@ -36,7 +37,7 @@ async def create_conversation(
         Created conversation
     """
     # Create a new conversation
-    conversation = Conversation(
+    conversation = ConversationModel(
         user_id=current_user.id,
         title=conversation_in.title,
         created_at=datetime.utcnow(),
@@ -69,8 +70,8 @@ async def list_conversations(
     Returns:
         List of conversations
     """
-    conversations = db.query(Conversation).filter(
-        Conversation.user_id == current_user.id
+    conversations = db.query(ConversationModel).filter(
+        ConversationModel.user_id == current_user.id
     ).all()
     
     return conversations
@@ -96,9 +97,9 @@ async def get_conversation(
     Raises:
         HTTPException: If conversation not found or not owned by user
     """
-    conversation = db.query(Conversation).filter(
-        Conversation.id == conversation_id,
-        Conversation.user_id == current_user.id
+    conversation = db.query(ConversationModel).filter(
+        ConversationModel.id == conversation_id,
+        ConversationModel.user_id == current_user.id
     ).first()
     
     if not conversation:
@@ -127,9 +128,9 @@ async def delete_conversation(
     Raises:
         HTTPException: If conversation not found or not owned by user
     """
-    conversation = db.query(Conversation).filter(
-        Conversation.id == conversation_id,
-        Conversation.user_id == current_user.id
+    conversation = db.query(ConversationModel).filter(
+        ConversationModel.id == conversation_id,
+        ConversationModel.user_id == current_user.id
     ).first()
     
     if not conversation:
@@ -181,9 +182,9 @@ async def get_event_tasks(
                 print(f"Found event with ID {numeric_id}")
                 # If event has a conversation, verify user has access to it
                 if event.conversation_id:
-                    conversation = db.query(Conversation).filter(
-                        Conversation.id == event.conversation_id,
-                        Conversation.user_id == current_user.id
+                    conversation = db.query(ConversationModel).filter(
+                        ConversationModel.id == event.conversation_id,
+                        ConversationModel.user_id == current_user.id
                     ).first()
                     
                     if not conversation:
@@ -329,9 +330,9 @@ async def update_task(
     
     # If event has a conversation, verify user has access to it
     if event.conversation_id:
-        conversation = db.query(Conversation).filter(
-            Conversation.id == event.conversation_id,
-            Conversation.user_id == current_user.id
+        conversation = db.query(ConversationModel).filter(
+            ConversationModel.id == event.conversation_id,
+            ConversationModel.user_id == current_user.id
         ).first()
         
         if not conversation:
@@ -384,9 +385,9 @@ async def websocket_endpoint(
             print(f"User authenticated: {user.username} (ID: {user.id})")
             
             # Verify user has access to this conversation
-            conversation = db.query(Conversation).filter(
-                Conversation.id == conversation_id,
-                Conversation.user_id == user.id
+            conversation = db.query(ConversationModel).filter(
+                ConversationModel.id == conversation_id,
+                ConversationModel.user_id == user.id
             ).first()
             
             if not conversation:

@@ -10,7 +10,7 @@ from datetime import datetime
 import json
 
 from app.state.manager import StateManager
-from app.db.models_saas import Organization
+from app.db.models_updated import Organization
 
 
 class TenantAwareStateManager:

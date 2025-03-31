@@ -65,3 +65,4 @@ azure-credentials.json
 !AZURE_CREDENTIALS.template.json
 !.env.saas.template
 !.env.backup.template
+env-files.zip

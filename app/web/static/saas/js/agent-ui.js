@@ -12,7 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatForm = document.getElementById('chatForm');
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
-    let currentAgentName = document.getElementById('currentAgentName');
+    const currentAgentNameElement = document.getElementById('currentAgentName');
+    let currentAgentName = '';
     const agentCapabilities = document.getElementById('agentCapabilities');
     const subscriptionTier = document.getElementById('subscriptionTier');
     const refreshAgents = document.getElementById('refreshAgents');
@@ -24,7 +25,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedAgentType = null;
     let agents = [];
     let conversations = [];
-    let isAuthenticated = !!localStorage.getItem('authToken');
+    let isAuthenticated = true; // Bypass authentication check for testing
+    
+    // Set a mock auth token for testing
+    localStorage.setItem('authToken', 'mock-auth-token');
+    localStorage.setItem('organizationId', '1');
     
     // Initialize
     init();
@@ -208,6 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.agent-card:not(.disabled)').forEach(card => {
             card.addEventListener('click', function() {
                 const agentType = this.getAttribute('data-agent-type');
+                console.log('Agent card clicked:', agentType);
                 selectAgent(agentType);
             });
         });
@@ -254,7 +260,9 @@ document.addEventListener('DOMContentLoaded', function() {
      * Select an agent
      * @param {string} agentType - The agent type to select
      */
-    function selectAgent(agentType) {
+function selectAgent(agentType) {
+        console.log('selectAgent called with:', agentType);
+        
         // Update selected agent
         selectedAgentType = agentType;
         
@@ -273,8 +281,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update current agent name
         currentAgentName = agent ? agent.name : 'Unknown Agent';
-        if (document.getElementById('currentAgentName')) {
-            document.getElementById('currentAgentName').textContent = currentAgentName;
+        if (currentAgentNameElement) {
+            currentAgentNameElement.textContent = currentAgentName;
         }
         
         // Enable chat input
@@ -296,6 +304,9 @@ document.addEventListener('DOMContentLoaded', function() {
      * @param {string} agentType - The agent type
      */
     function showAgentCapabilities(agentType) {
+        console.log('showAgentCapabilities called with:', agentType);
+        console.log('agents array:', agents);
+        
         const capabilities = agentService.getAgentCapabilities(agentType);
         
         let html = `
@@ -364,8 +375,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Update current agent name
             currentAgentName = agent ? agent.name : 'Unknown Agent';
-            if (document.getElementById('currentAgentName')) {
-                document.getElementById('currentAgentName').textContent = currentAgentName;
+            if (currentAgentNameElement) {
+                currentAgentNameElement.textContent = currentAgentName;
             }
             
             // Enable chat input

@@ -441,7 +441,7 @@ Create a concise summary of this project plan.""")
         # Save tasks to database
         try:
             from app.db.session import SessionLocal
-            from app.db.models import Event, Task
+            from app.db.models_updated import Event, Task
             
             db = SessionLocal()
             

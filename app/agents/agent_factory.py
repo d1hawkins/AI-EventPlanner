@@ -98,8 +98,62 @@ class AgentFactory:
             # Create initial state with tenant context
             initial_state = create_coordinator_initial_state()
             initial_state["organization_id"] = self.organization_id
+            initial_state["agent_type"] = "coordinator"  # Ensure agent_type is set
             self.state_manager.create_initial_state(conversation_id, initial_state)
             state = initial_state
+        
+        # Ensure all required fields are present for the coordinator agent
+        # The agent type is "coordinator" since we're in the _create_coordinator_agent method
+            # Set default phase if missing
+            if "current_phase" not in state:
+                state["current_phase"] = "information_collection"
+            
+            # Set default event_details if missing
+            if "event_details" not in state:
+                state["event_details"] = {
+                    "event_type": None,
+                    "title": None,
+                    "description": None,
+                    "attendee_count": None,
+                    "scale": None,
+                    "timeline_start": None,
+                    "timeline_end": None
+                }
+            
+            # Set default requirements if missing
+            if "requirements" not in state:
+                state["requirements"] = {
+                    "stakeholders": [],
+                    "resources": [],
+                    "risks": [],
+                    "success_criteria": [],
+                    "budget": {},
+                    "location": {}
+                }
+            
+            # Set default information_collected if missing
+            if "information_collected" not in state:
+                state["information_collected"] = {
+                    "basic_details": False,
+                    "timeline": False,
+                    "budget": False,
+                    "location": False,
+                    "stakeholders": False,
+                    "resources": False,
+                    "success_criteria": False,
+                    "risks": False
+                }
+            
+            # Set default agent_assignments if missing
+            if "agent_assignments" not in state:
+                state["agent_assignments"] = []
+            
+            # Set default next_steps if missing
+            if "next_steps" not in state:
+                state["next_steps"] = ["gather_event_details"]
+            
+            # Update the state with all the default values
+            self.state_manager.update_conversation_state(conversation_id, state)
         
         # Create the agent graph
         agent_graph = create_coordinator_graph()

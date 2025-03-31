@@ -9,7 +9,7 @@ class AgentService {
      * Initialize the agent service
      */
     constructor() {
-        this.apiBaseUrl = '/api';
+        this.apiBaseUrl = 'http://localhost:8002/api';
         this.authToken = this.getAuthToken();
         this.currentConversationId = null;
         this.currentAgentType = null;
@@ -182,9 +182,12 @@ class AgentService {
      * @returns {Object} The agent capabilities
      */
     getAgentCapabilities(agentType) {
+        console.log('getAgentCapabilities called with:', agentType);
+        
         // This is a static method that returns hardcoded capabilities for each agent type
         // In a real application, this could be fetched from the server
         const capabilities = {
+            // Map backend agent types to frontend capabilities
             coordinator: {
                 title: 'Event Coordinator',
                 description: 'The Event Coordinator orchestrates the entire event planning process and delegates tasks to specialized agents.',
