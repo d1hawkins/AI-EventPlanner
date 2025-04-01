@@ -175,6 +175,50 @@ class AgentService {
             throw error;
         }
     }
+    
+    /**
+     * Attach an event to a conversation
+     * @param {string} conversationId - The conversation ID
+     * @param {number} eventId - The event ID
+     * @returns {Promise<Object>} A promise that resolves to the success message
+     */
+    async attachEventToConversation(conversationId, eventId) {
+        try {
+            const payload = {
+                conversation_id: conversationId,
+                event_id: eventId
+            };
+            
+            const response = await fetch(`${this.apiBaseUrl}/agents/attach-event`, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify(payload)
+            });
+            
+            return this.handleResponse(response);
+        } catch (error) {
+            console.error('Error attaching event to conversation:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Get events for the current organization
+     * @returns {Promise<Object>} A promise that resolves to the list of events
+     */
+    async getEvents() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}/events`, {
+                method: 'GET',
+                headers: this.getHeaders()
+            });
+            
+            return this.handleResponse(response);
+        } catch (error) {
+            console.error('Error getting events:', error);
+            throw error;
+        }
+    }
 
     /**
      * Get agent capabilities based on agent type

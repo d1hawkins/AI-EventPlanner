@@ -54,6 +54,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Set up event listeners
             setupEventListeners();
+            
+            // Check if first-time user and show onboarding
+            if (!localStorage.getItem('agent_onboarding_completed')) {
+                // Wait for onboarding to be initialized
+                setTimeout(() => {
+                    // Check if onboarding instance exists
+                    if (window.onboarding) {
+                        window.onboarding.start();
+                    }
+                }, 500);
+            }
         } catch (error) {
             console.error('Error initializing agent UI:', error);
             showError('Failed to initialize agent UI. Please try refreshing the page.');
@@ -160,6 +171,22 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             showAttachEventModal();
         });
+        
+        // Agent help button
+        const agentHelpButton = document.getElementById('agentHelpButton');
+        if (agentHelpButton) {
+            agentHelpButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                // Check if onboarding instance exists
+                if (window.onboarding) {
+                    window.onboarding.start();
+                } else {
+                    // Fallback to showing the help modal
+                    const helpModal = new bootstrap.Modal(document.getElementById('agentHelpModal'));
+                    helpModal.show();
+                }
+            });
+        }
     }
     
     /**
@@ -682,9 +709,113 @@ function selectAgent(agentType) {
      * Show the attach event modal
      */
     function showAttachEventModal() {
-        // This would be implemented to show a modal for attaching the conversation to an event
-        // For now, just show a message
-        addSystemMessage('Attaching to event feature is coming soon.');
+        // Check if conversation exists
+        if (!agentService.currentConversationId) {
+            showError('No active conversation to attach to an event.');
+            return;
+        }
+        
+        // Fetch events for the current organization
+        agentService.getEvents()
+            .then(data => {
+                // Check if there are any events
+                if (!data.events || data.events.length === 0) {
+                    showError('No events found. Please create an event first.');
+                    return;
+                }
+                
+                // Create event options
+                let eventOptions = '';
+                data.events.forEach(event => {
+                    eventOptions += `<option value="${event.id}">${event.title}</option>`;
+                });
+                
+                // Create modal HTML
+                const modalHtml = `
+                    <div class="modal fade" id="attachEventModal" tabindex="-1" aria-labelledby="attachEventModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="attachEventModalLabel">Attach to Event</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="attachEventForm">
+                                        <div class="mb-3">
+                                            <label for="eventSelect" class="form-label">Select Event</label>
+                                            <select class="form-select" id="eventSelect" required>
+                                                <option value="">Select an event...</option>
+                                                ${eventOptions}
+                                            </select>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-primary" id="attachEventButton">Attach</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Remove any existing modal
+                const existingModal = document.getElementById('attachEventModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                // Add modal to the page
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('attachEventModal'));
+                modal.show();
+                
+                // Handle attach button click
+                document.getElementById('attachEventButton').addEventListener('click', function() {
+                    const eventId = document.getElementById('eventSelect').value;
+                    if (!eventId) {
+                        return;
+                    }
+                    
+                    // Attach event to conversation
+                    attachEventToConversation(eventId);
+                    
+                    // Close the modal
+                    modal.hide();
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching events:', error);
+                showError('Failed to load events. Please try again.');
+            });
+    }
+    
+    /**
+     * Attach an event to the current conversation
+     * @param {string} eventId - The event ID to attach
+     */
+    function attachEventToConversation(eventId) {
+        // Check if conversation exists
+        if (!agentService.currentConversationId) {
+            showError('No active conversation to attach to an event.');
+            return;
+        }
+        
+        // Show loading message
+        addSystemMessage('Attaching event to conversation...');
+        
+        // Send request to attach event
+        agentService.attachEventToConversation(agentService.currentConversationId, eventId)
+            .then(data => {
+                // Show success message
+                addSystemMessage(`Event has been attached to this conversation. The agent now has access to the event details.`);
+            })
+            .catch(error => {
+                console.error('Error attaching event:', error);
+                showError('Failed to attach event. Please try again.');
+            });
     }
     
     /**

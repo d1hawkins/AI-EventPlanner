@@ -6,14 +6,17 @@ with tenant context and subscription-based access controls.
 """
 
 from typing import Dict, Any, Optional, List
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Body
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
 from app.db.session import get_db
+from app.db.models_updated import Event
 from app.auth.dependencies import get_current_user
 from app.middleware.tenant import get_tenant_id, require_tenant
 from app.subscription.feature_control import get_feature_control
+from app.agents.agent_factory import get_agent_factory
 from app.agents.agent_router import (
     get_agent_response,
     get_conversation_history,
@@ -23,6 +26,21 @@ from app.agents.agent_router import (
 
 
 # Define request and response models
+class AttachEventRequest(BaseModel):
+    """Request model for attaching an event to a conversation."""
+    
+    conversation_id: str = Field(..., description="Conversation ID")
+    event_id: int = Field(..., description="Event ID")
+
+
+class AttachEventResponse(BaseModel):
+    """Response model for attaching an event to a conversation."""
+    
+    message: str = Field(..., description="Success message")
+    conversation_id: str = Field(..., description="Conversation ID")
+    event_id: int = Field(..., description="Event ID")
+    organization_id: Optional[int] = Field(None, description="Organization ID")
+
 class AgentMessageRequest(BaseModel):
     """Agent message request model."""
     
@@ -345,3 +363,100 @@ async def delete_agent_conversation(
         db=db,
         current_user_id=current_user_id
     )
+
+
+@router.post("/agents/attach-event", response_model=AttachEventResponse)
+async def attach_event_to_conversation(
+    request: Request,
+    attach_request: AttachEventRequest = Body(...),
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Attach an event to a conversation.
+    
+    Args:
+        request: FastAPI request
+        attach_request: Attach event request
+        db: Database session
+        current_user_id: Current user ID
+        
+    Returns:
+        Success message
+    """
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Verify that the conversation exists and belongs to this organization
+        conversation_id = attach_request.conversation_id
+        event_id = attach_request.event_id
+        
+        # Get agent factory with tenant context
+        agent_factory = get_agent_factory(db=db, organization_id=organization_id)
+        
+        # Get conversation state
+        state = agent_factory.state_manager.get_conversation_state(conversation_id)
+        
+        if not state:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Conversation {conversation_id} not found"
+            )
+        
+        # Check if the conversation belongs to the current organization
+        if organization_id and state.get("organization_id") != organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this conversation"
+            )
+        
+        # Get the event
+        event = db.query(Event).filter(Event.id == event_id).first()
+        
+        if not event:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Event {event_id} not found"
+            )
+        
+        # Update the conversation state with event context
+        state["event_context"] = {
+            "event_id": event.id,
+            "title": event.title,
+            "description": event.description,
+            "start_date": event.start_date.isoformat() if event.start_date else None,
+            "end_date": event.end_date.isoformat() if event.end_date else None,
+            "location": event.location,
+            "attendee_count": event.attendee_count,
+            "event_type": event.event_type,
+            "budget": event.budget
+        }
+        
+        # Update the state
+        agent_factory.state_manager.update_conversation_state(conversation_id, state)
+        
+        # Add a system message about the attached event
+        if "messages" in state:
+            state["messages"].append({
+                "role": "system",
+                "content": f"Event '{event.title}' has been attached to this conversation. The agent now has access to the event details.",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            agent_factory.state_manager.update_conversation_state(conversation_id, state)
+        
+        return {
+            "message": f"Event {event_id} attached to conversation {conversation_id}",
+            "conversation_id": conversation_id,
+            "event_id": event_id,
+            "organization_id": organization_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in attach_event_to_conversation: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error attaching event to conversation: {str(e)}"
+        )

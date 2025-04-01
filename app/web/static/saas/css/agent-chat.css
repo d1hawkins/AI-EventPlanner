@@ -310,11 +310,117 @@
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
+    /* General layout adjustments */
+    .dashboard-content {
+        padding: 10px;
+    }
+    
     .chat-container {
-        height: 400px;
+        height: calc(100vh - 200px);
+    }
+    
+    .agent-card {
+        margin-bottom: 10px;
+    }
+    
+    .chat-messages {
+        max-height: calc(100vh - 250px);
     }
     
     .chat-message .message-content {
         max-width: 85%;
+    }
+    
+    /* Fixed chat input for better mobile experience */
+    .chat-input-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 10px;
+        background-color: #fff;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+    }
+    
+    /* Adjust main content to account for fixed input */
+    .main-content {
+        padding-bottom: 70px;
+    }
+    
+    /* Touch-friendly adjustments */
+    .agent-card, .btn, .form-control, .conversation-item {
+        min-height: 44px; /* Minimum touch target size */
+    }
+    
+    /* Larger touch targets for better mobile usability */
+    .btn {
+        padding: 10px 16px;
+    }
+    
+    /* Improved form controls for mobile */
+    .form-control {
+        font-size: 16px; /* Prevents iOS zoom on focus */
+        padding: 12px 16px;
+    }
+    
+    /* Adjust agent list for mobile */
+    .agent-list {
+        max-height: 300px;
+    }
+    
+    /* Conversation history adjustments */
+    .conversation-history {
+        max-height: 200px;
+    }
+    
+    /* Simplified message display for small screens */
+    .chat-message .message-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+    
+    /* Adjust message spacing */
+    .chat-message {
+        margin-bottom: 12px;
+    }
+    
+    /* Full-width system messages */
+    .chat-message.system-message .message-content {
+        max-width: 100%;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+    
+    /* Optimize typing indicator */
+    .typing-indicator {
+        padding: 6px 10px;
+    }
+}
+
+/* Small mobile devices */
+@media (max-width: 576px) {
+    .chat-container {
+        height: calc(100vh - 180px);
+    }
+    
+    .chat-message .message-content {
+        max-width: 90%;
+        padding: 10px 12px;
+    }
+    
+    .agent-card .agent-description {
+        font-size: 0.75rem;
+    }
+    
+    /* Simplified UI for very small screens */
+    .capability-item .capability-description {
+        font-size: 0.8rem;
+    }
+    
+    .capability-example {
+        font-size: 0.8rem;
+        padding: 6px 10px;
     }
 }
