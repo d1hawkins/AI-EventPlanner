@@ -1,0 +1,39 @@
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim
+
+# Set environment variables for Python
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install additional dependencies required for Pydantic email validation
+RUN pip install --no-cache-dir email-validator
+
+# Fix dependency issues with pydantic and langchain
+RUN pip uninstall -y pydantic langchain langchain_core && \
+    pip install --no-cache-dir pydantic==1.10.8 langchain==0.0.267 langchain_core==0.0.10
+
+# Copy project
+COPY . .
+
+# Make the entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
+
+# Expose port
+EXPOSE $PORT
+
+# Run the application
+ENTRYPOINT ["/app/entrypoint.sh"]

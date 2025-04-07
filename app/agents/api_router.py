@@ -6,7 +6,7 @@ with tenant context and subscription-based access controls.
 """
 
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Body
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -26,6 +26,24 @@ from app.agents.agent_router import (
 
 
 # Define request and response models
+class AgentFeedbackRequest(BaseModel):
+    """Request model for submitting feedback for an agent response."""
+    
+    conversation_id: str = Field(..., description="Conversation ID")
+    message_index: int = Field(..., description="Index of the message in the conversation")
+    rating: int = Field(..., description="Rating (1-5)", ge=1, le=5)
+    comment: Optional[str] = Field(None, description="Optional feedback comment")
+
+
+class AgentFeedbackResponse(BaseModel):
+    """Response model for submitting feedback for an agent response."""
+    
+    message: str = Field(..., description="Success message")
+    conversation_id: str = Field(..., description="Conversation ID")
+    message_index: int = Field(..., description="Index of the message in the conversation")
+    organization_id: Optional[int] = Field(None, description="Organization ID")
+
+
 class AttachEventRequest(BaseModel):
     """Request model for attaching an event to a conversation."""
     
@@ -101,6 +119,16 @@ class DeleteConversationResponse(BaseModel):
     
     message: str = Field(..., description="Success message")
     conversation_id: str = Field(..., description="Conversation ID")
+    organization_id: Optional[int] = Field(None, description="Organization ID")
+
+
+class AgentAnalyticsResponse(BaseModel):
+    """Agent analytics response model."""
+    
+    total_conversations: int = Field(..., description="Total number of conversations")
+    conversations_by_agent: List[Dict[str, Any]] = Field(..., description="Conversations by agent type")
+    messages_by_agent: List[Dict[str, Any]] = Field(..., description="Messages by agent type")
+    conversations_by_date: List[Dict[str, Any]] = Field(..., description="Conversations by date")
     organization_id: Optional[int] = Field(None, description="Organization ID")
 
 
@@ -365,6 +393,178 @@ async def delete_agent_conversation(
     )
 
 
+@router.get("/agents/analytics", response_model=AgentAnalyticsResponse)
+async def get_agent_analytics(
+    request: Request,
+    start_date: str = None,
+    end_date: str = None,
+    agent_type: str = None,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get analytics data for agent usage.
+    
+    Args:
+        request: FastAPI request
+        start_date: Start date for analytics (YYYY-MM-DD)
+        end_date: End date for analytics (YYYY-MM-DD)
+        agent_type: Filter by agent type
+        db: Database session
+        current_user_id: Current user ID
+        
+    Returns:
+        Analytics data
+    """
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Get agent factory with tenant context
+        agent_factory = get_agent_factory(db=db, organization_id=organization_id)
+        
+        # Get all conversations for this organization
+        conversations = agent_factory.state_manager.list_conversations()
+        
+        # Parse date filters
+        start_datetime = None
+        end_datetime = None
+        
+        if start_date:
+            start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
+        
+        if end_date:
+            end_datetime = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+        
+        # Filter conversations by date and agent type
+        filtered_conversations = []
+        for conv in conversations:
+            # Skip if no created_at timestamp
+            if "created_at" not in conv:
+                continue
+            
+            # Parse conversation timestamp
+            try:
+                conv_datetime = datetime.fromisoformat(conv["created_at"])
+            except (ValueError, TypeError):
+                continue
+            
+            # Apply date filters
+            if start_datetime and conv_datetime < start_datetime:
+                continue
+            
+            if end_datetime and conv_datetime >= end_datetime:
+                continue
+            
+            # Apply agent type filter
+            if agent_type and conv.get("agent_type") != agent_type:
+                continue
+            
+            filtered_conversations.append(conv)
+        
+        # Calculate analytics metrics
+        total_conversations = len(filtered_conversations)
+        conversations_by_agent = {}
+        messages_by_agent = {}
+        conversations_by_date = {}
+        feedback_by_agent = {}
+        feedback_counts = {}
+        
+        for conv in filtered_conversations:
+            # Count conversations by agent
+            agent_type = conv.get("agent_type", "unknown")
+            conversations_by_agent[agent_type] = conversations_by_agent.get(agent_type, 0) + 1
+            
+            # Count messages by agent and collect feedback
+            messages = conv.get("messages", [])
+            messages_by_agent[agent_type] = messages_by_agent.get(agent_type, 0) + len(messages)
+            
+            # Process feedback
+            for message in messages:
+                if message.get("role") == "assistant" and "feedback" in message:
+                    feedback = message["feedback"]
+                    rating = feedback.get("rating", 0)
+                    
+                    # Initialize feedback data for this agent if not exists
+                    if agent_type not in feedback_by_agent:
+                        feedback_by_agent[agent_type] = {
+                            "total_rating": 0,
+                            "count": 0,
+                            "ratings": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+                        }
+                    
+                    # Update feedback data
+                    feedback_by_agent[agent_type]["total_rating"] += rating
+                    feedback_by_agent[agent_type]["count"] += 1
+                    feedback_by_agent[agent_type]["ratings"][rating] = feedback_by_agent[agent_type]["ratings"].get(rating, 0) + 1
+                    
+                    # Update overall feedback counts
+                    feedback_counts[rating] = feedback_counts.get(rating, 0) + 1
+            
+            # Count conversations by date
+            try:
+                conv_date = datetime.fromisoformat(conv["created_at"]).strftime("%Y-%m-%d")
+                conversations_by_date[conv_date] = conversations_by_date.get(conv_date, 0) + 1
+            except (ValueError, TypeError, KeyError):
+                pass
+        
+        # Calculate average ratings and format feedback data
+        feedback_by_agent_list = []
+        for agent_type, data in feedback_by_agent.items():
+            avg_rating = data["total_rating"] / data["count"] if data["count"] > 0 else 0
+            feedback_by_agent_list.append({
+                "agent_type": agent_type,
+                "average_rating": round(avg_rating, 1),
+                "count": data["count"],
+                "ratings_distribution": [
+                    {"rating": rating, "count": count}
+                    for rating, count in data["ratings"].items()
+                ]
+            })
+        
+        # Format overall feedback counts
+        feedback_distribution = [
+            {"rating": rating, "count": count}
+            for rating, count in sorted(feedback_counts.items())
+        ]
+        
+        # Calculate overall average rating
+        total_ratings = sum(rating * count for rating, count in feedback_counts.items())
+        total_feedback_count = sum(feedback_counts.values())
+        overall_avg_rating = round(total_ratings / total_feedback_count, 1) if total_feedback_count > 0 else 0
+        
+        # Prepare response
+        return {
+            "total_conversations": total_conversations,
+            "conversations_by_agent": [
+                {"agent_type": agent, "count": count}
+                for agent, count in conversations_by_agent.items()
+            ],
+            "messages_by_agent": [
+                {"agent_type": agent, "count": count}
+                for agent, count in messages_by_agent.items()
+            ],
+            "conversations_by_date": [
+                {"date": date, "count": count}
+                for date, count in sorted(conversations_by_date.items())
+            ],
+            "feedback": {
+                "total_count": total_feedback_count,
+                "average_rating": overall_avg_rating,
+                "distribution": feedback_distribution,
+                "by_agent": feedback_by_agent_list
+            },
+            "organization_id": organization_id
+        }
+        
+    except Exception as e:
+        print(f"Error in get_agent_analytics: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving analytics data: {str(e)}"
+        )
+
+
 @router.post("/agents/attach-event", response_model=AttachEventResponse)
 async def attach_event_to_conversation(
     request: Request,
@@ -459,4 +659,97 @@ async def attach_event_to_conversation(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error attaching event to conversation: {str(e)}"
+        )
+
+
+@router.post("/agents/feedback", response_model=AgentFeedbackResponse)
+async def submit_agent_feedback(
+    request: Request,
+    feedback_request: AgentFeedbackRequest = Body(...),
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Submit feedback for an agent response.
+    
+    Args:
+        request: FastAPI request
+        feedback_request: Feedback request
+        db: Database session
+        current_user_id: Current user ID
+        
+    Returns:
+        Success message
+    """
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Verify that the conversation exists and belongs to this organization
+        conversation_id = feedback_request.conversation_id
+        message_index = feedback_request.message_index
+        rating = feedback_request.rating
+        comment = feedback_request.comment
+        
+        # Get agent factory with tenant context
+        agent_factory = get_agent_factory(db=db, organization_id=organization_id)
+        
+        # Get conversation state
+        state = agent_factory.state_manager.get_conversation_state(conversation_id)
+        
+        if not state:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Conversation {conversation_id} not found"
+            )
+        
+        # Check if the conversation belongs to the current organization
+        if organization_id and state.get("organization_id") != organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this conversation"
+            )
+        
+        # Check if the message index is valid
+        if "messages" not in state or message_index >= len(state["messages"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid message index: {message_index}"
+            )
+        
+        # Get the message
+        message = state["messages"][message_index]
+        
+        # Check if the message is from the assistant
+        if message.get("role") != "assistant":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Feedback can only be provided for assistant messages"
+            )
+        
+        # Add feedback to the message
+        message["feedback"] = {
+            "rating": rating,
+            "comment": comment,
+            "timestamp": datetime.utcnow().isoformat(),
+            "user_id": current_user_id
+        }
+        
+        # Update the state
+        agent_factory.state_manager.update_conversation_state(conversation_id, state)
+        
+        return {
+            "message": "Feedback submitted successfully",
+            "conversation_id": conversation_id,
+            "message_index": message_index,
+            "organization_id": organization_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in submit_agent_feedback: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error submitting feedback: {str(e)}"
         )

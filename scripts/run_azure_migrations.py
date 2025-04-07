@@ -59,23 +59,30 @@ def run_migrations():
     password = "VM*admin"
     sslmode = "require"
     
+    # Get the current directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, ".."))
+    print(f"Project root: {project_root}")
+    
     # Create a temporary script to run the migrations with the correct connection parameters
     temp_script = """
 import os
 import sys
+import traceback
 from alembic import command
 from alembic.config import Config
 
 # Set the DATABASE_URL directly with the correct format for Azure PostgreSQL
 os.environ["DATABASE_URL"] = "postgresql://{user}:{password}@{host}:{port}/{dbname}"
+print(f"Using DATABASE_URL: postgresql://{user}:*****@{host}:{port}/{dbname}")
 
 def run_migrations():
     \"\"\"Run database migrations using Alembic.\"\"\"
     print("Running database migrations...")
     
-    # Get the directory of this script
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    project_root = os.path.abspath(os.path.join(dir_path, ".."))
+    # Set the project root directly
+    project_root = "{project_root}"
+    print(f"Project root: {project_root}")
     
     # Create Alembic configuration
     alembic_cfg = Config(os.path.join(project_root, "alembic.ini"))
@@ -86,11 +93,13 @@ def run_migrations():
         print("Migrations completed successfully!")
     except Exception as e:
         print(f"Error running migrations: {{e}}")
+        print("Traceback:")
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
     run_migrations()
-""".format(user=user, password=password, host=host, port=port, dbname=dbname)
+""".format(user=user, password=password, host=host, port=port, dbname=dbname, project_root=project_root)
     
     # Save the temporary script
     temp_script_path = "temp_migrate.py"
@@ -122,6 +131,7 @@ if __name__ == "__main__":
             direct_script = """
 import os
 import sys
+import traceback
 from alembic import command
 from alembic.config import Config
 import psycopg2
@@ -136,6 +146,7 @@ sslmode = "require"
 
 # Set the DATABASE_URL directly
 os.environ["DATABASE_URL"] = "postgresql://{user}:{password}@{host}:{port}/{dbname}"
+print(f"Using DATABASE_URL: postgresql://{user}:*****@{host}:{port}/{dbname}")
 
 def run_migrations():
     \"\"\"Run database migrations using Alembic.\"\"\"
@@ -156,26 +167,45 @@ def run_migrations():
         print("Database connection successful!")
     except Exception as e:
         print(f"Database connection failed: {{e}}")
+        print("Traceback:")
+        traceback.print_exc()
         sys.exit(1)
     
-    # Get the directory of this script
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    project_root = os.path.abspath(os.path.join(dir_path, ".."))
+    # Set the project root directly
+    project_root = "{project_root}"
+    print(f"Project root: {project_root}")
     
     # Create Alembic configuration
     alembic_cfg = Config(os.path.join(project_root, "alembic.ini"))
     
     try:
+        # Check if the database has any tables
+        conn = psycopg2.connect(
+            host=host,
+            port=port,
+            dbname=dbname,
+            user=user,
+            password=password,
+            sslmode=sslmode
+        )
+        cursor = conn.cursor()
+        cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+        tables = cursor.fetchall()
+        print(f"Existing tables in database: {{[table[0] for table in tables]}}")
+        conn.close()
+        
         # Run the migration
         command.upgrade(alembic_cfg, "head")
         print("Migrations completed successfully!")
     except Exception as e:
         print(f"Error running migrations: {{e}}")
+        print("Traceback:")
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
     run_migrations()
-""".format(user=user, password=password, host=host, port=port, dbname=dbname)
+""".format(user=user, password=password, host=host, port=port, dbname=dbname, project_root=project_root)
             
             # Save the direct script
             direct_script_path = "direct_migrate.py"

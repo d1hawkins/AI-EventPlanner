@@ -1,19 +1,23 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+import uuid
 from typing import List, Dict, Any, Optional
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, HTTPException, status
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from fastapi.responses import StreamingResponse
+import icalendar
 
 from app.db.session import get_db
 from app.db.models_updated import User, Message, AgentState, Event, Task
 from app.db.models_updated import Conversation as ConversationModel
 from app.auth.dependencies import get_current_user
-from app.schemas.event import ConversationCreate, Conversation as ConversationSchema, ConversationMessage
+from app.schemas.event import ConversationCreate, Conversation as ConversationSchema, ConversationMessage, EventUpdate
 from app.schemas.project import TaskUpdateSchema
 from app.state.manager import StateManager
 from app.graphs.coordinator_graph import create_coordinator_graph, create_initial_state
+from app.middleware.tenant import get_tenant_id
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
@@ -144,6 +148,258 @@ async def delete_conversation(
     
     return None
 
+
+@router.get("/events", response_model=Dict[str, List[Dict[str, Any]]])
+async def get_events(
+    request: Request,
+    start: str = None,
+    end: str = None,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get events for calendar view.
+    
+    Args:
+        request: FastAPI request
+        start: Start date (ISO format)
+        end: End date (ISO format)
+        db: Database session
+        current_user_id: Current user ID
+        
+    Returns:
+        List of events
+    """
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Build query
+        query = db.query(Event)
+        
+        # Apply organization filter if available
+        if organization_id:
+            query = query.filter(Event.organization_id == organization_id)
+        
+        # Apply date filters
+        if start:
+            try:
+                start_date = datetime.fromisoformat(start.replace('Z', '+00:00'))
+                query = query.filter(Event.end_date >= start_date)
+            except ValueError:
+                # Handle invalid date format
+                pass
+        
+        if end:
+            try:
+                end_date = datetime.fromisoformat(end.replace('Z', '+00:00'))
+                query = query.filter(Event.start_date <= end_date)
+            except ValueError:
+                # Handle invalid date format
+                pass
+        
+        # Execute query
+        events = query.all()
+        
+        # Convert to response model
+        return {
+            "events": [
+                {
+                    "id": event.id,
+                    "title": event.title,
+                    "description": event.description,
+                    "start_date": event.start_date.isoformat() if event.start_date else None,
+                    "end_date": event.end_date.isoformat() if event.end_date else None,
+                    "location": event.location,
+                    "attendee_count": event.attendee_count,
+                    "event_type": event.event_type,
+                    "status": event.status,
+                    "organization_id": event.organization_id
+                }
+                for event in events
+            ]
+        }
+        
+    except Exception as e:
+        print(f"Error in get_events: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving events: {str(e)}"
+        )
+
+@router.patch("/events/{event_id}", response_model=Dict[str, Any])
+async def update_event(
+    event_id: int,
+    event_update: EventUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Update an event's dates (for calendar drag and drop).
+    
+    Args:
+        event_id: Event ID
+        event_update: Event update data
+        request: FastAPI request
+        db: Database session
+        current_user_id: Current user ID
+        
+    Returns:
+        Updated event
+    """
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Get the event
+        event = db.query(Event).filter(Event.id == event_id).first()
+        
+        if not event:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Event not found"
+            )
+        
+        # Check if user has access to this event
+        if organization_id and event.organization_id != organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+        
+        # Update event fields
+        for key, value in event_update.dict(exclude_unset=True).items():
+            setattr(event, key, value)
+        
+        # Save changes
+        db.commit()
+        db.refresh(event)
+        
+        # Return updated event
+        return {
+            "id": event.id,
+            "title": event.title,
+            "description": event.description,
+            "start_date": event.start_date.isoformat() if event.start_date else None,
+            "end_date": event.end_date.isoformat() if event.end_date else None,
+            "location": event.location,
+            "attendee_count": event.attendee_count,
+            "event_type": event.event_type,
+            "status": event.status,
+            "organization_id": event.organization_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in update_event: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating event: {str(e)}"
+        )
+
+@router.get("/events/export")
+async def export_calendar(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+):
+    """
+    Export events as iCalendar file.
+    
+    Args:
+        request: FastAPI request
+        db: Database session
+        current_user_id: Current user ID
+        
+    Returns:
+        iCalendar file
+    """
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Get user
+        user = db.query(User).filter(User.id == current_user_id).first()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Build query
+        query = db.query(Event)
+        
+        # Apply organization filter if available
+        if organization_id:
+            query = query.filter(Event.organization_id == organization_id)
+        
+        # Get events
+        events = query.all()
+        
+        # Create calendar
+        cal = icalendar.Calendar()
+        cal.add('prodid', '-//AI Event Planner//EN')
+        cal.add('version', '2.0')
+        cal.add('calscale', 'GREGORIAN')
+        cal.add('method', 'PUBLISH')
+        
+        # Add events to calendar
+        for event in events:
+            ical_event = icalendar.Event()
+            
+            # Required properties
+            ical_event.add('uid', f"{event.id}@aieventplanner.com")
+            ical_event.add('dtstamp', datetime.utcnow())
+            
+            # Event title
+            ical_event.add('summary', event.title)
+            
+            # Event dates
+            if event.start_date:
+                ical_event.add('dtstart', event.start_date)
+            if event.end_date:
+                ical_event.add('dtend', event.end_date)
+            
+            # Optional properties
+            if event.description:
+                ical_event.add('description', event.description)
+            if event.location:
+                ical_event.add('location', event.location)
+            
+            # Add status
+            if event.status:
+                status_map = {
+                    'draft': 'TENTATIVE',
+                    'planning': 'TENTATIVE',
+                    'confirmed': 'CONFIRMED',
+                    'completed': 'CONFIRMED',
+                    'cancelled': 'CANCELLED'
+                }
+                ical_event.add('status', status_map.get(event.status, 'TENTATIVE'))
+            
+            # Add to calendar
+            cal.add_component(ical_event)
+        
+        # Return calendar file
+        calendar_bytes = cal.to_ical()
+        
+        return StreamingResponse(
+            iter([calendar_bytes]),
+            media_type="text/calendar",
+            headers={
+                "Content-Disposition": f"attachment; filename=events.ics"
+            }
+        )
+        
+    except Exception as e:
+        print(f"Error in export_calendar: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error exporting calendar: {str(e)}"
+        )
 
 @router.get("/events/{event_id}/tasks")
 async def get_event_tasks(

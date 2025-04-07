@@ -92,6 +92,13 @@ def create_tables():
         # Import all models to ensure they are registered with Base
         from app.db.models import User, Conversation, Message, AgentState, Event, Task, Stakeholder
         
+        # Import SaaS models if they exist
+        try:
+            from app.db.models_saas import Organization, OrganizationUser, SubscriptionPlan, SubscriptionInvoice
+            print("SaaS models imported successfully.")
+        except ImportError:
+            print("SaaS models not found, skipping.")
+        
         # Create the tables
         Base.metadata.create_all(bind=engine)
         

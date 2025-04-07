@@ -3,11 +3,11 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
+from sqlalchemy.engine.url import make_url
 
 from alembic import context
 
 from app.db.base import Base
-from app.config import DATABASE_URL
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -29,7 +29,23 @@ target_metadata = Base.metadata
 # ... etc.
 
 # Override the sqlalchemy.url with the DATABASE_URL from environment
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    config.set_main_option("sqlalchemy.url", database_url)
+    # Mask the password in the URL for logging
+    masked_url = database_url
+    if '@' in database_url:
+        parts = database_url.split('@')
+        if len(parts) > 1:
+            credentials = parts[0].split(':')
+            if len(credentials) > 2:
+                masked_url = f"{credentials[0]}:{credentials[1]}:****@{parts[1]}"
+            elif len(credentials) > 1:
+                masked_url = f"{credentials[0]}:****@{parts[1]}"
+    print(f"Using database URL: {masked_url}")
+else:
+    # Fallback to the one in config file
+    print("WARNING: DATABASE_URL environment variable not set, using default from alembic.ini")
 
 
 def run_migrations_offline():
@@ -45,11 +61,17 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
+    
+    # Determine the dialect based on the URL
+    dialect = make_url(url).get_dialect().name
+    print(f"Using dialect: {dialect}")
+    
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        dialect_name="postgresql"
     )
 
     with context.begin_transaction():
@@ -63,15 +85,27 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
+    # Get the configuration section
+    cfg = config.get_section(config.config_ini_section)
+    
+    # Determine the dialect based on the URL
+    url = cfg.get("sqlalchemy.url")
+    dialect = make_url(url).get_dialect().name
+    print(f"Using dialect: {dialect}")
+    
+    # Create the engine
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
+        cfg,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
     with connectable.connect() as connection:
+        # Force PostgreSQL dialect
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, 
+            target_metadata=target_metadata,
+            dialect_name="postgresql"
         )
 
         with context.begin_transaction():

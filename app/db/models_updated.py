@@ -177,6 +177,14 @@ class Event(Base):
     location = Column(String, nullable=True)
     budget = Column(Integer, nullable=True)  # Budget in cents
     attendee_count = Column(Integer, nullable=True)
+    
+    # Recurrence fields
+    is_recurring = Column(Boolean, default=False)
+    recurrence_rule = Column(String, nullable=True)  # iCalendar RRULE format
+    recurrence_end_date = Column(DateTime, nullable=True)
+    recurrence_exceptions = Column(JSON, nullable=True)  # Dates to exclude from recurrence
+    parent_event_id = Column(Integer, ForeignKey("events.id"), nullable=True)  # For recurring event instances
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

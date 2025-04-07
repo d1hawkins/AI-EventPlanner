@@ -39,6 +39,8 @@ var/
 
 # Logs
 logs/
+LogFiles/
+deployments/
 *.log
 
 # OS specific
@@ -49,11 +51,16 @@ Thumbs.db
 .coverage
 htmlcov/
 .pytest_cache/
-.env
-.env.azure
+.env*
+!.env.example
 .azure/
 azuredeployment.json
 *.publishsettings
+deploy*.zip
+deploy*.sh
+azure-deploy*.sh
+AZURE_*.md
+AZURE_*.json
 
 # Documentation
 README.md

@@ -3,7 +3,7 @@
 
 set -e
 
-# Configuration
+# Configuration - Fixed values for Azure resources
 APP_NAME="ai-event-planner-saas"
 RESOURCE_GROUP="ai-event-planner-rg"
 LOCATION="eastus"
@@ -32,23 +32,23 @@ az account show &> /dev/null || {
     az login
 }
 
-# Check if .env.azure file exists
-if [ ! -f .env.azure ]; then
-    echo -e "${YELLOW}No .env.azure file found. Creating one from .env.saas.example...${NC}"
-    if [ -f .env.saas.example ]; then
-        cp .env.saas.example .env.azure
-        echo -e "${GREEN}.env.azure file created. Please edit it with your Azure configuration.${NC}"
-        echo -e "${YELLOW}Press Enter to continue after editing the file, or Ctrl+C to cancel.${NC}"
-        read
-    else
-        echo -e "${RED}No .env.saas.example file found. Please create a .env.azure file manually.${NC}"
+# Check if .env.azure.fixed file exists
+if [ ! -f .env.azure.fixed ]; then
+    echo -e "${YELLOW}No .env.azure.fixed file found. Using .env.azure.fixed...${NC}"
+    if [ ! -f .env.azure.fixed ]; then
+        echo -e "${RED}No .env.azure.fixed file found. Please create a .env.azure.fixed file manually.${NC}"
         exit 1
     fi
 fi
 
-# Load environment variables from .env.azure
-echo "Loading environment variables from .env.azure..."
-export $(grep -v '^#' .env.azure | xargs)
+# Load environment variables from .env.azure.fixed
+echo "Loading environment variables from .env.azure.fixed..."
+set -a
+source .env.azure.fixed
+set +a
+
+# Override APP_NAME to ensure it's valid for Azure resources (no spaces)
+APP_NAME="ai-event-planner-saas"
 
 # Create resource group if it doesn't exist
 echo "Creating resource group if it doesn't exist..."
@@ -86,12 +86,12 @@ if ! az postgres server show --name $POSTGRES_SERVER_NAME --resource-group $RESO
         --resource-group $RESOURCE_GROUP \
         --server-name $POSTGRES_SERVER_NAME
     
-    # Update .env.azure with PostgreSQL connection string
+    # Update .env.azure.fixed with PostgreSQL connection string
     POSTGRES_HOST="$POSTGRES_SERVER_NAME.postgres.database.azure.com"
     POSTGRES_CONNECTION_STRING="postgresql://$POSTGRES_ADMIN_USER@$POSTGRES_SERVER_NAME:$POSTGRES_ADMIN_PASSWORD@$POSTGRES_HOST/$POSTGRES_DB_NAME"
     
-    # Update .env.azure file
-    sed -i "s|DATABASE_URL=.*|DATABASE_URL=$POSTGRES_CONNECTION_STRING|g" .env.azure
+    # Update .env.azure.fixed file
+    sed -i "s|DATABASE_URL=.*|DATABASE_URL=$POSTGRES_CONNECTION_STRING|g" .env.azure.fixed
     
     echo -e "${GREEN}PostgreSQL server created.${NC}"
     echo -e "${YELLOW}PostgreSQL admin password: $POSTGRES_ADMIN_PASSWORD${NC}"
@@ -118,8 +118,8 @@ if ! az storage account show --name $STORAGE_ACCOUNT_NAME --resource-group $RESO
         --query connectionString \
         --output tsv)
     
-    # Update .env.azure file
-    sed -i "s|STORAGE_CONNECTION_STRING=.*|STORAGE_CONNECTION_STRING=$STORAGE_CONNECTION_STRING|g" .env.azure
+    # Update .env.azure.fixed file
+    sed -i "s|STORAGE_CONNECTION_STRING=.*|STORAGE_CONNECTION_STRING=$STORAGE_CONNECTION_STRING|g" .env.azure.fixed
     
     echo -e "${GREEN}Storage account created.${NC}"
 else
@@ -164,7 +164,7 @@ az webapp config set \
     --resource-group $RESOURCE_GROUP \
     --startup-file "gunicorn app.main_saas:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
 
-# Set environment variables from .env.azure
+# Set environment variables from .env.azure.fixed
 echo "Setting environment variables..."
 while IFS='=' read -r key value; do
     # Skip empty lines and comments
@@ -172,12 +172,15 @@ while IFS='=' read -r key value; do
         continue
     fi
     
+    # Remove quotes from value if present
+    value=$(echo $value | sed -e 's/^"//' -e 's/"$//')
+    
     # Set environment variable
     az webapp config appsettings set \
         --name $APP_NAME \
         --resource-group $RESOURCE_GROUP \
         --settings "$key=$value"
-done < .env.azure
+done < .env.azure.fixed
 
 # Build and deploy the application
 echo "Building and deploying the application..."

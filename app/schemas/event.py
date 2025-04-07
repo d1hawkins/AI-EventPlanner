@@ -15,6 +15,13 @@ class EventBase(BaseModel):
     location: Optional[str] = None
     budget: Optional[int] = None  # Budget in cents
     attendee_count: Optional[int] = None
+    
+    # Recurrence fields
+    is_recurring: Optional[bool] = False
+    recurrence_rule: Optional[str] = None  # iCalendar RRULE format
+    recurrence_end_date: Optional[datetime] = None
+    recurrence_exceptions: Optional[List[datetime]] = None  # Dates to exclude from recurrence
+    parent_event_id: Optional[int] = None  # For recurring event instances
 
 
 class EventCreate(EventBase):
@@ -34,6 +41,13 @@ class EventUpdate(BaseModel):
     location: Optional[str] = None
     budget: Optional[int] = None
     attendee_count: Optional[int] = None
+    
+    # Recurrence fields
+    is_recurring: Optional[bool] = None
+    recurrence_rule: Optional[str] = None
+    recurrence_end_date: Optional[datetime] = None
+    recurrence_exceptions: Optional[List[datetime]] = None
+    parent_event_id: Optional[int] = None
 
 
 class Event(EventBase):
