@@ -1080,11 +1080,24 @@ Generate a status report for the event planning process. Include progress on key
             MessagesPlaceholder(variable_name="messages"),
         ])
         
+        # Convert message dicts to message objects
+        message_objects = []
+        for m in state["messages"]:
+            role = m.get("role")
+            content = m.get("content")
+            if role == "user":
+                message_objects.append(HumanMessage(content=content))
+            elif role == "assistant":
+                message_objects.append(AIMessage(content=content))
+            # Avoid adding system messages from history here, as the template adds one
+            # elif role == "system":
+            #     message_objects.append(SystemMessage(content=content))
+
         # Generate response using the LLM
         chain = prompt | llm
-        result = chain.invoke({"messages": [{"role": m["role"], "content": m["content"]} for m in state["messages"]]})
+        result = chain.invoke({"messages": message_objects})
         
-        # Add the response to messages
+        # Add the response to messages (as dict)
         new_message = {
             "role": "assistant",
             "content": result.content

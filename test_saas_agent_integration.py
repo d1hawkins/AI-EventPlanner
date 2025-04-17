@@ -15,7 +15,7 @@ import requests
 from typing import Dict, Any, List, Optional
 
 # Set up test environment
-BASE_URL = "http://localhost:8002"
+BASE_URL = "http://localhost:8003"
 AUTH_HEADERS = {}
 
 
@@ -222,9 +222,11 @@ def run_tests():
     
     # Create test organizations with different subscription plans
     print("\nCreating test organizations...")
-    org1 = create_organization("Test Org Free", "test-org-free", "price_free")
-    org2 = create_organization("Test Org Pro", "test-org-pro", "price_professional")
-    org3 = create_organization("Test Org Enterprise", "test-org-enterprise", "price_enterprise")
+    # Add a unique identifier to the slugs to avoid conflicts
+    unique_id = str(uuid.uuid4())[:8]
+    org1 = create_organization("Test Org Free", f"test-org-free-{unique_id}", "price_free")
+    org2 = create_organization("Test Org Pro", f"test-org-pro-{unique_id}", "price_professional")
+    org3 = create_organization("Test Org Enterprise", f"test-org-enterprise-{unique_id}", "price_enterprise")
     
     print(f"Created organizations: {org1['id']}, {org2['id']}, {org3['id']}")
     

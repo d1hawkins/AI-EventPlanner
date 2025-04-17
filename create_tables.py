@@ -16,7 +16,8 @@ load_dotenv()
 
 # Import the Base class and all models
 from app.db.base import Base
-from app.db.models_updated import User, Conversation, Message, AgentState, Event, Task, Stakeholder, Organization, OrganizationUser, SubscriptionPlan, SubscriptionInvoice
+from app.db.models import User, Conversation, Message, AgentState, Event, Task, Stakeholder
+from app.db.models_updated import Organization, OrganizationUser, SubscriptionPlan, SubscriptionInvoice
 
 def create_tables():
     """Create all database tables."""

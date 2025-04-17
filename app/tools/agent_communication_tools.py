@@ -214,6 +214,12 @@ class ResourcePlanningTaskTool(BaseTool):
             # Log the state preparation
             logger.debug(f"Prepared state for Resource Planning Agent with task: {task}")
             
+            # DEBUG: Print state before invoking graph
+            print(f"DEBUG: State before invoking resource planning graph for task '{task}':")
+            import pprint
+            pprint.pprint(state)
+            print("-" * 20)
+            
             # Run the resource planning graph
             logger.info("Invoking Resource Planning graph")
             try:

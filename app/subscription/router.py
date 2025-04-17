@@ -28,7 +28,21 @@ stripe.api_key = os.getenv("STRIPE_API_KEY", "")
 stripe_webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
 
-@router.post("/organizations", response_model=OrganizationResponse)
+# Add a custom response model for Organization that uses features_dict
+class OrganizationResponseWithFeatures(OrganizationResponse):
+    """Organization response with features as a dictionary."""
+    
+    @classmethod
+    def from_orm(cls, obj):
+        """Convert ORM object to response model."""
+        # Create a copy of the object to avoid modifying the original
+        obj_dict = {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
+        # Replace features with features_dict
+        obj_dict["features"] = obj.features_dict
+        return cls(**obj_dict)
+
+
+@router.post("/organizations", response_model=OrganizationResponseWithFeatures, status_code=status.HTTP_201_CREATED)
 async def create_organization(
     organization_in: OrganizationCreate,
     db: Session = Depends(get_db),
@@ -60,7 +74,7 @@ async def create_organization(
         plan_id=organization_in.plan_id,
         max_users=organization_in.max_users,
         max_events=organization_in.max_events,
-        features=json.dumps(organization_in.features)
+        features=json.dumps(organization_in.features) if isinstance(organization_in.features, dict) else organization_in.features
     )
     db.add(organization)
     db.flush()
@@ -76,10 +90,9 @@ async def create_organization(
     db.commit()
     db.refresh(organization)
     
-    return organization
+    return OrganizationResponseWithFeatures.from_orm(organization)
 
-
-@router.get("/organizations", response_model=List[OrganizationResponse])
+@router.get("/organizations", response_model=List[OrganizationResponseWithFeatures])
 async def list_organizations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -100,10 +113,10 @@ async def list_organizations(
     
     organizations = db.query(Organization).filter(Organization.id.in_(org_ids)).all()
     
-    return organizations
+    return [OrganizationResponseWithFeatures.from_orm(org) for org in organizations]
 
 
-@router.get("/organizations/{organization_id}", response_model=OrganizationResponse)
+@router.get("/organizations/{organization_id}", response_model=OrganizationResponseWithFeatures)
 async def get_organization(
     organization_id: int,
     db: Session = Depends(get_db),
@@ -140,7 +153,7 @@ async def get_organization(
             detail="Organization not found"
         )
     
-    return organization
+    return OrganizationResponseWithFeatures.from_orm(organization)
 
 
 @router.post("/organizations/{organization_id}/users", response_model=OrganizationUserResponse)
@@ -334,7 +347,7 @@ async def create_subscription(
         organization.plan_id = str(plan.id)
         organization.max_users = plan.max_users
         organization.max_events = plan.max_events
-        organization.features = plan.features
+        organization.features = json.dumps(plan.features) if isinstance(plan.features, dict) else plan.features
         db.commit()
         
         return {

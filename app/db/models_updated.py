@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON, Boolean, Text
 from sqlalchemy.orm import relationship
@@ -40,6 +41,16 @@ class Organization(Base):
     max_users = Column(Integer, default=5)
     max_events = Column(Integer, default=10)
     features = Column(Text, default='{"basic": true, "advanced": false, "premium": false}')
+    
+    @property
+    def features_dict(self):
+        """Convert features JSON string to dictionary."""
+        if isinstance(self.features, dict):
+            return self.features
+        try:
+            return json.loads(self.features)
+        except (json.JSONDecodeError, TypeError):
+            return {"basic": True, "advanced": False, "premium": False}
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
