@@ -9,7 +9,8 @@ class AgentService {
      * Initialize the agent service
      */
     constructor() {
-        this.apiBaseUrl = 'http://localhost:8002/api';
+        // Use relative URL for API endpoints to work in any environment
+        this.apiBaseUrl = '/api';
         this.authToken = this.getAuthToken();
         this.currentConversationId = null;
         this.currentAgentType = null;

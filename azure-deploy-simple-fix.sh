@@ -1,5 +1,6 @@
 #!/bin/bash
 # Deploy the AI Event Planner SaaS application to Azure App Service (Python) without Docker
+# This is a simplified version that focuses on fixing the "Failed to find attribute 'app' in 'app'" error
 
 set -e
 
@@ -57,20 +58,11 @@ echo "Created temporary directory: $DEPLOY_DIR"
 
 # Copy files to the deployment directory
 echo "Copying files to deployment directory..."
+cp app.py $DEPLOY_DIR/
 cp app_simplified.py $DEPLOY_DIR/
+cp wsgi.py $DEPLOY_DIR/
+cp install_packages.sh $DEPLOY_DIR/
 cp requirements_simplified.txt $DEPLOY_DIR/requirements.txt
-mkdir -p $DEPLOY_DIR/app/web/static
-cp -r app/web/static $DEPLOY_DIR/app/web/
-
-# Create startup command file
-echo "Creating startup command file..."
-cat > $DEPLOY_DIR/startup.sh << 'EOF'
-#!/bin/bash
-cd /home/site/wwwroot
-pip install -r requirements.txt
-gunicorn app_simplified:app --bind=0.0.0.0:8000 --workers=4
-EOF
-chmod +x $DEPLOY_DIR/startup.sh
 
 # Create a zip file for deployment
 echo "Creating deployment package..."
@@ -81,10 +73,6 @@ cd ..
 # Deploy to Azure App Service
 echo "Deploying to Azure App Service..."
 az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --src deploy.zip
-
-# Configure the App Service
-echo "Configuring App Service..."
-az webapp config set --resource-group $RESOURCE_GROUP --name $APP_NAME --startup-file "startup.sh"
 
 # Enable logging
 echo "Enabling logging..."

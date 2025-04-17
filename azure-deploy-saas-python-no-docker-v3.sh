@@ -58,17 +58,33 @@ echo "Created temporary directory: $DEPLOY_DIR"
 # Copy files to the deployment directory
 echo "Copying files to deployment directory..."
 cp app_simplified.py $DEPLOY_DIR/
+cp app_adapter.py $DEPLOY_DIR/
+cp app_adapter_with_agents.py $DEPLOY_DIR/
 cp requirements_simplified.txt $DEPLOY_DIR/requirements.txt
 mkdir -p $DEPLOY_DIR/app/web/static
 cp -r app/web/static $DEPLOY_DIR/app/web/
 
-# Create startup command file
+# Copy agent-related directories to ensure they're available in Azure
+echo "Copying agent-related directories..."
+mkdir -p $DEPLOY_DIR/app/agents
+cp -r app/agents $DEPLOY_DIR/app/
+mkdir -p $DEPLOY_DIR/app/db
+cp -r app/db $DEPLOY_DIR/app/
+mkdir -p $DEPLOY_DIR/app/middleware
+cp -r app/middleware $DEPLOY_DIR/app/
+
+# Copy web.config and startup.py files
+echo "Copying web.config and startup.py files..."
+cp web.config $DEPLOY_DIR/
+cp startup.py $DEPLOY_DIR/
+
+# Create startup command file (as a backup)
 echo "Creating startup command file..."
 cat > $DEPLOY_DIR/startup.sh << 'EOF'
 #!/bin/bash
 cd /home/site/wwwroot
 pip install -r requirements.txt
-gunicorn app_simplified:app --bind=0.0.0.0:8000 --workers=4
+gunicorn app_adapter:app --bind=0.0.0.0:8000 --workers=4
 EOF
 chmod +x $DEPLOY_DIR/startup.sh
 

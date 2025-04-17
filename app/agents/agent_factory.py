@@ -40,7 +40,7 @@ class AgentFactory:
         """
         self.db = db
         self.organization_id = organization_id
-        self.state_manager = get_tenant_aware_state_manager(organization_id=organization_id)
+        self.state_manager = get_tenant_aware_state_manager(organization_id=organization_id, db=db)
         self.feature_control = get_feature_control(db=db, organization_id=organization_id)
     
     def create_agent(self, agent_type: str, conversation_id: str, **kwargs) -> Any:

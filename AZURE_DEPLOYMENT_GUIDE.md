@@ -1,102 +1,156 @@
-# AI Event Planner: Local Testing and Azure Deployment Guide
+# Azure Deployment Guide for AI Event Planner
 
-I've successfully tested the AI Event Planner application locally and explored the Azure deployment options. Here's a comprehensive guide for both local testing and Azure deployment:
+This guide provides detailed instructions for deploying the AI Event Planner application to Azure App Service and troubleshooting common issues.
 
-## Local Testing Options
+## Prerequisites
 
-You have three options for running the application locally:
+- Azure CLI installed and configured
+- Azure subscription
+- Git repository cloned locally
 
-### 1. Static Frontend Only (Simplest)
+## Deployment Steps
+
+### 1. Fix Application Code
+
+Before deployment, ensure the application code is free of syntax errors:
+
+- Check `app_simplified.py` for syntax errors
+- Ensure the startup script has the correct shebang line
+- Use the simplified requirements file for faster deployment
+
+### 2. Deploy to Azure
+
+Use the provided deployment script to deploy the application to Azure:
+
 ```bash
-python serve_saas_static.py
+./azure-deploy-saas-python-no-docker-v2.sh
 ```
-- **What it does**: Serves only the static frontend files on port 8090
-- **Pros**: No database or environment setup needed, quick to start
-- **Cons**: No backend functionality (API calls will fail)
-- **Best for**: UI/UX testing, frontend development
 
-### 2. Full Application with Python
+This script will:
+- Create a resource group if it doesn't exist
+- Create an App Service Plan if it doesn't exist
+- Create a Web App if it doesn't exist
+- Package and deploy the application
+- Configure the startup command
+- Enable logging
+
+### 3. Verify Deployment
+
+After deployment, verify that the application is running correctly:
+
 ```bash
-python run_saas.py
-```
-- **What it does**: Runs the complete application directly on your machine
-- **Requirements**: 
-  - PostgreSQL database
-  - Environment variables in `.env` file (copy from `.env.saas.example`)
-- **Pros**: Full functionality, easier debugging
-- **Cons**: Requires database setup and environment configuration
-- **Best for**: Complete testing of all features
+# Check the status of the web app
+az webapp show --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --query state
 
-### 3. Full Application with Docker
+# Open the website in a browser
+open https://ai-event-planner-saas-py.azurewebsites.net
+```
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### 1. Application Fails to Start
+
+If the application fails to start within the timeout period (10 minutes), check the following:
+
+- **Syntax Errors**: Ensure there are no syntax errors in your Python code.
+  - Fix: Review and correct any syntax errors in `app_simplified.py`.
+
+- **Missing Dependencies**: Ensure all required dependencies are included in the requirements file.
+  - Fix: Update `requirements_simplified.txt` to include all necessary packages.
+
+- **Startup Script Issues**: Ensure the startup script is correctly configured.
+  - Fix: Check that `startup.sh` has the correct shebang line and permissions.
+
+#### 2. Viewing Logs
+
+To view logs for troubleshooting:
+
 ```bash
-chmod +x run_saas_docker.sh
-./run_saas_docker.sh
+# View application logs
+az webapp log download --name ai-event-planner-saas-py --resource-group ai-event-planner-rg
+
+# Stream logs in real-time
+az webapp log tail --name ai-event-planner-saas-py --resource-group ai-event-planner-rg
 ```
-- **What it does**: Builds and runs the application in a Docker container
-- **Requirements**:
-  - Docker installed
-  - Environment variables in `.env` file
-- **Pros**: Closest to production environment, isolates dependencies
-- **Cons**: Requires Docker, slower to build initially
-- **Best for**: Final testing before deployment to Azure
 
-## Azure Deployment Options
+#### 3. Environment Variables
 
-For deploying to Azure, you have the following options:
+If your application requires environment variables:
 
-### 1. GitHub Actions with Docker (Recommended)
-- **Key Files**: 
-  - GitHub workflow: `.github/workflows/azure-deploy-docker.yml`
-  - Docker configuration: `Dockerfile.saas`
-  - Secrets management: `AZURE_CREDENTIALS.template.json`, `.env.saas.template`
+```bash
+# Set environment variables
+az webapp config appsettings set --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --settings KEY=VALUE
+```
 
-- **Setup**:
-  1. Add Azure credentials to GitHub repository secrets
-  2. Add API keys (OpenAI, SendGrid, Google, Stripe) to GitHub secrets
-  3. Trigger the workflow from GitHub Actions tab
+#### 4. Restarting the Application
 
-- **Advantages**:
-  - Fully automated CI/CD pipeline
-  - No need for Docker on your local machine
-  - Consistent environment between development and production
-  - Secure secrets management
-  - Runs database migrations automatically
+If you need to restart the application:
 
-### 2. Local Docker Deployment
-- **Key File**: `azure-deploy-docker.sh`
+```bash
+# Restart the web app
+az webapp restart --name ai-event-planner-saas-py --resource-group ai-event-planner-rg
+```
 
-- **Process**:
-  1. Build Docker image locally
-  2. Push to Azure Container Registry
-  3. Deploy to Azure App Service
+## Debugging Azure Deployment
 
-- **Advantages**:
-  - More direct control over the deployment process
-  - Can be run from your local machine
-  - Useful for testing deployment before setting up GitHub Actions
+### 1. Check Application Logs
 
-### 3. Static HTML Deployment
-- **Key File**: `azure-deploy-html-fixed.sh`
+Azure App Service stores logs that can help diagnose issues:
 
-- **Process**:
-  1. Creates a simple static website
-  2. Deploys to Azure App Service
+```bash
+# Download logs
+az webapp log download --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --log-file app_logs.zip
+```
 
-- **Advantages**:
-  - Simplest deployment option
-  - No Docker required
-  - Quick to deploy
-  - Useful as a temporary solution
+### 2. Check Deployment Status
 
-## Recommendation
+```bash
+# Check deployment status
+az webapp deployment list --name ai-event-planner-saas-py --resource-group ai-event-planner-rg
+```
 
-For local testing, start with the static frontend option to quickly test the UI, then move to the Docker option for a more complete test that closely matches the production environment.
+### 3. SSH into the App Service
 
-For Azure deployment, the GitHub Actions approach is recommended as it provides a fully automated CI/CD pipeline with proper secrets management and consistent deployments.
+For more advanced debugging:
 
-## Next Steps
+```bash
+# Enable SSH
+az webapp ssh --name ai-event-planner-saas-py --resource-group ai-event-planner-rg
+```
 
-1. Test the application locally using one of the methods above
-2. Set up your Azure resources (App Service, Container Registry)
-3. Configure your GitHub repository with the necessary secrets
-4. Deploy to Azure using the GitHub Actions workflow
+### 4. Check Resource Utilization
+
+If the application is slow or unresponsive:
+
+```bash
+# Check CPU and memory usage
+az monitor metrics list --resource-id /subscriptions/{subscription-id}/resourceGroups/ai-event-planner-rg/providers/Microsoft.Web/sites/ai-event-planner-saas-py --metric "CpuPercentage" "MemoryPercentage"
+```
+
+## Best Practices for Azure Deployment
+
+1. **Use Simplified Dependencies**: Only include necessary dependencies to reduce deployment time and potential issues.
+
+2. **Enable Detailed Logging**: Always enable detailed logging to help diagnose issues.
+
+3. **Use Application Insights**: Consider adding Application Insights for better monitoring and diagnostics.
+
+4. **Test Locally First**: Always test your application locally before deploying to Azure.
+
+5. **Use Deployment Slots**: For production applications, use deployment slots for zero-downtime deployments.
+
+## Understanding Azure App Service Containerization
+
+Even when using a "non-Docker" deployment, Azure App Service for Linux still uses containerization technology behind the scenes:
+
+1. **Managed Containers**: Azure App Service for Linux uses Docker containers internally to run applications, even when you're not explicitly using Docker in your deployment process.
+
+2. **Log Paths**: This is why error messages may reference Docker logs (e.g., `/api/logs/docker`), as that's where Azure stores the runtime logs for all Linux App Service applications.
+
+3. **Deployment Process**: When you deploy without a custom Docker image, Azure builds and manages the container for you using its default Python container image.
+
+## Conclusion
+
+By following this guide, you should be able to successfully deploy the AI Event Planner application to Azure App Service and troubleshoot any issues that arise. If you encounter persistent issues, consider simplifying your application further or reaching out to Azure support.
