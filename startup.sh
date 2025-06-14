@@ -9,7 +9,7 @@ echo "Python path: $PYTHONPATH"
 # Install required dependencies
 echo "Installing dependencies..."
 pip install -r requirements.txt
-pip install fastapi uvicorn gunicorn sqlalchemy pydantic langchain langgraph google-generativeai openai passlib python-jose python-multipart bcrypt python-dotenv psycopg2-binary email-validator icalendar
+pip install fastapi uvicorn gunicorn sqlalchemy pydantic langchain langgraph google-generativeai openai passlib python-jose python-multipart bcrypt python-dotenv psycopg2-binary email-validator icalendar alembic
 
 # Print environment for debugging
 echo "Environment variables:"
@@ -48,13 +48,32 @@ if [ "$RUN_MIGRATIONS" = "true" ]; then
     fi
 fi
 
+# Check if startup.py exists
+if [ -f "startup.py" ]; then
+    echo "Found startup.py, using it as the entry point"
+    python startup.py
+    exit 0
+fi
+
+# Check if wsgi.py exists
+if [ -f "wsgi.py" ]; then
+    echo "Found wsgi.py, using it as the entry point"
+    gunicorn wsgi:app --bind=0.0.0.0:8000 --workers=4 --timeout=120
+    exit 0
+fi
+
+# Check if app_adapter.py exists
+if [ -f "app_adapter.py" ]; then
+    echo "Found app_adapter.py, using it as the entry point"
+    gunicorn app_adapter:app --bind=0.0.0.0:8000 --workers=4 --timeout=120
+    exit 0
+fi
+
 # Check if main_saas.py exists in the app directory
 MAIN_SAAS_PATH="app/main_saas.py"
-APP_ADAPTER_PATH="app_adapter.py"
 MAIN_PATH="app/main.py"
 
 echo "Checking for $MAIN_SAAS_PATH: $([ -f "$MAIN_SAAS_PATH" ] && echo "Found" || echo "Not found")"
-echo "Checking for $APP_ADAPTER_PATH: $([ -f "$APP_ADAPTER_PATH" ] && echo "Found" || echo "Not found")"
 echo "Checking for $MAIN_PATH: $([ -f "$MAIN_PATH" ] && echo "Found" || echo "Not found")"
 
 # Try to determine which module to use
@@ -64,9 +83,12 @@ if [ -f "$MAIN_SAAS_PATH" ]; then
 elif [ -f "$MAIN_PATH" ]; then
     echo "Found main.py, using app.main:app"
     APP_MODULE="app.main:app"
+elif [ -f "app_simplified.py" ]; then
+    echo "Found app_simplified.py, using app_simplified:app"
+    APP_MODULE="app_simplified:app"
 else
-    echo "Using app_adapter:app as fallback"
-    APP_MODULE="app_adapter:app"
+    echo "No suitable entry point found. Using app.py as a fallback"
+    APP_MODULE="app:app"
 fi
 
 # Run gunicorn with the determined app module

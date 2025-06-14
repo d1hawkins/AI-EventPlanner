@@ -6,6 +6,8 @@ with tenant context and subscription-based access controls.
 """
 
 from typing import Dict, Any, Optional, List
+import uuid
+import time
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Body
 from sqlalchemy.orm import Session
@@ -15,13 +17,25 @@ from app.db.session import get_db
 from app.db.models_updated import Event
 from app.auth.dependencies import get_current_user
 from app.middleware.tenant import get_tenant_id, require_tenant
-from app.subscription.feature_control import get_feature_control
+from app.subscription.feature_control import get_feature_control, FeatureNotAvailableError
 from app.agents.agent_factory import get_agent_factory
-from app.agents.agent_router import (
-    get_agent_response,
-    get_conversation_history,
-    list_conversations,
-    delete_conversation
+from app.utils.logging_utils import (
+    setup_logger, 
+    log_agent_invocation, 
+    log_agent_response, 
+    log_agent_error,
+    log_state_update,
+    log_performance_metric
+)
+
+
+# Set up logger for the agent router
+logger = setup_logger(
+    name="agent_router",
+    log_level="DEBUG",
+    enable_app_insights=True,
+    app_insights_level="INFO",
+    component="agent"
 )
 
 
@@ -195,6 +209,584 @@ SUBSCRIPTION_TIERS = {
 router = APIRouter()
 
 
+async def get_agent_response(
+    agent_type: str,
+    message: str,
+    conversation_id: Optional[str] = None,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get a response from an agent with tenant context and comprehensive logging.
+    
+    Args:
+        agent_type: The type of agent to use
+        message: The user message
+        conversation_id: The conversation ID (optional, will be generated if not provided)
+        request: The FastAPI request
+        db: Database session
+        current_user_id: The current user ID
+        
+    Returns:
+        The agent response
+        
+    Raises:
+        HTTPException: If the agent is not available or an error occurs
+    """
+    start_time = time.time()
+    
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Create a new conversation ID if not provided
+        if not conversation_id:
+            conversation_id = str(uuid.uuid4())
+            logger.info(f"Created new conversation ID: {conversation_id}", 
+                       extra={"custom_dimensions": {
+                           "agent_type": agent_type,
+                           "organization_id": organization_id
+                       }})
+        
+        # Log the request
+        log_agent_invocation(
+            logger=logger,
+            agent_type=agent_type,
+            task=f"process_message: {message[:50]}{'...' if len(message) > 50 else ''}",
+            conversation_id=conversation_id,
+            organization_id=organization_id
+        )
+        
+        # Get agent factory with tenant context
+        agent_factory = get_agent_factory(db=db, organization_id=organization_id)
+        
+        try:
+            # Create the agent with tenant context and subscription checks
+            agent = agent_factory.create_agent(
+                agent_type=agent_type,
+                conversation_id=conversation_id
+            )
+            
+            # Add the message to the agent state
+            state = agent["state"]
+            if "messages" not in state:
+                state["messages"] = []
+                logger.debug(f"Initialized messages array for conversation: {conversation_id}")
+            
+            # Add the user message with timestamp
+            user_message = {
+                "role": "user",
+                "content": message,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            state["messages"].append(user_message)
+            
+            # Log state update
+            log_state_update(
+                logger=logger,
+                state_name="messages",
+                state_value=f"Added user message: {message[:50]}{'...' if len(message) > 50 else ''}",
+                conversation_id=conversation_id,
+                organization_id=organization_id
+            )
+            
+            # Ensure required fields are present in the state
+            if agent_type == "coordinator":
+                # Set default phase if missing
+                if "current_phase" not in state:
+                    state["current_phase"] = "information_collection"
+                    logger.debug(f"Added missing 'current_phase' field to coordinator state: {conversation_id}")
+                
+                # Set default event_details if missing
+                if "event_details" not in state:
+                    state["event_details"] = {
+                        "event_type": None,
+                        "title": None,
+                        "description": None,
+                        "attendee_count": None,
+                        "scale": None,
+                        "timeline_start": None,
+                        "timeline_end": None
+                    }
+                    logger.debug(f"Added missing 'event_details' field to coordinator state: {conversation_id}")
+                
+                # Set default requirements if missing
+                if "requirements" not in state:
+                    state["requirements"] = {
+                        "stakeholders": [],
+                        "resources": [],
+                        "risks": [],
+                        "success_criteria": [],
+                        "budget": {},
+                        "location": {}
+                    }
+                    logger.debug(f"Added missing 'requirements' field to coordinator state: {conversation_id}")
+                
+                # Set default information_collected if missing
+                if "information_collected" not in state:
+                    state["information_collected"] = {
+                        "basic_details": False,
+                        "timeline": False,
+                        "budget": False,
+                        "location": False,
+                        "stakeholders": False,
+                        "resources": False,
+                        "success_criteria": False,
+                        "risks": False
+                    }
+                    logger.debug(f"Added missing 'information_collected' field to coordinator state: {conversation_id}")
+                
+                # Set default agent_assignments if missing
+                if "agent_assignments" not in state:
+                    state["agent_assignments"] = []
+                    logger.debug(f"Added missing 'agent_assignments' field to coordinator state: {conversation_id}")
+                
+                # Set default next_steps if missing
+                if "next_steps" not in state:
+                    state["next_steps"] = ["gather_event_details"]
+                    logger.debug(f"Added missing 'next_steps' field to coordinator state: {conversation_id}")
+            
+            # Log before invoking agent graph
+            logger.info(f"Invoking {agent_type} agent graph for conversation: {conversation_id}")
+            
+            # Measure agent graph execution time
+            graph_start_time = time.time()
+            
+            # Run the agent graph with the updated state
+            result = agent["graph"].invoke(state)
+            
+            # Calculate and log graph execution time
+            graph_duration_ms = (time.time() - graph_start_time) * 1000
+            log_performance_metric(
+                logger=logger,
+                name=f"agent_graph_execution_{agent_type}",
+                value=graph_duration_ms,
+                component="agent",
+                organization_id=organization_id
+            )
+            logger.debug(f"Agent graph execution completed in {graph_duration_ms:.2f}ms")
+            
+            try:
+                # Update the state in the state manager
+                agent_factory.state_manager.update_conversation_state(conversation_id, result)
+                logger.debug(f"Updated conversation state for: {conversation_id}")
+            except Exception as update_error:
+                # Log the error but continue
+                log_agent_error(
+                    logger=logger,
+                    agent_type=agent_type,
+                    error=update_error,
+                    context=f"Error updating conversation state for conversation: {conversation_id}",
+                    conversation_id=conversation_id,
+                    organization_id=organization_id
+                )
+            
+            # Extract the assistant's response
+            assistant_messages = [
+                msg for msg in result.get("messages", [])
+                if msg.get("role") == "assistant" and not msg.get("ephemeral", False)
+            ]
+            
+            # Get the last assistant message
+            last_message = assistant_messages[-1]["content"] if assistant_messages else "No response from agent."
+            
+            # Log the agent response
+            log_agent_response(
+                logger=logger,
+                agent_type=agent_type,
+                response=last_message,
+                conversation_id=conversation_id,
+                organization_id=organization_id
+            )
+            
+            # Calculate total request duration
+            total_duration_ms = (time.time() - start_time) * 1000
+            log_performance_metric(
+                logger=logger,
+                name=f"agent_request_total_{agent_type}",
+                value=total_duration_ms,
+                component="agent",
+                organization_id=organization_id
+            )
+            
+            # Return the response
+            return {
+                "response": last_message,
+                "conversation_id": conversation_id,
+                "agent_type": agent_type,
+                "organization_id": organization_id
+            }
+            
+        except FeatureNotAvailableError as e:
+            # Handle subscription-based access control errors
+            log_agent_error(
+                logger=logger,
+                agent_type=agent_type,
+                error=e,
+                context="Subscription does not have access to this agent type",
+                conversation_id=conversation_id,
+                organization_id=organization_id
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=str(e)
+            )
+            
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        # Handle other errors
+        log_agent_error(
+            logger=logger,
+            agent_type=agent_type,
+            error=e,
+            context="Unexpected error processing agent request",
+            conversation_id=conversation_id,
+            organization_id=organization_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing agent request: {str(e)}"
+        )
+
+
+async def get_conversation_history(
+    conversation_id: str,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get conversation history with tenant context and comprehensive logging.
+    
+    Args:
+        conversation_id: The conversation ID
+        request: The FastAPI request
+        db: Database session
+        current_user_id: The current user ID
+        
+    Returns:
+        The conversation history
+        
+    Raises:
+        HTTPException: If the conversation is not found or an error occurs
+    """
+    start_time = time.time()
+    
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Log the request
+        logger.info(f"Getting conversation history for: {conversation_id}", 
+                   extra={"custom_dimensions": {
+                       "conversation_id": conversation_id,
+                       "organization_id": organization_id
+                   }})
+        
+        # Get agent factory with tenant context
+        agent_factory = get_agent_factory(db=db, organization_id=organization_id)
+        
+        try:
+            # Get the conversation state
+            state = agent_factory.state_manager.get_conversation_state(conversation_id)
+        except Exception as get_error:
+            # Log the error and return empty state
+            log_agent_error(
+                logger=logger,
+                agent_type="unknown",
+                error=get_error,
+                context=f"Error getting conversation state for conversation: {conversation_id}",
+                conversation_id=conversation_id,
+                organization_id=organization_id
+            )
+            state = {}
+        
+        # Check if the conversation exists
+        if not state:
+            logger.warning(f"Conversation not found: {conversation_id}", 
+                          extra={"custom_dimensions": {
+                              "conversation_id": conversation_id,
+                              "organization_id": organization_id
+                          }})
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Conversation {conversation_id} not found"
+            )
+        
+        # Check if the conversation belongs to the current organization
+        if organization_id and state.get("organization_id") != organization_id:
+            logger.warning(f"Unauthorized access attempt to conversation: {conversation_id}", 
+                          extra={"custom_dimensions": {
+                              "conversation_id": conversation_id,
+                              "organization_id": organization_id,
+                              "state_organization_id": state.get("organization_id")
+                          }})
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have access to this conversation"
+            )
+        
+        # Extract messages from the state
+        messages = []
+        try:
+            messages = [
+                {
+                    "role": msg.get("role"),
+                    "content": msg.get("content"),
+                    "timestamp": msg.get("timestamp")
+                }
+                for msg in state.get("messages", [])
+                if not msg.get("ephemeral", False)  # Skip ephemeral messages
+            ]
+            logger.debug(f"Extracted {len(messages)} messages from conversation: {conversation_id}")
+        except Exception as msg_error:
+            # Log the error and continue with empty messages
+            log_agent_error(
+                logger=logger,
+                agent_type=state.get("agent_type", "unknown"),
+                error=msg_error,
+                context=f"Error extracting messages from conversation: {conversation_id}",
+                conversation_id=conversation_id,
+                organization_id=organization_id
+            )
+        
+        # Calculate request duration
+        duration_ms = (time.time() - start_time) * 1000
+        log_performance_metric(
+            logger=logger,
+            name="get_conversation_history",
+            value=duration_ms,
+            component="agent",
+            organization_id=organization_id
+        )
+        
+        # Return the conversation history
+        return {
+            "conversation_id": conversation_id,
+            "messages": messages,
+            "agent_type": state.get("agent_type", "unknown"),
+            "organization_id": state.get("organization_id")
+        }
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        # Handle other errors
+        log_agent_error(
+            logger=logger,
+            agent_type="unknown",
+            error=e,
+            context=f"Unexpected error retrieving conversation history for: {conversation_id}",
+            conversation_id=conversation_id,
+            organization_id=organization_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving conversation history: {str(e)}"
+        )
+
+
+async def list_conversations(
+    limit: int = 100,
+    offset: int = 0,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    List conversations with tenant context and comprehensive logging.
+    
+    Args:
+        limit: Maximum number of conversations to return
+        offset: Offset for pagination
+        request: The FastAPI request
+        db: Database session
+        current_user_id: The current user ID
+        
+    Returns:
+        List of conversations
+        
+    Raises:
+        HTTPException: If an error occurs
+    """
+    start_time = time.time()
+    
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Log the request
+        logger.info(f"Listing conversations for organization: {organization_id}", 
+                   extra={"custom_dimensions": {
+                       "limit": limit,
+                       "offset": offset,
+                       "organization_id": organization_id
+                   }})
+        
+        # Get agent factory with tenant context
+        agent_factory = get_agent_factory(db=db, organization_id=organization_id)
+        
+        try:
+            # List conversations for the current organization
+            conversations = agent_factory.state_manager.list_conversations(limit=limit, offset=offset)
+            logger.debug(f"Retrieved {len(conversations)} conversations for organization: {organization_id}")
+        except Exception as list_error:
+            # Handle errors in list_conversations
+            log_agent_error(
+                logger=logger,
+                agent_type="unknown",
+                error=list_error,
+                context=f"Error listing conversations for organization: {organization_id}",
+                organization_id=organization_id
+            )
+            # Return empty list as fallback
+            conversations = []
+        
+        # Calculate request duration
+        duration_ms = (time.time() - start_time) * 1000
+        log_performance_metric(
+            logger=logger,
+            name="list_conversations",
+            value=duration_ms,
+            component="agent",
+            organization_id=organization_id
+        )
+        
+        # Return the conversations
+        return {
+            "conversations": conversations,
+            "total": len(conversations),
+            "limit": limit,
+            "offset": offset,
+            "organization_id": organization_id
+        }
+        
+    except Exception as e:
+        # Handle other errors
+        log_agent_error(
+            logger=logger,
+            agent_type="unknown",
+            error=e,
+            context=f"Unexpected error listing conversations for organization: {organization_id}",
+            organization_id=organization_id
+        )
+        # Return empty response as fallback
+        return {
+            "conversations": [],
+            "total": 0,
+            "limit": limit,
+            "offset": offset,
+            "organization_id": organization_id
+        }
+
+
+async def delete_conversation(
+    conversation_id: str,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Delete a conversation with tenant context and comprehensive logging.
+    
+    Args:
+        conversation_id: The conversation ID
+        request: The FastAPI request
+        db: Database session
+        current_user_id: The current user ID
+        
+    Returns:
+        Success message
+        
+    Raises:
+        HTTPException: If the conversation is not found or an error occurs
+    """
+    start_time = time.time()
+    
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Log the request
+        logger.info(f"Deleting conversation: {conversation_id}", 
+                   extra={"custom_dimensions": {
+                       "conversation_id": conversation_id,
+                       "organization_id": organization_id
+                   }})
+        
+        # Get agent factory with tenant context
+        agent_factory = get_agent_factory(db=db, organization_id=organization_id)
+        
+        try:
+            # Delete the conversation
+            success = agent_factory.state_manager.delete_conversation(conversation_id)
+        except Exception as delete_error:
+            # Log the error and assume failure
+            log_agent_error(
+                logger=logger,
+                agent_type="unknown",
+                error=delete_error,
+                context=f"Error deleting conversation: {conversation_id}",
+                conversation_id=conversation_id,
+                organization_id=organization_id
+            )
+            success = False
+        
+        # Check if the conversation was deleted
+        if not success:
+            logger.warning(f"Failed to delete conversation: {conversation_id}", 
+                          extra={"custom_dimensions": {
+                              "conversation_id": conversation_id,
+                              "organization_id": organization_id
+                          }})
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Conversation {conversation_id} not found or you do not have access to it"
+            )
+        
+        # Calculate request duration
+        duration_ms = (time.time() - start_time) * 1000
+        log_performance_metric(
+            logger=logger,
+            name="delete_conversation",
+            value=duration_ms,
+            component="agent",
+            organization_id=organization_id
+        )
+        
+        logger.info(f"Successfully deleted conversation: {conversation_id}")
+        
+        # Return success message
+        return {
+            "message": f"Conversation {conversation_id} deleted successfully",
+            "conversation_id": conversation_id,
+            "organization_id": organization_id
+        }
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+        
+    except Exception as e:
+        # Handle other errors
+        log_agent_error(
+            logger=logger,
+            agent_type="unknown",
+            error=e,
+            context=f"Unexpected error deleting conversation: {conversation_id}",
+            conversation_id=conversation_id,
+            organization_id=organization_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting conversation: {str(e)}"
+        )
+
+
 @router.get("/agents/available", response_model=AgentAvailabilityResponse)
 async def get_available_agents(
     request: Request,
@@ -227,7 +819,7 @@ async def get_available_agents(
             subscription_tier = feature_control.get_subscription_tier()
         except Exception as feature_error:
             # Log the error but continue with free tier
-            print(f"Error getting subscription tier: {str(feature_error)}")
+            logger.warning(f"Error getting subscription tier: {str(feature_error)}")
             # Default to free tier
             subscription_tier = "free"
         
@@ -259,7 +851,7 @@ async def get_available_agents(
         
     except Exception as e:
         # Handle errors
-        print(f"Error in get_available_agents: {str(e)}")
+        logger.error(f"Error in get_available_agents: {str(e)}")
         
         # Return a default response with all agents
         agents = []
@@ -467,39 +1059,15 @@ async def get_agent_analytics(
         conversations_by_agent = {}
         messages_by_agent = {}
         conversations_by_date = {}
-        feedback_by_agent = {}
-        feedback_counts = {}
         
         for conv in filtered_conversations:
             # Count conversations by agent
             agent_type = conv.get("agent_type", "unknown")
             conversations_by_agent[agent_type] = conversations_by_agent.get(agent_type, 0) + 1
             
-            # Count messages by agent and collect feedback
+            # Count messages by agent
             messages = conv.get("messages", [])
             messages_by_agent[agent_type] = messages_by_agent.get(agent_type, 0) + len(messages)
-            
-            # Process feedback
-            for message in messages:
-                if message.get("role") == "assistant" and "feedback" in message:
-                    feedback = message["feedback"]
-                    rating = feedback.get("rating", 0)
-                    
-                    # Initialize feedback data for this agent if not exists
-                    if agent_type not in feedback_by_agent:
-                        feedback_by_agent[agent_type] = {
-                            "total_rating": 0,
-                            "count": 0,
-                            "ratings": {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
-                        }
-                    
-                    # Update feedback data
-                    feedback_by_agent[agent_type]["total_rating"] += rating
-                    feedback_by_agent[agent_type]["count"] += 1
-                    feedback_by_agent[agent_type]["ratings"][rating] = feedback_by_agent[agent_type]["ratings"].get(rating, 0) + 1
-                    
-                    # Update overall feedback counts
-                    feedback_counts[rating] = feedback_counts.get(rating, 0) + 1
             
             # Count conversations by date
             try:
@@ -507,31 +1075,6 @@ async def get_agent_analytics(
                 conversations_by_date[conv_date] = conversations_by_date.get(conv_date, 0) + 1
             except (ValueError, TypeError, KeyError):
                 pass
-        
-        # Calculate average ratings and format feedback data
-        feedback_by_agent_list = []
-        for agent_type, data in feedback_by_agent.items():
-            avg_rating = data["total_rating"] / data["count"] if data["count"] > 0 else 0
-            feedback_by_agent_list.append({
-                "agent_type": agent_type,
-                "average_rating": round(avg_rating, 1),
-                "count": data["count"],
-                "ratings_distribution": [
-                    {"rating": rating, "count": count}
-                    for rating, count in data["ratings"].items()
-                ]
-            })
-        
-        # Format overall feedback counts
-        feedback_distribution = [
-            {"rating": rating, "count": count}
-            for rating, count in sorted(feedback_counts.items())
-        ]
-        
-        # Calculate overall average rating
-        total_ratings = sum(rating * count for rating, count in feedback_counts.items())
-        total_feedback_count = sum(feedback_counts.values())
-        overall_avg_rating = round(total_ratings / total_feedback_count, 1) if total_feedback_count > 0 else 0
         
         # Prepare response
         return {
@@ -548,17 +1091,11 @@ async def get_agent_analytics(
                 {"date": date, "count": count}
                 for date, count in sorted(conversations_by_date.items())
             ],
-            "feedback": {
-                "total_count": total_feedback_count,
-                "average_rating": overall_avg_rating,
-                "distribution": feedback_distribution,
-                "by_agent": feedback_by_agent_list
-            },
             "organization_id": organization_id
         }
         
     except Exception as e:
-        print(f"Error in get_agent_analytics: {str(e)}")
+        logger.error(f"Error in get_agent_analytics: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving analytics data: {str(e)}"
@@ -655,7 +1192,7 @@ async def attach_event_to_conversation(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error in attach_event_to_conversation: {str(e)}")
+        logger.error(f"Error in attach_event_to_conversation: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error attaching event to conversation: {str(e)}"
@@ -748,7 +1285,7 @@ async def submit_agent_feedback(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error in submit_agent_feedback: {str(e)}")
+        logger.error(f"Error in submit_agent_feedback: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error submitting feedback: {str(e)}"

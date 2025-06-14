@@ -45,7 +45,7 @@ cp startup.py $DEPLOY_DIR/
 cp startup.sh $DEPLOY_DIR/
 cp wsgi.py $DEPLOY_DIR/
 cp web.config $DEPLOY_DIR/
-cp app_adapter.py $DEPLOY_DIR/
+cp app_adapter_with_agents.py $DEPLOY_DIR/app_adapter.py
 cp requirements.txt $DEPLOY_DIR/
 cp run_azure_migrations_fixed.py $DEPLOY_DIR/
 chmod +x $DEPLOY_DIR/startup.sh

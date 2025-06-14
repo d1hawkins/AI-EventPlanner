@@ -43,6 +43,11 @@ echo -e "${YELLOW}=== Verifying iCalendar Installation ===${NC}"
 ./check_icalendar_installation.py
 echo
 
+# Verify the alembic installation
+echo -e "${YELLOW}=== Verifying Alembic Installation ===${NC}"
+./check_alembic_installation.py
+echo
+
 # Check if the application is running
 echo -e "${YELLOW}=== Checking Application Status ===${NC}"
 APP_NAME="ai-event-planner-saas-py"

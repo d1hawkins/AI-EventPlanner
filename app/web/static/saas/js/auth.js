@@ -10,21 +10,22 @@ document.addEventListener('DOMContentLoaded', function() {
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Get form values
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const rememberMe = document.getElementById('rememberMe').checked;
+            // Get form values - check for both username and email fields
+            const usernameField = document.getElementById('username');
+            const emailField = document.getElementById('email');
+            const passwordField = document.getElementById('password');
+            
+            const username = usernameField ? usernameField.value : emailField.value;
+            const password = passwordField.value;
+            const rememberMe = document.getElementById('rememberMe') ? document.getElementById('rememberMe').checked : false;
             
             // Validate form
             let isValid = true;
             let errorMessage = '';
             
-            if (!email) {
+            if (!username) {
                 isValid = false;
-                errorMessage += 'Email is required.\n';
-            } else if (!isValidEmail(email)) {
-                isValid = false;
-                errorMessage += 'Please enter a valid email address.\n';
+                errorMessage += 'Username is required.\n';
             }
             
             if (!password) {
@@ -33,28 +34,48 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             if (!isValid) {
-                alert(errorMessage);
+                showToast(errorMessage, 'error');
                 return;
             }
             
-            // In a real application, this would make an API call to authenticate the user
-            // For demo purposes, we'll just create a dummy token and redirect to the dashboard
-            console.log('Login form submitted:', { email, password, rememberMe });
+            // Make API call to authenticate the user
+            console.log('Login form submitted:', { username, password, rememberMe });
             
-            // Simulate API call with a timeout
             showLoading();
             
-            setTimeout(function() {
-                // Create a dummy token and store it in localStorage
-                const dummyToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoxNzE3MjM0OTk5fQ.dummy-signature';
-                localStorage.setItem('authToken', dummyToken);
-                
-                // Also store the organization ID for tenant context
-                localStorage.setItem('organizationId', '1');
+            // Create form data for OAuth2PasswordRequestForm
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('password', password);
+            
+            fetch('/auth/token', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Invalid credentials');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Store the token
+                localStorage.setItem('authToken', data.access_token);
+                localStorage.setItem('tokenType', data.token_type);
                 
                 hideLoading();
-                window.location.href = '/saas/dashboard.html';
-            }, 1500);
+                showToast('Login successful!', 'success');
+                
+                // Redirect to dashboard
+                setTimeout(() => {
+                    window.location.href = '/saas/dashboard.html';
+                }, 1000);
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Login error:', error);
+                showToast('Invalid username or password', 'error');
+            });
         });
     }
     
@@ -65,16 +86,16 @@ document.addEventListener('DOMContentLoaded', function() {
         signupForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Get form values from the current step
+            // Get form values - handle both single-step and multi-step forms
             const currentStep = document.querySelector('.signup-step:not([style*="display: none"])');
-            const stepId = currentStep.id;
+            const isMultiStep = currentStep !== null;
             
-            if (stepId === 'step3') {
-                // Final step - validate terms acceptance
+            if (isMultiStep && currentStep.id === 'step3') {
+                // Multi-step form - final step
                 const termsCheck = document.getElementById('termsCheck').checked;
                 
                 if (!termsCheck) {
-                    alert('You must agree to the Terms of Service and Privacy Policy to continue.');
+                    showToast('You must agree to the Terms of Service and Privacy Policy to continue.', 'error');
                     return;
                 }
                 
@@ -89,16 +110,89 @@ document.addEventListener('DOMContentLoaded', function() {
                     marketingConsent: document.getElementById('marketingCheck').checked
                 };
                 
-                // In a real application, this would make an API call to create the user and organization
                 console.log('Signup form submitted:', formData);
-                
-                // Simulate API call with a timeout
                 showLoading();
                 
+                // TODO: Implement full organization signup
                 setTimeout(function() {
                     hideLoading();
                     window.location.href = '/saas/dashboard.html';
                 }, 1500);
+            } else {
+                // Simple registration form
+                const email = document.getElementById('email').value;
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                
+                // Validate form
+                let isValid = true;
+                let errorMessage = '';
+                
+                if (!email) {
+                    isValid = false;
+                    errorMessage += 'Email is required.\n';
+                } else if (!isValidEmail(email)) {
+                    isValid = false;
+                    errorMessage += 'Please enter a valid email address.\n';
+                }
+                
+                if (!username) {
+                    isValid = false;
+                    errorMessage += 'Username is required.\n';
+                }
+                
+                if (!password) {
+                    isValid = false;
+                    errorMessage += 'Password is required.\n';
+                } else if (password.length < 8) {
+                    isValid = false;
+                    errorMessage += 'Password must be at least 8 characters long.\n';
+                }
+                
+                if (!isValid) {
+                    showToast(errorMessage, 'error');
+                    return;
+                }
+                
+                // Make API call to register the user
+                console.log('Registration form submitted:', { email, username, password });
+                
+                showLoading();
+                
+                fetch('/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        username: username,
+                        password: password,
+                        is_active: true
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.detail || 'Registration failed');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    hideLoading();
+                    showToast('Registration successful! Please login.', 'success');
+                    
+                    // Redirect to login page
+                    setTimeout(() => {
+                        window.location.href = '/saas/login.html';
+                    }, 2000);
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Registration error:', error);
+                    showToast(error.message || 'Registration failed', 'error');
+                });
             }
         });
     }
@@ -243,6 +337,42 @@ document.addEventListener('DOMContentLoaded', function() {
         if (overlay) {
             overlay.style.display = 'none';
         }
+    }
+    
+    function showToast(message, type = 'info') {
+        // Create toast container if it doesn't exist
+        let toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toastContainer';
+            toastContainer.style.position = 'fixed';
+            toastContainer.style.top = '20px';
+            toastContainer.style.right = '20px';
+            toastContainer.style.zIndex = '10000';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+        toast.style.minWidth = '300px';
+        toast.style.marginBottom = '10px';
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        toastContainer.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 5000);
+        
+        // Log to console for debugging
+        console.log(`Toast: ${message} (${type})`);
     }
 });
 

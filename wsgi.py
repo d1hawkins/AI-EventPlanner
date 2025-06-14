@@ -82,6 +82,16 @@ if application is None and os.path.exists(main_path):
         print(f"Error importing app from app.main: {str(e)}")
         application = None
 
+# If that fails too, try app_simplified
+if application is None:
+    try:
+        print("Attempting to import from app_simplified")
+        from app_simplified import app as application
+        print("Successfully imported app from app_simplified")
+    except ImportError as e:
+        print(f"Error importing app from app_simplified: {str(e)}")
+        application = None
+
 # If that fails too, fall back to app_adapter
 if application is None:
     try:

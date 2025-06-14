@@ -15,8 +15,8 @@ load_dotenv(".env.saas")
 # Set default environment variables if not present
 if not os.getenv("HOST"):
     os.environ["HOST"] = "0.0.0.0"
-# Use port 8003 to avoid conflicts with other servers
-os.environ["PORT"] = "8003"
+# Use port 8004 to avoid conflicts with other servers
+os.environ["PORT"] = "8004"
 if not os.getenv("ENVIRONMENT"):
     os.environ["ENVIRONMENT"] = "development"
 if not os.getenv("APP_VERSION"):

@@ -2,6 +2,7 @@
 # It creates a simple WSGI app that serves static files from the saas directory
 # and routes API requests to the appropriate handlers
 # This version also integrates with the real agent implementation
+# FIXED VERSION: Uses simple_coordinator_graph instead of coordinator_graph to avoid TypedDict issues
 
 import os
 import mimetypes
@@ -95,6 +96,38 @@ except ImportError as e:
     REAL_AGENTS_AVAILABLE = False
     print(f"Failed to import real agent implementation: {str(e)}")
     traceback.print_exc()
+
+# IMPORTANT FIX: Import simple_coordinator_graph instead of coordinator_graph
+# This avoids the TypedDict compatibility issues that cause issubclass() errors
+try:
+    # Try to import from app.graphs.simple_coordinator_graph
+    from app.graphs.simple_coordinator_graph import create_coordinator_graph, create_initial_state
+    print("Successfully imported simple_coordinator_graph")
+except ImportError:
+    try:
+        # Try alternative import paths
+        import_paths = [
+            'graphs.simple_coordinator_graph',
+            'app_adapter.app.graphs.simple_coordinator_graph'
+        ]
+        
+        imported = False
+        for path in import_paths:
+            try:
+                module = __import__(path, fromlist=['create_coordinator_graph', 'create_initial_state'])
+                create_coordinator_graph = getattr(module, 'create_coordinator_graph')
+                create_initial_state = getattr(module, 'create_initial_state')
+                print(f"Successfully imported simple_coordinator_graph from {path}")
+                imported = True
+                break
+            except ImportError:
+                continue
+        
+        if not imported:
+            print("WARNING: Could not import simple_coordinator_graph. Agent functionality will be limited.")
+    except Exception as e:
+        print(f"Error importing simple_coordinator_graph: {str(e)}")
+        traceback.print_exc()
 
 def app(environ, start_response):
     """
