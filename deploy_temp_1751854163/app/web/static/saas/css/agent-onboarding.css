@@ -1,0 +1,322 @@
+/**
+ * AI Event Planner SaaS - Agent Onboarding Styles
+ */
+
+/* Onboarding Modal Styles */
+.onboarding-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.onboarding-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.onboarding-content {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.onboarding-modal.active .onboarding-content {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.onboarding-header {
+    padding: 20px;
+    border-bottom: 1px solid #e3e6f0;
+    position: relative;
+}
+
+.onboarding-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #4e73df;
+}
+
+.onboarding-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 1.5rem;
+    color: #858796;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.onboarding-close:hover {
+    color: #e74a3b;
+}
+
+.onboarding-body {
+    padding: 20px;
+}
+
+.onboarding-step {
+    display: none;
+}
+
+.onboarding-step.active {
+    display: block;
+}
+
+.onboarding-step-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #4e73df;
+}
+
+.onboarding-step-content {
+    margin-bottom: 20px;
+}
+
+.onboarding-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #e3e6f0;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Progress Indicator */
+.onboarding-progress {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.progress-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #e3e6f0;
+    margin: 0 5px;
+    transition: background-color 0.3s ease;
+}
+
+.progress-dot.active {
+    background-color: #4e73df;
+}
+
+/* Agent Selection in Onboarding */
+.onboarding-agent-selection {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.onboarding-agent-card {
+    border: 1px solid #e3e6f0;
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.onboarding-agent-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.onboarding-agent-card.selected {
+    border-color: #4e73df;
+    background-color: rgba(78, 115, 223, 0.05);
+}
+
+.onboarding-agent-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(78, 115, 223, 0.1);
+    color: #4e73df;
+    margin-bottom: 10px;
+}
+
+.onboarding-agent-name {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.onboarding-agent-description {
+    font-size: 0.85rem;
+    color: #858796;
+}
+
+/* Sample Conversation Styles */
+.sample-conversation {
+    background-color: #f8f9fc;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.sample-message {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.sample-message:last-child {
+    margin-bottom: 0;
+}
+
+.sample-message.user-message {
+    flex-direction: row-reverse;
+}
+
+.sample-message-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+    background-color: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+
+.sample-message.user-message .sample-message-avatar {
+    margin-right: 0;
+    margin-left: 10px;
+    background-color: #4e73df;
+    color: white;
+}
+
+.sample-message-content {
+    max-width: 70%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background-color: white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    font-size: 0.9rem;
+}
+
+.sample-message.user-message .sample-message-content {
+    background-color: #4e73df;
+    color: white;
+}
+
+/* Tooltip Styles */
+.onboarding-tooltip {
+    position: absolute;
+    background-color: #4e73df;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1040;
+    max-width: 250px;
+    font-size: 0.9rem;
+}
+
+.onboarding-tooltip:after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+}
+
+.onboarding-tooltip.top:after {
+    border-width: 8px 8px 0 8px;
+    border-color: #4e73df transparent transparent transparent;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.onboarding-tooltip.bottom:after {
+    border-width: 0 8px 8px 8px;
+    border-color: transparent transparent #4e73df transparent;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.onboarding-tooltip.left:after {
+    border-width: 8px 0 8px 8px;
+    border-color: transparent transparent transparent #4e73df;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.onboarding-tooltip.right:after {
+    border-width: 8px 8px 8px 0;
+    border-color: transparent #4e73df transparent transparent;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Help Button Styles */
+.agent-help-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #4e73df;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    z-index: 1030;
+    transition: all 0.3s ease;
+}
+
+.agent-help-button:hover {
+    transform: scale(1.1);
+    background-color: #2e59d9;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .onboarding-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .onboarding-agent-selection {
+        grid-template-columns: 1fr;
+    }
+    
+    .onboarding-footer {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .onboarding-footer .btn {
+        width: 100%;
+    }
+}

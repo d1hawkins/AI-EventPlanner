@@ -62,7 +62,14 @@ if [ -f "wsgi.py" ]; then
     exit 0
 fi
 
-# Check if app_adapter.py exists
+# Check if app_adapter_with_agents.py exists (for real agents)
+if [ -f "app_adapter_with_agents.py" ]; then
+    echo "Found app_adapter_with_agents.py, using it as the entry point"
+    gunicorn app_adapter_with_agents:app --bind=0.0.0.0:8000 --workers=4 --timeout=120
+    exit 0
+fi
+
+# Check if app_adapter.py exists (fallback)
 if [ -f "app_adapter.py" ]; then
     echo "Found app_adapter.py, using it as the entry point"
     gunicorn app_adapter:app --bind=0.0.0.0:8000 --workers=4 --timeout=120

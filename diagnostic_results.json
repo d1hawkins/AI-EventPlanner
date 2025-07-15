@@ -1,0 +1,66 @@
+{
+  "environment": {
+    "status": "success",
+    "issues": [],
+    "details": {
+      "LLM_PROVIDER": "google",
+      "DATABASE_URL": "SET",
+      "ENVIRONMENT": "SET",
+      "GOOGLE_API_KEY": "SET",
+      "APPINSIGHTS_INSTRUMENTATIONKEY": "NOT SET",
+      "APP_VERSION": "1.0.0",
+      "HOST": "SET",
+      "PORT": "SET"
+    }
+  },
+  "llm_factory": {
+    "status": "error",
+    "issues": [
+      "LLM test call failed: 403 Generative Language API has not been used in project 424217536561 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=424217536561 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"SERVICE_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"generativelanguage.googleapis.com\"\n}\nmetadata {\n  key: \"serviceTitle\"\n  value: \"Generative Language API\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"424217536561\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/424217536561\"\n}\nmetadata {\n  key: \"activationUrl\"\n  value: \"https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=424217536561\"\n}\n, locale: \"en-US\"\nmessage: \"Generative Language API has not been used in project 424217536561 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=424217536561 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console API activation\"\n  url: \"https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=424217536561\"\n}\n]"
+    ],
+    "details": {
+      "import": "success",
+      "llm_creation": "success",
+      "llm_type": "<class 'langchain_google_genai.chat_models.ChatGoogleGenerativeAI'>",
+      "llm_test": "error: 403 Generative Language API has not been used in project 424217536561 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=424217536561 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"SERVICE_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"generativelanguage.googleapis.com\"\n}\nmetadata {\n  key: \"serviceTitle\"\n  value: \"Generative Language API\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"424217536561\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/424217536561\"\n}\nmetadata {\n  key: \"activationUrl\"\n  value: \"https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=424217536561\"\n}\n, locale: \"en-US\"\nmessage: \"Generative Language API has not been used in project 424217536561 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=424217536561 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console API activation\"\n  url: \"https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview?project=424217536561\"\n}\n]"
+    }
+  },
+  "agent_graphs": {
+    "status": "error",
+    "issues": [
+      "financial graph error: \"FinancialSearchTool\" object has no field \"search_service\"",
+      "stakeholder_management graph error: \"StakeholderSearchTool\" object has no field \"search_service\"",
+      "project_management graph error: \"ProjectManagementSearchTool\" object has no field \"search_service\"",
+      "analytics graph error: \"AnalyticsSearchTool\" object has no field \"search_service\""
+    ],
+    "details": {
+      "coordinator": "success",
+      "resource_planning": "success",
+      "financial": "error: \"FinancialSearchTool\" object has no field \"search_service\"",
+      "stakeholder_management": "error: \"StakeholderSearchTool\" object has no field \"search_service\"",
+      "marketing_communications": "success",
+      "project_management": "error: \"ProjectManagementSearchTool\" object has no field \"search_service\"",
+      "analytics": "error: \"AnalyticsSearchTool\" object has no field \"search_service\"",
+      "compliance_security": "success"
+    }
+  },
+  "database": {
+    "status": "error",
+    "issues": [
+      "Database connection error: Not an executable object: 'SELECT 1'"
+    ],
+    "details": {
+      "import": "success",
+      "connection": "error: Not an executable object: 'SELECT 1'"
+    }
+  },
+  "agent_factory": {
+    "status": "success",
+    "issues": [],
+    "details": {
+      "import": "success",
+      "creation": "success",
+      "agent_creation": "success"
+    }
+  }
+}

@@ -189,8 +189,150 @@ def app(environ, start_response):
                 # Fall back to mock responses
                 print("Falling back to mock responses")
         
+        # Handle /api/agents/available endpoint
+        if path_info == '/api/agents/available' and environ.get('REQUEST_METHOD') == 'GET':
+            # Mock response for available agents
+            response_data = {
+                "agents": [
+                    {
+                        "agent_type": "coordinator",
+                        "name": "Event Coordinator",
+                        "description": "Orchestrates the entire event planning process and delegates tasks to specialized agents.",
+                        "icon": "bi-diagram-3",
+                        "subscription_tier": "free",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "resource_planning",
+                        "name": "Resource Planner",
+                        "description": "Helps you identify, allocate, and manage resources needed for your event.",
+                        "icon": "bi-boxes",
+                        "subscription_tier": "free",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "financial",
+                        "name": "Financial Advisor",
+                        "description": "Handles budgeting, cost estimation, and financial planning for your event.",
+                        "icon": "bi-calculator",
+                        "subscription_tier": "professional",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "stakeholder_management",
+                        "name": "Stakeholder Manager",
+                        "description": "Helps you identify, engage, and communicate with event stakeholders.",
+                        "icon": "bi-people",
+                        "subscription_tier": "professional",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "marketing_communications",
+                        "name": "Marketing Specialist",
+                        "description": "Helps you promote your event and create effective communication materials.",
+                        "icon": "bi-megaphone",
+                        "subscription_tier": "professional",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "project_management",
+                        "name": "Project Manager",
+                        "description": "Helps you plan, execute, and track your event as a project.",
+                        "icon": "bi-kanban",
+                        "subscription_tier": "professional",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "analytics",
+                        "name": "Analytics Expert",
+                        "description": "Helps you collect, analyze, and interpret data related to your event.",
+                        "icon": "bi-graph-up",
+                        "subscription_tier": "enterprise",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "compliance_security",
+                        "name": "Compliance & Security Specialist",
+                        "description": "Ensures your event meets legal requirements and security standards.",
+                        "icon": "bi-shield-check",
+                        "subscription_tier": "enterprise",
+                        "available": True
+                    }
+                ],
+                "subscription_tier": "professional",  # Mock subscription tier
+                "using_real_agent": REAL_AGENTS_AVAILABLE
+            }
+            
+            # Convert to JSON
+            response_json = json.dumps(response_data).encode('utf-8')
+            
+            # Send the response
+            status = '200 OK'
+            headers = [('Content-type', 'application/json'), ('Content-Length', str(len(response_json)))]
+            start_response(status, headers)
+            return [response_json]
+        
+        # Handle /api/agents/conversations endpoint
+        elif path_info == '/api/agents/conversations' and environ.get('REQUEST_METHOD') == 'GET':
+            # Mock response for conversation list
+            response_data = {
+                "conversations": [
+                    {
+                        "conversation_id": "conv_1",
+                        "agent_type": "coordinator",
+                        "preview": "I need help planning a corporate conference...",
+                        "timestamp": "2025-06-15T18:30:00Z"
+                    },
+                    {
+                        "conversation_id": "conv_2",
+                        "agent_type": "financial",
+                        "preview": "What's the budget for catering?",
+                        "timestamp": "2025-06-15T17:45:00Z"
+                    }
+                ],
+                "using_real_agent": REAL_AGENTS_AVAILABLE
+            }
+            
+            # Convert to JSON
+            response_json = json.dumps(response_data).encode('utf-8')
+            
+            # Send the response
+            status = '200 OK'
+            headers = [('Content-type', 'application/json'), ('Content-Length', str(len(response_json)))]
+            start_response(status, headers)
+            return [response_json]
+        
+        # Handle /api/events endpoint
+        elif path_info == '/api/events' and environ.get('REQUEST_METHOD') == 'GET':
+            # Mock response for events
+            response_data = {
+                "events": [
+                    {
+                        "id": 1,
+                        "title": "Tech Conference 2025",
+                        "description": "Annual technology conference",
+                        "date": "2025-09-15"
+                    },
+                    {
+                        "id": 2,
+                        "title": "Company Retreat",
+                        "description": "Team building retreat",
+                        "date": "2025-08-20"
+                    }
+                ]
+            }
+            
+            # Convert to JSON
+            response_json = json.dumps(response_data).encode('utf-8')
+            
+            # Send the response
+            status = '200 OK'
+            headers = [('Content-type', 'application/json'), ('Content-Length', str(len(response_json)))]
+            start_response(status, headers)
+            return [response_json]
+        
         # Mock responses for API requests when real agents are not available
-        if path_info == '/api/agents/message' and environ.get('REQUEST_METHOD') == 'POST':
+        elif path_info == '/api/agents/message' and environ.get('REQUEST_METHOD') == 'POST':
             # Get the request body
             try:
                 request_body_size = int(environ.get('CONTENT_LENGTH', 0))

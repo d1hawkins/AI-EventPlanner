@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Event Planner</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/styles/github.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/login-styles.css">
+</head>
+<body>
+    <!-- Authentication Container -->
+    <div id="auth-container" style="display: none;">
+        <!-- Login Form -->
+        <div class="auth-form">
+            <h2>Login</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username-input">Username</label>
+                    <input type="text" id="username-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="password-input">Password</label>
+                    <input type="password" id="password-input" required>
+                </div>
+                <button type="submit">Login</button>
+                <p>Don't have an account? <a href="#" id="show-register">Register</a></p>
+            </form>
+        </div>
+        
+        <!-- Register Form -->
+        <div id="register-form-container" style="display: none;">
+            <div class="auth-form">
+                <h2>Register</h2>
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="reg-email">Email</label>
+                        <input type="email" id="reg-email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-username">Username</label>
+                        <input type="text" id="reg-username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Password</label>
+                        <input type="password" id="reg-password" required>
+                    </div>
+                    <button type="submit">Register</button>
+                    <p>Already have an account? <a href="#" id="show-login">Login</a></p>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chat Interface -->
+    <div id="chat-interface" class="app-container">
+        <!-- Header -->
+        <header>
+            <h1>AI Event Planner</h1>
+            <div id="user-info">
+                <span id="username">User</span>
+                <button id="logout-btn">Logout</button>
+            </div>
+        </header>
+        
+        <!-- Main Content - 3 column layout -->
+        <div class="main-content">
+            <!-- Left Column - Conversations List -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <h2>Conversations</h2>
+                    <button id="new-conversation-btn" title="New Conversation">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-conversations" placeholder="Search conversations...">
+                </div>
+                <div id="conversations-list">
+                    <!-- Conversations will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Middle Column - Chat -->
+            <div class="chat-container">
+                <div id="chat-header">
+                    <h2 id="conversation-title">New Conversation</h2>
+                    <div class="chat-actions">
+                        <button title="Settings"><i class="fas fa-cog"></i></button>
+                    </div>
+                </div>
+                <div id="messages-container">
+                    <!-- Messages will be populated here -->
+                </div>
+                <div class="chat-input-container">
+                    <textarea id="message-input" placeholder="Type your message here..."></textarea>
+                    <button id="send-btn">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Send</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Right Column - Proposal/Plan -->
+            <div class="plan-container">
+                <div class="plan-tabs">
+                    <button class="tab-btn active" data-tab="proposal">
+                        <i class="fas fa-file-alt"></i>
+                        Proposal
+                    </button>
+                    <button class="tab-btn" data-tab="project-plan">
+                        <i class="fas fa-tasks"></i>
+                        Project Plan
+                    </button>
+                </div>
+                
+                <!-- Proposal Tab -->
+                <div id="proposal-content" class="tab-pane active">
+                    <div class="plan-header">
+                        <h3>Event Proposal</h3>
+                        <div class="plan-actions">
+                            <button id="export-proposal-btn" title="Export" disabled>
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button id="print-proposal-btn" title="Print" disabled>
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="plan-body">
+                        <div class="empty-state">
+                            <div class="empty-icon">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <h4>No Proposal Yet</h4>
+                            <p>Complete the information gathering process to generate a proposal.</p>
+                            <button id="generate-proposal-btn" class="action-btn">
+                                <i class="fas fa-magic"></i>
+                                Generate Proposal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Project Plan Tab -->
+                <div id="project-plan-content" class="tab-pane">
+                    <div class="plan-header">
+                        <h3>Project Plan</h3>
+                        <div class="plan-actions">
+                            <button id="refresh-tasks-btn" title="Refresh">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button id="export-plan-btn" title="Export" disabled>
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button id="print-plan-btn" title="Print" disabled>
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="plan-body">
+                        <!-- Task Management Section -->
+                        <div id="task-management" class="task-management">
+                            <div class="task-filters">
+                                <div class="filter-group">
+                                    <label for="status-filter">Status:</label>
+                                    <select id="status-filter">
+                                        <option value="all">All</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label for="agent-filter">Assigned To:</label>
+                                    <select id="agent-filter">
+                                        <option value="all">All</option>
+                                        <option value="resource_planning">Resource Planning</option>
+                                        <option value="financial">Financial</option>
+                                        <option value="stakeholder_management">Stakeholder</option>
+                                        <option value="marketing_communications">Marketing</option>
+                                        <option value="project_management">Project Management</option>
+                                        <option value="analytics">Analytics</option>
+                                        <option value="compliance_security">Compliance</option>
+                                    </select>
+                                </div>
+                                <div class="search-task">
+                                    <input type="text" id="task-search" placeholder="Search tasks...">
+                                </div>
+                            </div>
+                            
+                            <!-- Task Progress Overview -->
+                            <div class="task-progress">
+                                <div class="progress-bar-container">
+                                    <div class="progress-label">Overall Progress</div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="overall-progress" style="width: 0%;">0%</div>
+                                    </div>
+                                </div>
+                                <div class="task-stats">
+                                    <div class="stat-item">
+                                        <div class="stat-value" id="total-tasks">0</div>
+                                        <div class="stat-label">Total</div>
+                                    </div>
+                                    <div class="stat-item pending">
+                                        <div class="stat-value" id="pending-tasks">0</div>
+                                        <div class="stat-label">Pending</div>
+                                    </div>
+                                    <div class="stat-item in-progress">
+                                        <div class="stat-value" id="in-progress-tasks">0</div>
+                                        <div class="stat-label">In Progress</div>
+                                    </div>
+                                    <div class="stat-item completed">
+                                        <div class="stat-value" id="completed-tasks">0</div>
+                                        <div class="stat-label">Completed</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Task List -->
+                            <div class="task-list-container">
+                                <h4>Tasks</h4>
+                                <div id="task-list" class="task-list">
+                                    <!-- Tasks will be populated here -->
+                                    <div class="empty-task-list">
+                                        <p>No tasks available. Generate a project plan first.</p>
+                                        <button id="generate-plan-btn" class="action-btn" disabled>
+                                            <i class="fas fa-magic"></i>
+                                            Generate Plan
+                                        </button>
+                                        <p class="note">Proposal approval required</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/lib/highlight.min.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

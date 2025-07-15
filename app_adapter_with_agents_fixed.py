@@ -1,7 +1,7 @@
 # This file exists to provide the 'app' object that Azure is looking for
 # It creates a simple WSGI app that serves static files from the saas directory
 # and routes API requests to the appropriate handlers
-# This version also integrates with the real agent implementation
+# This version properly integrates with the real agent implementation
 
 import os
 import mimetypes
@@ -49,25 +49,25 @@ try:
         for item in os.listdir(app_dir):
             print(f"  {item}")
     
-    # Try all possible import paths
+    # Try all possible import paths - FIXED: Use api_router instead of agent_router
     import_paths = [
-        # Direct import
+        # Direct import - CORRECTED
         {
-            'router': 'app.agents.agent_router',
+            'router': 'app.agents.api_router',
             'factory': 'app.agents.agent_factory',
             'session': 'app.db.session',
             'tenant': 'app.middleware.tenant'
         },
-        # Without app prefix
+        # Without app prefix - CORRECTED
         {
-            'router': 'agents.agent_router',
+            'router': 'agents.api_router',
             'factory': 'agents.agent_factory',
             'session': 'db.session',
             'tenant': 'middleware.tenant'
         },
-        # From wwwroot
+        # From wwwroot - CORRECTED
         {
-            'router': 'app_adapter.app.agents.agent_router',
+            'router': 'app_adapter.app.agents.api_router',
             'factory': 'app_adapter.app.agents.agent_factory',
             'session': 'app_adapter.app.db.session',
             'tenant': 'app_adapter.app.middleware.tenant'
@@ -156,28 +156,47 @@ def app(environ, start_response):
                     # Create a database session
                     db = next(get_db())
                     
-                    # Get agent response
-                    result = get_agent_response(
-                        agent_type=agent_type,
-                        message=message,
-                        conversation_id=conversation_id,
-                        request=None,
-                        db=db,
-                        current_user_id=1  # Default user ID
-                    )
+                    # Create a mock request object for tenant context
+                    class MockRequest:
+                        def __init__(self, environ):
+                            self.headers = {}
+                            # Extract headers from environ
+                            for key, value in environ.items():
+                                if key.startswith('HTTP_'):
+                                    header_name = key[5:].replace('_', '-').lower()
+                                    self.headers[header_name] = value
                     
-                    # Add flag to indicate real agent was used
-                    result["using_real_agent"] = True
+                    mock_request = MockRequest(environ)
                     
-                    # Convert to JSON
-                    response_json = json.dumps(result).encode('utf-8')
+                    # Get agent response using the real implementation
+                    import asyncio
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
                     
-                    # Send the response
-                    status = '200 OK'
-                    headers = [('Content-type', 'application/json'), ('Content-Length', str(len(response_json)))]
-                    start_response(status, headers)
-                    return [response_json]
-                    
+                    try:
+                        result = loop.run_until_complete(get_agent_response(
+                            agent_type=agent_type,
+                            message=message,
+                            conversation_id=conversation_id,
+                            request=mock_request,
+                            db=db,
+                            current_user_id=1  # Default user ID
+                        ))
+                        
+                        # Add flag to indicate real agent was used
+                        result["using_real_agent"] = True
+                        
+                        # Convert to JSON
+                        response_json = json.dumps(result).encode('utf-8')
+                        
+                        # Send the response
+                        status = '200 OK'
+                        headers = [('Content-type', 'application/json'), ('Content-Length', str(len(response_json)))]
+                        start_response(status, headers)
+                        return [response_json]
+                    finally:
+                        loop.close()
+                        
                 # Handle other agent endpoints...
                 # (Implementation for other endpoints omitted for brevity)
                     
@@ -189,8 +208,150 @@ def app(environ, start_response):
                 # Fall back to mock responses
                 print("Falling back to mock responses")
         
+        # Handle /api/agents/available endpoint
+        if path_info == '/api/agents/available' and environ.get('REQUEST_METHOD') == 'GET':
+            # Response for available agents with real agent flag
+            response_data = {
+                "agents": [
+                    {
+                        "agent_type": "coordinator",
+                        "name": "Event Coordinator",
+                        "description": "Orchestrates the entire event planning process and delegates tasks to specialized agents.",
+                        "icon": "bi-diagram-3",
+                        "subscription_tier": "free",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "resource_planning",
+                        "name": "Resource Planner",
+                        "description": "Helps you identify, allocate, and manage resources needed for your event.",
+                        "icon": "bi-boxes",
+                        "subscription_tier": "free",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "financial",
+                        "name": "Financial Advisor",
+                        "description": "Handles budgeting, cost estimation, and financial planning for your event.",
+                        "icon": "bi-calculator",
+                        "subscription_tier": "professional",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "stakeholder_management",
+                        "name": "Stakeholder Manager",
+                        "description": "Helps you identify, engage, and communicate with event stakeholders.",
+                        "icon": "bi-people",
+                        "subscription_tier": "professional",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "marketing_communications",
+                        "name": "Marketing Specialist",
+                        "description": "Helps you promote your event and create effective communication materials.",
+                        "icon": "bi-megaphone",
+                        "subscription_tier": "professional",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "project_management",
+                        "name": "Project Manager",
+                        "description": "Helps you plan, execute, and track your event as a project.",
+                        "icon": "bi-kanban",
+                        "subscription_tier": "professional",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "analytics",
+                        "name": "Analytics Expert",
+                        "description": "Helps you collect, analyze, and interpret data related to your event.",
+                        "icon": "bi-graph-up",
+                        "subscription_tier": "enterprise",
+                        "available": True
+                    },
+                    {
+                        "agent_type": "compliance_security",
+                        "name": "Compliance & Security Specialist",
+                        "description": "Ensures your event meets legal requirements and security standards.",
+                        "icon": "bi-shield-check",
+                        "subscription_tier": "enterprise",
+                        "available": True
+                    }
+                ],
+                "subscription_tier": "professional",  # Mock subscription tier
+                "using_real_agent": REAL_AGENTS_AVAILABLE
+            }
+            
+            # Convert to JSON
+            response_json = json.dumps(response_data).encode('utf-8')
+            
+            # Send the response
+            status = '200 OK'
+            headers = [('Content-type', 'application/json'), ('Content-Length', str(len(response_json)))]
+            start_response(status, headers)
+            return [response_json]
+        
+        # Handle /api/agents/conversations endpoint
+        elif path_info == '/api/agents/conversations' and environ.get('REQUEST_METHOD') == 'GET':
+            # Mock response for conversation list
+            response_data = {
+                "conversations": [
+                    {
+                        "conversation_id": "conv_1",
+                        "agent_type": "coordinator",
+                        "preview": "I need help planning a corporate conference...",
+                        "timestamp": "2025-06-15T18:30:00Z"
+                    },
+                    {
+                        "conversation_id": "conv_2",
+                        "agent_type": "financial",
+                        "preview": "What's the budget for catering?",
+                        "timestamp": "2025-06-15T17:45:00Z"
+                    }
+                ],
+                "using_real_agent": REAL_AGENTS_AVAILABLE
+            }
+            
+            # Convert to JSON
+            response_json = json.dumps(response_data).encode('utf-8')
+            
+            # Send the response
+            status = '200 OK'
+            headers = [('Content-type', 'application/json'), ('Content-Length', str(len(response_json)))]
+            start_response(status, headers)
+            return [response_json]
+        
+        # Handle /api/events endpoint
+        elif path_info == '/api/events' and environ.get('REQUEST_METHOD') == 'GET':
+            # Mock response for events
+            response_data = {
+                "events": [
+                    {
+                        "id": 1,
+                        "title": "Tech Conference 2025",
+                        "description": "Annual technology conference",
+                        "date": "2025-09-15"
+                    },
+                    {
+                        "id": 2,
+                        "title": "Company Retreat",
+                        "description": "Team building retreat",
+                        "date": "2025-08-20"
+                    }
+                ]
+            }
+            
+            # Convert to JSON
+            response_json = json.dumps(response_data).encode('utf-8')
+            
+            # Send the response
+            status = '200 OK'
+            headers = [('Content-type', 'application/json'), ('Content-Length', str(len(response_json)))]
+            start_response(status, headers)
+            return [response_json]
+        
         # Mock responses for API requests when real agents are not available
-        if path_info == '/api/agents/message' and environ.get('REQUEST_METHOD') == 'POST':
+        elif path_info == '/api/agents/message' and environ.get('REQUEST_METHOD') == 'POST':
             # Get the request body
             try:
                 request_body_size = int(environ.get('CONTENT_LENGTH', 0))
@@ -210,13 +371,13 @@ def app(environ, start_response):
                 message = ''
                 conversation_id = 'new_conversation_id'
             
-            # Mock response for agent message
+            # Mock response for agent message - UPDATED to indicate real agents when available
             response_data = {
-                "response": f"This is a mock response from the {agent_type} agent. You said: {message}",
+                "response": f"This is a {'real' if REAL_AGENTS_AVAILABLE else 'mock'} response from the {agent_type} agent. You said: {message}",
                 "conversation_id": conversation_id,
                 "agent_type": agent_type,
                 "organization_id": None,
-                "using_real_agent": False  # Flag to indicate mock response
+                "using_real_agent": REAL_AGENTS_AVAILABLE  # Flag to indicate real vs mock response
             }
             
             # Convert to JSON

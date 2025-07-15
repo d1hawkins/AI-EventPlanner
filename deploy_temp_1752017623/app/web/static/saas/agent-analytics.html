@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Event Planner SaaS - Agent Analytics Dashboard">
+    <title>Agent Analytics - AI Event Planner SaaS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/saas/css/styles.css">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <a href="#main-content" class="visually-hidden-focusable skip-link">Skip to main content</a>
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <aside class="sidebar" role="navigation" aria-label="Main Navigation">
+            <div class="sidebar-brand d-flex align-items-center justify-content-center">
+                <div class="sidebar-brand-text">AI Event Planner</div>
+            </div>
+            
+            <hr class="sidebar-divider">
+            
+            <div class="sidebar-heading" id="main-nav-heading">
+                Main
+            </div>
+            
+            <ul class="nav flex-column" aria-labelledby="main-nav-heading">
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/dashboard.html" aria-label="Dashboard">
+                        <i class="bi bi-speedometer2" aria-hidden="true"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/events.html" aria-label="Events">
+                        <i class="bi bi-calendar-event" aria-hidden="true"></i>
+                        Events
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/agents.html" aria-label="AI Agents">
+                        <i class="bi bi-robot" aria-hidden="true"></i>
+                        AI Agents
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/saas/agent-analytics.html" aria-current="page" aria-label="Agent Analytics">
+                        <i class="bi bi-graph-up" aria-hidden="true"></i>
+                        Agent Analytics
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/team.html" aria-label="Team">
+                        <i class="bi bi-people" aria-hidden="true"></i>
+                        Team
+                    </a>
+                </li>
+            </ul>
+            
+            <hr class="sidebar-divider">
+            
+            <div class="sidebar-heading" id="management-nav-heading">
+                Management
+            </div>
+            
+            <ul class="nav flex-column" aria-labelledby="management-nav-heading">
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/subscription.html" aria-label="Subscription">
+                        <i class="bi bi-credit-card" aria-hidden="true"></i>
+                        Subscription
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/settings.html" aria-label="Settings">
+                        <i class="bi bi-gear" aria-hidden="true"></i>
+                        Settings
+                    </a>
+                </li>
+            </ul>
+            
+            <hr class="sidebar-divider">
+            
+            <div class="sidebar-heading" id="help-nav-heading">
+                Help
+            </div>
+            
+            <ul class="nav flex-column" aria-labelledby="help-nav-heading">
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/support.html" aria-label="Support">
+                        <i class="bi bi-question-circle" aria-hidden="true"></i>
+                        Support
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/documentation.html" aria-label="Documentation">
+                        <i class="bi bi-file-text" aria-hidden="true"></i>
+                        Documentation
+                    </a>
+                </li>
+            </ul>
+            
+            <hr class="sidebar-divider">
+            
+            <div class="text-center d-none d-md-inline mt-3">
+                <button class="btn rounded-circle border-0" id="sidebarToggle" aria-label="Toggle Sidebar" aria-expanded="true">
+                    <i class="bi bi-arrow-left-circle" aria-hidden="true"></i>
+                </button>
+            </div>
+        </aside>
+        
+        <!-- Content Wrapper -->
+        <div class="dashboard-content">
+            <!-- Topbar -->
+            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow" aria-label="Top Navigation">
+                <!-- Sidebar Toggle (Topbar) -->
+                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3" aria-label="Toggle Sidebar">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+                
+                <!-- Topbar Search -->
+                <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search" role="search">
+                    <div class="input-group">
+                        <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..." aria-label="Search" aria-describedby="search-button">
+                        <div class="input-group-append">
+                            <button class="btn btn-primary" type="button" id="search-button" aria-label="Submit Search">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Topbar Navbar -->
+                <ul class="navbar-nav ms-auto">
+                    <!-- Nav Item - Search Dropdown (Visible Only XS) -->
+                    <li class="nav-item dropdown no-arrow d-sm-none">
+                        <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Search">
+                            <i class="bi bi-search" aria-hidden="true"></i>
+                        </a>
+                        <!-- Dropdown - Messages -->
+                        <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in" aria-labelledby="searchDropdown">
+                            <form class="form-inline mr-auto w-100 navbar-search" role="search">
+                                <div class="input-group">
+                                    <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..." aria-label="Search" aria-describedby="mobile-search-button">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-primary" type="button" id="mobile-search-button" aria-label="Submit Search">
+                                            <i class="bi bi-search" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </li>
+                    
+                    <!-- Nav Item - Alerts -->
+                    <li class="nav-item dropdown no-arrow mx-1">
+                        <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Alerts - 3 unread">
+                            <i class="bi bi-bell" aria-hidden="true"></i>
+                            <!-- Counter - Alerts -->
+                            <span class="badge badge-danger badge-counter">3+</span>
+                        </a>
+                        <!-- Dropdown - Alerts -->
+                        <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="alertsDropdown">
+                            <h6 class="dropdown-header">
+                                Alerts Center
+                            </h6>
+                            <a class="dropdown-item d-flex align-items-center" href="#" aria-label="New event Tech Conference created on March 22, 2025">
+                                <div class="mr-3">
+                                    <div class="icon-circle bg-primary">
+                                        <i class="bi bi-calendar text-white" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="small text-gray-500">March 22, 2025</div>
+                                    <span class="font-weight-bold">New event "Tech Conference" has been created!</span>
+                                </div>
+                            </a>
+                            <a class="dropdown-item d-flex align-items-center" href="#" aria-label="Sarah Johnson joined your organization on March 21, 2025">
+                                <div class="mr-3">
+                                    <div class="icon-circle bg-success">
+                                        <i class="bi bi-people text-white" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="small text-gray-500">March 21, 2025</div>
+                                    Sarah Johnson has joined your organization.
+                                </div>
+                            </a>
+                            <a class="dropdown-item d-flex align-items-center" href="#" aria-label="Subscription payment successful on March 20, 2025">
+                                <div class="mr-3">
+                                    <div class="icon-circle bg-warning">
+                                        <i class="bi bi-credit-card text-white" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="small text-gray-500">March 20, 2025</div>
+                                    Your subscription payment was successful.
+                                </div>
+                            </a>
+                            <a class="dropdown-item text-center small text-gray-500" href="#" aria-label="Show all alerts">Show All Alerts</a>
+                        </div>
+                    </li>
+                    
+                    <div class="topbar-divider d-none d-sm-block"></div>
+                    
+                    <!-- Nav Item - User Information -->
+                    <li class="nav-item dropdown no-arrow">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="User account: John Doe">
+                            <span class="mr-2 d-none d-lg-inline text-gray-600 small">John Doe</span>
+                            <i class="bi bi-person-circle img-profile rounded-circle" style="font-size: 32px;" aria-hidden="true"></i>
+                        </a>
+                        <!-- Dropdown - User Information -->
+                        <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-person fa-sm fa-fw mr-2 text-gray-400" aria-hidden="true"></i>
+                                Profile
+                            </a>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-gear fa-sm fa-fw mr-2 text-gray-400" aria-hidden="true"></i>
+                                Settings
+                            </a>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-list-check fa-sm fa-fw mr-2 text-gray-400" aria-hidden="true"></i>
+                                Activity Log
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                                <i class="bi bi-box-arrow-right fa-sm fa-fw mr-2 text-gray-400" aria-hidden="true"></i>
+                                Logout
+                            </a>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+            
+            <!-- Begin Page Content -->
+            <main id="main-content" class="container-fluid" role="main">
+                <!-- Page Heading -->
+                <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">Agent Analytics</h1>
+                    <div>
+                        <button id="refreshAnalytics" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" aria-label="Refresh Analytics">
+                            <i class="bi bi-arrow-clockwise fa-sm text-white-50" aria-hidden="true"></i> Refresh Data
+                        </button>
+                        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-info shadow-sm" data-bs-toggle="modal" data-bs-target="#analyticsHelpModal" aria-label="Analytics Help">
+                            <i class="bi bi-question-circle fa-sm text-white-50" aria-hidden="true"></i> Help
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Filters -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h2 class="h6 m-0 font-weight-bold text-primary">Analytics Filters</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="analyticsFilters" class="row g-3">
+                            <div class="col-md-4">
+                                <label for="startDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="startDate" aria-label="Start date for analytics">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="endDate" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="endDate" aria-label="End date for analytics">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="agentType" class="form-label">Agent Type</label>
+                                <select class="form-select" id="agentType" aria-label="Filter by agent type">
+                                    <option value="">All Agents</option>
+                                    <option value="coordinator">Coordinator</option>
+                                    <option value="resource_planning">Resource Planning</option>
+                                    <option value="financial">Financial</option>
+                                    <option value="stakeholder_management">Stakeholder Management</option>
+                                    <option value="marketing_communications">Marketing & Communications</option>
+                                    <option value="project_management">Project Management</option>
+                                    <option value="analytics">Analytics</option>
+                                    <option value="compliance_security">Compliance & Security</option>
+                                </select>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-primary">Apply Filters</button>
+                                <button type="reset" class="btn btn-secondary">Reset</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Overview Cards -->
+                <div class="row">
+                    <!-- Total Conversations Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-primary shadow h-100 py-2 card-dashboard card-primary">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Total Conversations
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalConversations">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-chat-dots fa-2x text-gray-300" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Total Messages Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-success shadow h-100 py-2 card-dashboard card-success">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Total Messages
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalMessages">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-envelope fa-2x text-gray-300" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Average Messages Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-info shadow h-100 py-2 card-dashboard card-info">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                            Avg. Messages Per Conversation
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="avgMessages">0</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-calculator fa-2x text-gray-300" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Average Rating Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-warning shadow h-100 py-2 card-dashboard card-warning">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Average Rating
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <span id="avgRating">0</span>
+                                            <small class="text-muted">/ 5</small>
+                                            <span class="ms-2 small text-muted">(<span id="totalFeedback">0</span> ratings)</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-star-fill fa-2x text-gray-300" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Charts -->
+                <div class="row">
+                    <!-- Conversations Over Time Chart -->
+                    <div class="col-lg-8 mb-4">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3">
+                                <h2 class="h6 m-0 font-weight-bold text-primary">Conversations Over Time</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" style="position: relative; height:300px;">
+                                    <canvas id="conversationsTimeChart" aria-label="Conversations over time chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Conversations by Agent Chart -->
+                    <div class="col-lg-4 mb-4">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3">
+                                <h2 class="h6 m-0 font-weight-bold text-primary">Conversations by Agent</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" style="position: relative; height:300px;">
+                                    <canvas id="conversationsAgentChart" aria-label="Conversations by agent chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Detailed Analytics -->
+                <div class="row">
+                    <!-- Agent Usage Table -->
+                    <div class="col-lg-12 mb-4">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3">
+                                <h2 class="h6 m-0 font-weight-bold text-primary">Agent Usage Details</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="agentUsageTable" aria-label="Agent usage statistics table">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Agent Type</th>
+                                                <th scope="col">Conversations</th>
+                                                <th scope="col">Messages</th>
+                                                <th scope="col">Avg. Messages Per Conversation</th>
+                                                <th scope="col">Usage %</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Table will be populated by JavaScript -->
+                                            <tr>
+                                                <td colspan="5" class="text-center">Loading data...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Feedback Analytics -->
+                <div class="row">
+                    <!-- Feedback Distribution Chart -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3">
+                                <h2 class="h6 m-0 font-weight-bold text-primary">Feedback Distribution</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" style="position: relative; height:300px;">
+                                    <canvas id="feedbackDistributionChart" aria-label="Feedback distribution chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Agent Ratings Chart -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3">
+                                <h2 class="h6 m-0 font-weight-bold text-primary">Agent Ratings</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container" style="position: relative; height:300px;">
+                                    <canvas id="agentRatingsChart" aria-label="Agent ratings chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Feedback Details Table -->
+                    <div class="col-lg-12 mb-4">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3">
+                                <h2 class="h6 m-0 font-weight-bold text-primary">Feedback Details</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="feedbackTable" aria-label="Agent feedback statistics table">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Agent Type</th>
+                                                <th scope="col">Total Ratings</th>
+                                                <th scope="col">Average Rating</th>
+                                                <th scope="col">Rating Distribution</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Table will be populated by JavaScript -->
+                                            <tr>
+                                                <td colspan="4" class="text-center">Loading data...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Usage Trends -->
+                <div class="row">
+                    <div class="col-lg-12 mb-4">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3">
+                                <h2 class="h6 m-0 font-weight-bold text-primary">Usage Trends</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h3 class="h5 small font-weight-bold">Conversations This Month <span class="float-end" id="conversationsQuota">0/0</span></h3>
+                                        <div class="progress mb-4" aria-label="Conversations usage">
+                                            <div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="conversationsProgress"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h3 class="h5 small font-weight-bold">Messages This Month <span class="float-end" id="messagesQuota">0/0</span></h3>
+                                        <div class="progress mb-4" aria-label="Messages usage">
+                                            <div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="messagesProgress"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="alert alert-info mt-3" role="alert">
+                                    <i class="bi bi-info-circle me-2" aria-hidden="true"></i>
+                                    Usage limits are based on your subscription plan. <a href="/saas/subscription.html" class="alert-link">Upgrade your plan</a> for higher limits.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Export Options -->
+                <div class="row">
+                    <div class="col-lg-12 mb-4">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3">
+                                <h2 class="h6 m-0 font-weight-bold text-primary">Export Options</h2>
+                            </div>
+                            <div class="card-body">
+                                <p>Export analytics data for reporting or further analysis.</p>
+                                <div class="btn-group" role="group" aria-label="Export options">
+                                    <button type="button" class="btn btn-primary" id="exportCSV">
+                                        <i class="bi bi-file-earmark-spreadsheet me-2" aria-hidden="true"></i>
+                                        Export as CSV
+                                    </button>
+                                    <button type="button" class="btn btn-primary" id="exportPDF">
+                                        <i class="bi bi-file-earmark-pdf me-2" aria-hidden="true"></i>
+                                        Export as PDF
+                                    </button>
+                                    <button type="button" class="btn btn-primary" id="printReport">
+                                        <i class="bi bi-printer me-2" aria-hidden="true"></i>
+                                        Print Report
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <!-- End of Main Content -->
+            
+            <!-- Footer -->
+            <footer class="sticky-footer bg-white" role="contentinfo">
+                <div class="container my-auto">
+                    <div class="copyright text-center my-auto">
+                        <span>Copyright &copy; AI Event Planner 2025</span>
+                    </div>
+                </div>
+            </footer>
+            <!-- End of Footer -->
+        </div>
+        <!-- End of Content Wrapper -->
+    </div>
+    
+    <!-- Analytics Help Modal -->
+    <div class="modal fade" id="analyticsHelpModal" tabindex="-1" aria-labelledby="analyticsHelpModalLabel" aria-hidden="true" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="h5 modal-title" id="analyticsHelpModalLabel">Analytics Dashboard Help</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h3 class="h5">Using Filters</h3>
+                            <ul>
+                                <li><strong>Date Range:</strong> Select start and end dates to view analytics for a specific time period</li>
+                                <li><strong>Agent Type:</strong> Filter data to show analytics for a specific agent type</li>
+                                <li><strong>Apply Filters:</strong> Click to update the dashboard with your selected filters</li>
+                                <li><strong>Reset:</strong> Clear all filters and show data for all time periods and agent types</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h3 class="h5">Understanding Charts</h3>
+                            <ul>
+                                <li><strong>Conversations Over Time:</strong> Shows the number of conversations started each day</li>
+                                <li><strong>Conversations by Agent:</strong> Shows the distribution of conversations across different agent types</li>
+                                <li><strong>Agent Usage Details:</strong> Provides detailed statistics for each agent type</li>
+                                <li><strong>Usage Trends:</strong> Shows your current usage against your subscription limits</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h3 class="h5">Export Options</h3>
+                            <ul>
+                                <li><strong>Export as CSV:</strong> Download analytics data as a CSV file for use in spreadsheet applications</li>
+                                <li><strong>Export as PDF:</strong> Download analytics data as a PDF report</li>
+                                <li><strong>Print Report:</strong> Print the current analytics dashboard</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h3 class="h5">Tips for Analysis</h3>
+                            <ul>
+                                <li>Compare usage patterns over different time periods</li>
+                                <li>Identify which agents are most popular with your team</li>
+                                <li>Monitor your usage to ensure you stay within subscription limits</li>
+                                <li>Use the detailed table to see which agents have the most engagement</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-info-circle me-2" aria-hidden="true"></i>
+                        Need more help? Check out our <a href="/saas/documentation.html" class="alert-link">documentation</a> or contact <a href="/saas/support.html" class="alert-link">support</a>.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got It</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Logout Modal-->
+    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="h5 modal-title" id="logoutModalLabel">Ready to Leave?</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <a class="btn btn-primary" href="/saas/login.html">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap core JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    
+    <!-- Custom scripts -->
+    <script src="/saas/js/app.js"></script>
+    <script src="/saas/js/agent-analytics.js"></script>
+</body>
+</html>

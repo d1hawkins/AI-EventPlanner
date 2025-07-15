@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Event Planner SaaS - Team Management">
+    <title>Team Management - AI Event Planner SaaS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/saas/css/styles.css">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <a href="#main-content" class="visually-hidden-focusable skip-link">Skip to main content</a>
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <aside class="sidebar" role="navigation" aria-label="Main Navigation">
+            <div class="sidebar-brand d-flex align-items-center justify-content-center">
+                <div class="sidebar-brand-text">AI Event Planner</div>
+            </div>
+            
+            <hr class="sidebar-divider">
+            
+            <div class="sidebar-heading" id="main-nav-heading">
+                Main
+            </div>
+            
+            <ul class="nav flex-column" aria-labelledby="main-nav-heading">
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/dashboard.html" aria-label="Dashboard">
+                        <i class="bi bi-speedometer2" aria-hidden="true"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/events.html" aria-label="Events">
+                        <i class="bi bi-calendar-event" aria-hidden="true"></i>
+                        Events
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/agents.html" aria-label="AI Agents">
+                        <i class="bi bi-robot" aria-hidden="true"></i>
+                        AI Agents
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/saas/team.html" aria-current="page" aria-label="Team">
+                        <i class="bi bi-people" aria-hidden="true"></i>
+                        Team
+                    </a>
+                </li>
+            </ul>
+            
+            <hr class="sidebar-divider">
+            
+            <div class="sidebar-heading" id="management-nav-heading">
+                Management
+            </div>
+            
+            <ul class="nav flex-column" aria-labelledby="management-nav-heading">
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/subscription.html" aria-label="Subscription">
+                        <i class="bi bi-credit-card" aria-hidden="true"></i>
+                        Subscription
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/settings.html" aria-label="Settings">
+                        <i class="bi bi-gear" aria-hidden="true"></i>
+                        Settings
+                    </a>
+                </li>
+            </ul>
+            
+            <hr class="sidebar-divider">
+            
+            <div class="sidebar-heading" id="help-nav-heading">
+                Help
+            </div>
+            
+            <ul class="nav flex-column" aria-labelledby="help-nav-heading">
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/support.html" aria-label="Support">
+                        <i class="bi bi-question-circle" aria-hidden="true"></i>
+                        Support
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/documentation.html" aria-label="Documentation">
+                        <i class="bi bi-file-text" aria-hidden="true"></i>
+                        Documentation
+                    </a>
+                </li>
+            </ul>
+            
+            <hr class="sidebar-divider">
+            
+            <div class="text-center d-none d-md-inline mt-3">
+                <button class="btn rounded-circle border-0" id="sidebarToggle" aria-label="Toggle Sidebar" aria-expanded="true">
+                    <i class="bi bi-arrow-left-circle" aria-hidden="true"></i>
+                </button>
+            </div>
+        </aside>
+        
+        <!-- Content Wrapper -->
+        <div class="dashboard-content">
+            <!-- Topbar -->
+            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow" aria-label="Top Navigation">
+                <!-- Sidebar Toggle (Topbar) -->
+                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3" aria-label="Toggle Sidebar">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+                
+                <!-- Topbar Search -->
+                <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search" role="search">
+                    <div class="input-group">
+                        <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..." aria-label="Search" aria-describedby="search-button">
+                        <div class="input-group-append">
+                            <button class="btn btn-primary" type="button" id="search-button" aria-label="Submit Search">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Topbar Navbar -->
+                <ul class="navbar-nav ms-auto">
+                    <!-- Nav Item - Search Dropdown (Visible Only XS) -->
+                    <li class="nav-item dropdown no-arrow d-sm-none">
+                        <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Search">
+                            <i class="bi bi-search" aria-hidden="true"></i>
+                        </a>
+                        <!-- Dropdown - Messages -->
+                        <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in" aria-labelledby="searchDropdown">
+                            <form class="form-inline mr-auto w-100 navbar-search" role="search">
+                                <div class="input-group">
+                                    <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..." aria-label="Search" aria-describedby="mobile-search-button">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-primary" type="button" id="mobile-search-button" aria-label="Submit Search">
+                                            <i class="bi bi-search" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </li>
+                    
+                    <!-- Nav Item - Alerts -->
+                    <li class="nav-item dropdown no-arrow mx-1">
+                        <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Alerts - 3 unread">
+                            <i class="bi bi-bell" aria-hidden="true"></i>
+                            <!-- Counter - Alerts -->
+                            <span class="badge badge-danger badge-counter">3+</span>
+                        </a>
+                        <!-- Dropdown - Alerts -->
+                        <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="alertsDropdown">
+                            <h6 class="dropdown-header">
+                                Alerts Center
+                            </h6>
+                            <a class="dropdown-item d-flex align-items-center" href="#" aria-label="New event Tech Conference created on March 22, 2025">
+                                <div class="mr-3">
+                                    <div class="icon-circle bg-primary">
+                                        <i class="bi bi-calendar text-white" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="small text-gray-500">March 22, 2025</div>
+                                    <span class="font-weight-bold">New event "Tech Conference" has been created!</span>
+                                </div>
+                            </a>
+                            <a class="dropdown-item d-flex align-items-center" href="#" aria-label="Sarah Johnson joined your organization on March 21, 2025">
+                                <div class="mr-3">
+                                    <div class="icon-circle bg-success">
+                                        <i class="bi bi-people text-white" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="small text-gray-500">March 21, 2025</div>
+                                    Sarah Johnson has joined your organization.
+                                </div>
+                            </a>
+                            <a class="dropdown-item d-flex align-items-center" href="#" aria-label="Subscription payment successful on March 20, 2025">
+                                <div class="mr-3">
+                                    <div class="icon-circle bg-warning">
+                                        <i class="bi bi-credit-card text-white" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="small text-gray-500">March 20, 2025</div>
+                                    Your subscription payment was successful.
+                                </div>
+                            </a>
+                            <a class="dropdown-item text-center small text-gray-500" href="#" aria-label="Show all alerts">Show All Alerts</a>
+                        </div>
+                    </li>
+                    
+                    <div class="topbar-divider d-none d-sm-block"></div>
+                    
+                    <!-- Nav Item - User Information -->
+                    <li class="nav-item dropdown no-arrow">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="User account: John Doe">
+                            <span class="mr-2 d-none d-lg-inline text-gray-600 small">John Doe</span>
+                            <i class="bi bi-person-circle img-profile rounded-circle" style="font-size: 32px;" aria-hidden="true"></i>
+                        </a>
+                        <!-- Dropdown - User Information -->
+                        <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-person fa-sm fa-fw mr-2 text-gray-400" aria-hidden="true"></i>
+                                Profile
+                            </a>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-gear fa-sm fa-fw mr-2 text-gray-400" aria-hidden="true"></i>
+                                Settings
+                            </a>
+                            <a class="dropdown-item" href="#">
+                                <i class="bi bi-list-check fa-sm fa-fw mr-2 text-gray-400" aria-hidden="true"></i>
+                                Activity Log
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                                <i class="bi bi-box-arrow-right fa-sm fa-fw mr-2 text-gray-400" aria-hidden="true"></i>
+                                Logout
+                            </a>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+            
+            <!-- Begin Page Content -->
+            <main id="main-content" class="container-fluid" role="main">
+                <!-- Page Heading -->
+                <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">Team Management</h1>
+                    <div>
+                        <a href="/saas/team-invite.html" class="d-none d-sm-inline-block btn btn-sm btn-success shadow-sm" aria-label="Invite Team Members">
+                            <i class="bi bi-person-plus fa-sm text-white-50" aria-hidden="true"></i> Invite Team Members
+                        </a>
+                        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" id="refreshTeam" aria-label="Refresh Team List">
+                            <i class="bi bi-arrow-clockwise fa-sm text-white-50" aria-hidden="true"></i> Refresh
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Team Overview -->
+                <div class="row">
+                    <!-- Team Size Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-primary shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Team Size</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">5</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-people-fill fa-2x text-gray-300" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Active Members Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-success shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Active Members</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">4</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-person-check fa-2x text-gray-300" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pending Invitations Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-warning shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Pending Invitations</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">1</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-envelope fa-2x text-gray-300" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Available Seats Card -->
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card border-left-info shadow h-100 py-2">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                            Available Seats</div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">5</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="bi bi-person-plus fa-2x text-gray-300" aria-hidden="true"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Team Members Table -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                        <h2 class="h6 m-0 font-weight-bold text-primary">Team Members</h2>
+                        <div class="dropdown no-arrow">
+                            <a class="dropdown-toggle" href="#" role="button" id="teamDropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical text-gray-400"></i>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="teamDropdown">
+                                <div class="dropdown-header">View Options:</div>
+                                <a class="dropdown-item" href="#" id="viewAll">View All</a>
+                                <a class="dropdown-item" href="#" id="viewActive">View Active Only</a>
+                                <a class="dropdown-item" href="#" id="viewAdmins">View Admins Only</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="#" id="exportTeam">Export Team List</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="teamTable" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Name</th>
+                                        <th scope="col">Email</th>
+                                        <th scope="col">Role</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Last Active</th>
+                                        <th scope="col">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teamTableBody">
+                                    <!-- Sample data, will be replaced by JavaScript -->
+                                    <tr>
+                                        <td class="d-flex align-items-center">
+                                            <i class="bi bi-person-circle me-2" style="font-size: 24px;" aria-hidden="true"></i>
+                                            <div>
+                                                <div>John Doe</div>
+                                                <div class="small text-muted">You</div>
+                                            </div>
+                                        </td>
+                                        <td>john.doe@example.com</td>
+                                        <td><span class="badge bg-danger">Owner</span></td>
+                                        <td><span class="badge bg-success">Active</span></td>
+                                        <td>Now</td>
+                                        <td>
+                                            <div class="btn-group" role="group" aria-label="Member actions">
+                                                <button type="button" class="btn btn-primary btn-sm" aria-label="Edit John Doe">
+                                                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="d-flex align-items-center">
+                                            <i class="bi bi-person-circle me-2" style="font-size: 24px;" aria-hidden="true"></i>
+                                            <div>Sarah Johnson</div>
+                                        </td>
+                                        <td>sarah.johnson@example.com</td>
+                                        <td><span class="badge bg-primary">Admin</span></td>
+                                        <td><span class="badge bg-success">Active</span></td>
+                                        <td>2 hours ago</td>
+                                        <td>
+                                            <div class="btn-group" role="group" aria-label="Member actions">
+                                                <button type="button" class="btn btn-primary btn-sm" aria-label="Edit Sarah Johnson">
+                                                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm" aria-label="Remove Sarah Johnson">
+                                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="d-flex align-items-center">
+                                            <i class="bi bi-person-circle me-2" style="font-size: 24px;" aria-hidden="true"></i>
+                                            <div>Michael Smith</div>
+                                        </td>
+                                        <td>michael.smith@example.com</td>
+                                        <td><span class="badge bg-secondary">Member</span></td>
+                                        <td><span class="badge bg-success">Active</span></td>
+                                        <td>1 day ago</td>
+                                        <td>
+                                            <div class="btn-group" role="group" aria-label="Member actions">
+                                                <button type="button" class="btn btn-primary btn-sm" aria-label="Edit Michael Smith">
+                                                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm" aria-label="Remove Michael Smith">
+                                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="d-flex align-items-center">
+                                            <i class="bi bi-person-circle me-2" style="font-size: 24px;" aria-hidden="true"></i>
+                                            <div>Emily Davis</div>
+                                        </td>
+                                        <td>emily.davis@example.com</td>
+                                        <td><span class="badge bg-secondary">Member</span></td>
+                                        <td><span class="badge bg-success">Active</span></td>
+                                        <td>3 days ago</td>
+                                        <td>
+                                            <div class="btn-group" role="group" aria-label="Member actions">
+                                                <button type="button" class="btn btn-primary btn-sm" aria-label="Edit Emily Davis">
+                                                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm" aria-label="Remove Emily Davis">
+                                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="d-flex align-items-center">
+                                            <i class="bi bi-envelope me-2" style="font-size: 24px;" aria-hidden="true"></i>
+                                            <div>David Wilson</div>
+                                        </td>
+                                        <td>david.wilson@example.com</td>
+                                        <td><span class="badge bg-secondary">Member</span></td>
+                                        <td><span class="badge bg-warning">Invited</span></td>
+                                        <td>-</td>
+                                        <td>
+                                            <div class="btn-group" role="group" aria-label="Member actions">
+                                                <button type="button" class="btn btn-info btn-sm" aria-label="Resend invitation to David Wilson">
+                                                    <i class="bi bi-envelope" aria-hidden="true"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-danger btn-sm" aria-label="Cancel invitation to David Wilson">
+                                                    <i class="bi bi-x-circle" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Roles and Permissions -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h2 class="h6 m-0 font-weight-bold text-primary">Roles and Permissions</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="rolesTable" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Role</th>
+                                        <th scope="col">Description</th>
+                                        <th scope="col">Permissions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="badge bg-danger">Owner</span></td>
+                                        <td>Full access to all features and settings. Can manage billing and subscription.</td>
+                                        <td>
+                                            <ul class="list-unstyled mb-0">
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Manage team members</li>
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Manage billing and subscription</li>
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Create and manage events</li>
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Use all AI agents</li>
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Access analytics</li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-primary">Admin</span></td>
+                                        <td>Can manage team members and events. Limited access to billing.</td>
+                                        <td>
+                                            <ul class="list-unstyled mb-0">
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Manage team members</li>
+                                                <li><i class="bi bi-x-circle-fill text-danger me-1" aria-hidden="true"></i> Manage billing and subscription</li>
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Create and manage events</li>
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Use all AI agents</li>
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Access analytics</li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-secondary">Member</span></td>
+                                        <td>Can create and manage events. Limited access to team settings.</td>
+                                        <td>
+                                            <ul class="list-unstyled mb-0">
+                                                <li><i class="bi bi-x-circle-fill text-danger me-1" aria-hidden="true"></i> Manage team members</li>
+                                                <li><i class="bi bi-x-circle-fill text-danger me-1" aria-hidden="true"></i> Manage billing and subscription</li>
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Create and manage events</li>
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Use all AI agents</li>
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Access analytics</li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-info">Viewer</span></td>
+                                        <td>Read-only access to events and limited AI agent usage.</td>
+                                        <td>
+                                            <ul class="list-unstyled mb-0">
+                                                <li><i class="bi bi-x-circle-fill text-danger me-1" aria-hidden="true"></i> Manage team members</li>
+                                                <li><i class="bi bi-x-circle-fill text-danger me-1" aria-hidden="true"></i> Manage billing and subscription</li>
+                                                <li><i class="bi bi-x-circle-fill text-danger me-1" aria-hidden="true"></i> Create and manage events</li>
+                                                <li><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Use basic AI agents</li>
+                                                <li><i class="bi bi-x-circle-fill text-danger me-1" aria-hidden="true"></i> Access analytics</li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <!-- End of Main Content -->
+            
+            <!-- Footer -->
+            <footer class="sticky-footer bg-white" role="contentinfo">
+                <div class="container my-auto">
+                    <div class="copyright text-center my-auto">
+                        <span>Copyright &copy; AI Event Planner 2025</span>
+                    </div>
+                </div>
+            </footer>
+            <!-- End of Footer -->
+        </div>
+        <!-- End of Content Wrapper -->
+    </div>
+    
+    <!-- Remove Member Modal -->
+    <div class="modal fade" id="removeMemberModal" tabindex="-1" aria-labelledby="removeMemberModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="removeMemberModalLabel">Confirm Remove</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to remove this team member? This action cannot be undone.</p>
+                    <p><strong>Member: </strong><span id="removeMemberName"></span></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmRemoveMember">Remove Member</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Member Modal -->
+    <div class="modal fade" id="editMemberModal" tabindex="-1" aria-labelledby="editMemberModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editMemberModalLabel">Edit Team Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editMemberForm">
+                        <input type="hidden" id="editMemberId">
+                        <div class="mb-3">
+                            <label for="editMemberName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="editMemberName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editMemberEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="editMemberEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editMemberRole" class="form-label">Role</label>
+                            <select class="form-select" id="editMemberRole" required>
+                                <option value="owner">Owner</option>
+                                <option value="admin">Admin</option>
+                                <option value="member">Member</option>
+                                <option value="viewer">Viewer</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveMemberChanges">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Logout Modal-->
+    <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalLabel">Ready to Leave?</h5>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    <a class="btn btn-primary" href="/saas/login.html">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="/saas/js/dashboard.js"></script>
+    <script src="/saas/js/team.js"></script>
+</body>
+</html>
