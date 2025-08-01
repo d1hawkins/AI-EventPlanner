@@ -1,0 +1,362 @@
+{
+  "timestamp": "2025-07-21T19:48:21.901688",
+  "environment_info": {
+    "environment": "local",
+    "python_version": "3.13.3 (main, Apr  8 2025, 13:54:08) [Clang 15.0.0 (clang-1500.1.0.2.5)]",
+    "python_path": [
+      "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner",
+      "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner",
+      "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app",
+      "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/agents",
+      "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs",
+      "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/tools",
+      "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/utils",
+      "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/db",
+      "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/middleware",
+      "/usr/local/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/lib/python313.zip",
+      "/usr/local/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/lib/python3.13",
+      "/usr/local/Cellar/python@3.13/3.13.3/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload",
+      "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages"
+    ],
+    "working_directory": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner",
+    "azure_paths_exist": {
+      "/home/site/wwwroot": false,
+      "/home/site/wwwroot/app": false,
+      "/home/site/wwwroot/app/agents": false,
+      "/home/site/wwwroot/app/graphs": false,
+      "/home/site/wwwroot/app/tools": false,
+      "/home/site/wwwroot/app/utils": false,
+      "/home/site/wwwroot/app/db": false,
+      "/home/site/wwwroot/app/middleware": false
+    },
+    "file_structure": {
+      "local_app": {
+        "middleware": [
+          "tenant.py",
+          "tenant.py.backup",
+          "__pycache__"
+        ],
+        "tools": [
+          "compliance_tools.py",
+          "agent_communication_tools.py.backup_20250304_002657",
+          ".DS_Store",
+          "marketing_tools.py",
+          "agent_communication_tools_local.py",
+          "stakeholder_tools.py",
+          "coordinator_search_tool.py",
+          "project_management_search_tool.py",
+          "__init__.py",
+          "stakeholder_search_tool.py",
+          "__pycache__",
+          "agent_communication_tools.py",
+          "project_tools.py",
+          "compliance_tools_part2.txt",
+          "resource_planning_search_tool.py",
+          "analytics_search_tool.py",
+          "financial_search_tool.py",
+          "event_tools.py",
+          "marketing_search_tool.py",
+          "financial_tools.py",
+          "compliance_search_tool.py",
+          "analytics_tools.py",
+          "agent_communication_tools.py.backup_20250510_232713"
+        ],
+        "auth": [
+          ".DS_Store",
+          "__init__.py",
+          "__pycache__",
+          "router.py",
+          "dependencies.py"
+        ],
+        "web": [
+          ".DS_Store",
+          "__init__.py",
+          "__pycache__",
+          "static",
+          "router.py"
+        ],
+        "agents": [
+          "agent_factory.py.backup",
+          "agent_factory.py",
+          "api_router.py",
+          "__init__.py",
+          "agent_factory.py.backup_20250510_232713",
+          "__pycache__"
+        ],
+        "utils": [
+          ".DS_Store",
+          "proactive_suggestions.py",
+          "mcp_adapter.py",
+          "recommendation_engine.py",
+          "azure_logging.py",
+          "conversation_paths.py",
+          "__init__.py",
+          "logging_utils_local.py",
+          "__pycache__",
+          "recommendation_learning.py",
+          "question_manager.py",
+          "search_utils.py",
+          "llm_factory.py",
+          "logging_utils.py",
+          "conversation_memory.py"
+        ],
+        "models": [
+          "__init__.py"
+        ],
+        "__pycache__": [
+          "main.cpython-313.pyc",
+          "main.cpython-312.pyc",
+          "config.cpython-313.pyc",
+          "config.cpython-312.pyc",
+          "main_saas.cpython-313.pyc",
+          "main_saas.cpython-312.pyc",
+          "__init__.cpython-312.pyc",
+          "main_saas_local.cpython-313.pyc",
+          "main_saas_local.cpython-312.pyc",
+          "__init__.cpython-313.pyc"
+        ],
+        "state": [
+          ".DS_Store",
+          "__init__.py",
+          "__pycache__",
+          "manager.py",
+          "tenant_aware_manager.py"
+        ],
+        "schemas": [
+          "user.py",
+          "event.py",
+          ".DS_Store",
+          "marketing.py",
+          "compliance.py",
+          "__init__.py",
+          "__pycache__",
+          "financial.py",
+          "analytics.py",
+          "stakeholder.py",
+          "project.py"
+        ],
+        "subscription": [
+          "__pycache__",
+          "schemas.py",
+          "feature_control.py",
+          "router.py"
+        ],
+        "db": [
+          ".DS_Store",
+          "models.py",
+          "models_saas.py",
+          "session.py",
+          "__init__.py",
+          "__pycache__",
+          "models_updated.py",
+          "base.py"
+        ],
+        "graphs": [
+          "resource_planning_graph.py",
+          "coordinator_graph.py.backup_20250304_003116",
+          "coordinator_graph.py.backup_20250304_004334",
+          "coordinator_graph.py.backup_20250304_002657",
+          ".DS_Store",
+          "coordinator_graph.py.backup_20250304_004432",
+          "coordinator_graph.py.backup_20250304_003621",
+          "__init__.py",
+          "coordinator_graph.py.backup_20250304_004801",
+          "coordinator_graph.py.backup_20250304_003644",
+          "__pycache__",
+          "stakeholder_management_graph.py",
+          "coordinator_graph.py.backup_20250304_003844",
+          "project_management_graph.py",
+          "coordinator_graph.py.backup_20250304_002929",
+          "coordinator_graph.py.backup_20250304_004449",
+          "compliance_security_graph.py",
+          "coordinator_graph.py.backup_20250304_002838",
+          "marketing_communications_graph.py",
+          "coordinator_graph.py.backup_20250304_004529",
+          "financial_graph.py",
+          "coordinator_graph.py.backup",
+          "simple_coordinator_graph.py",
+          "analytics_graph.py",
+          "coordinator_graph.py.backup_20250304_003010",
+          "coordinator_graph.py"
+        ]
+      }
+    }
+  },
+  "import_summary": {
+    "core_modules": {
+      "total": 4,
+      "successful": 4,
+      "failed": 0
+    },
+    "graph_modules": {
+      "total": 8,
+      "available": 8,
+      "missing": 0
+    }
+  },
+  "detailed_results": {
+    "core_imports": {
+      "router": {
+        "app.agents.api_router": {
+          "status": "success",
+          "module": "<module 'app.agents.api_router' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/agents/api_router.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/agents/api_router.py"
+        }
+      },
+      "factory": {
+        "app.agents.agent_factory": {
+          "status": "success",
+          "module": "<module 'app.agents.agent_factory' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/agents/agent_factory.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/agents/agent_factory.py"
+        }
+      },
+      "session": {
+        "app.db.session": {
+          "status": "success",
+          "module": "<module 'app.db.session' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/db/session.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/db/session.py"
+        }
+      },
+      "tenant": {
+        "app.middleware.tenant": {
+          "status": "success",
+          "module": "<module 'app.middleware.tenant' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/middleware/tenant.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/middleware/tenant.py"
+        }
+      }
+    },
+    "dependencies": {
+      "fastapi": {
+        "status": "available",
+        "version": "0.115.8",
+        "description": "FastAPI web framework",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/fastapi/__init__.py"
+      },
+      "uvicorn": {
+        "status": "available",
+        "version": "0.34.0",
+        "description": "ASGI server",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/uvicorn/__init__.py"
+      },
+      "sqlalchemy": {
+        "status": "available",
+        "version": "2.0.38",
+        "description": "Database ORM",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/sqlalchemy/__init__.py"
+      },
+      "psycopg2": {
+        "status": "available",
+        "version": "2.9.10 (dt dec pq3 ext lo64)",
+        "description": "PostgreSQL adapter",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/psycopg2/__init__.py"
+      },
+      "pydantic": {
+        "status": "available",
+        "version": "2.10.6",
+        "description": "Data validation",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/pydantic/__init__.py"
+      },
+      "langchain": {
+        "status": "available",
+        "version": "0.3.19",
+        "description": "LangChain framework",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/langchain/__init__.py"
+      },
+      "langgraph": {
+        "status": "available",
+        "version": "unknown",
+        "description": "LangGraph for agent workflows",
+        "file": null
+      },
+      "openai": {
+        "status": "available",
+        "version": "1.64.0",
+        "description": "OpenAI API client",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/openai/__init__.py"
+      },
+      "google.generativeai": {
+        "status": "available",
+        "version": "0.8.5",
+        "description": "Google AI client",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/google/generativeai/__init__.py"
+      }
+    },
+    "graph_imports": {
+      "coordinator_graph": {
+        "app.graphs.coordinator_graph": {
+          "status": "available",
+          "module": "<module 'app.graphs.coordinator_graph' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/coordinator_graph.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/coordinator_graph.py"
+        }
+      },
+      "resource_planning_graph": {
+        "app.graphs.resource_planning_graph": {
+          "status": "available",
+          "module": "<module 'app.graphs.resource_planning_graph' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/resource_planning_graph.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/resource_planning_graph.py"
+        }
+      },
+      "financial_graph": {
+        "app.graphs.financial_graph": {
+          "status": "available",
+          "module": "<module 'app.graphs.financial_graph' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/financial_graph.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/financial_graph.py"
+        }
+      },
+      "stakeholder_graph": {
+        "app.graphs.stakeholder_management_graph": {
+          "status": "available",
+          "module": "<module 'app.graphs.stakeholder_management_graph' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/stakeholder_management_graph.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/stakeholder_management_graph.py"
+        }
+      },
+      "marketing_graph": {
+        "app.graphs.marketing_communications_graph": {
+          "status": "available",
+          "module": "<module 'app.graphs.marketing_communications_graph' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/marketing_communications_graph.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/marketing_communications_graph.py"
+        }
+      },
+      "project_graph": {
+        "app.graphs.project_management_graph": {
+          "status": "available",
+          "module": "<module 'app.graphs.project_management_graph' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/project_management_graph.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/project_management_graph.py"
+        }
+      },
+      "analytics_graph": {
+        "app.graphs.analytics_graph": {
+          "status": "available",
+          "module": "<module 'app.graphs.analytics_graph' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/analytics_graph.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/analytics_graph.py"
+        }
+      },
+      "compliance_graph": {
+        "app.graphs.compliance_security_graph": {
+          "status": "available",
+          "module": "<module 'app.graphs.compliance_security_graph' from '/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/compliance_security_graph.py'>",
+          "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/compliance_security_graph.py"
+        }
+      }
+    },
+    "database": {
+      "status": "connection_failed",
+      "error": "Textual SQL expression 'SELECT 1' should be explicitly declared as text('SELECT 1')",
+      "connection_string": "hidden",
+      "environment_vars": {
+        "DATABASE_URL": "***hidden***",
+        "AZURE_DATABASE_URL": null,
+        "POSTGRES_URL": null,
+        "DB_HOST": null,
+        "DB_NAME": null,
+        "DB_USER": null,
+        "DB_PASSWORD": null
+      }
+    }
+  },
+  "missing_modules": [],
+  "recommendations": [
+    "Fix database connectivity issues"
+  ],
+  "overall_status": "healthy"
+}

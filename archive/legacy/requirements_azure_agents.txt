@@ -1,0 +1,1120 @@
+# Core web framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+gunicorn==21.2.0
+
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# Data validation
+pydantic==2.5.2
+email-validator==2.1.0
+
+# Environment & Configuration
+python-dotenv==1.0.0
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# AI/ML Libraries for conversational agents - FIXED VERSIONS
+langchain==0.1.20
+langgraph==0.0.55
+langchain-google-genai==1.0.3
+langchain-openai==0.1.8
+langchain-core==0.1.52
+openai==1.30.1
+google-generativeai==0.5.4
+
+# Utilities
+requests==2.31.0
+httpx==0.25.2
+
+# Azure Application Insights - REQUIRED
+applicationinsights==0.11.10
+
+# Additional dependencies for conversational flow
+typing-extensions>=4.9.0
+json5==0.9.14
+
+# State management dependencies
+redis>=4.5.0
+python-dateutil>=2.8.0
+
+# Graph execution dependencies
+networkx>=3.0
+pyyaml>=6.0
+
+# Logging and monitoring
+structlog>=23.0.0
+
+# Calendar and event handling
+icalendar>=5.0.0
+
+# Additional Azure-specific dependencies
+azure-identity>=1.15.0
+azure-keyvault-secrets>=4.7.0
+azure-storage-blob>=12.19.0
+
+# Development and testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# HTTP client improvements
+aiohttp>=3.9.0
+
+# JSON handling
+orjson>=3.9.0
+
+# Async utilities
+asyncio-mqtt>=0.16.0
+
+# Time zone handling
+pytz>=2023.3
+
+# Configuration management
+pydantic-settings>=2.1.0
+
+# Validation utilities
+validators>=0.22.0
+
+# File handling
+openpyxl>=3.1.0
+python-magic>=0.4.27
+
+# Image processing (if needed)
+Pillow>=10.0.0
+
+# Cryptography
+cryptography>=41.0.0
+
+# Template engine
+jinja2>=3.1.0
+
+# Markdown processing
+markdown>=3.5.0
+
+# URL utilities
+furl>=2.1.3
+
+# Phone number validation
+phonenumbers>=8.13.0
+
+# Country/region data
+pycountry>=22.3.0
+
+# Caching
+cachetools>=5.3.0
+
+# Rate limiting
+slowapi>=0.1.9
+
+# Background tasks
+celery>=5.3.0
+
+# Message queuing
+kombu>=5.3.0
+
+# Monitoring and metrics
+prometheus-client>=0.19.0
+
+# Health checks
+healthcheck>=1.3.3
+
+# CORS handling (already included in FastAPI but explicit)
+starlette>=0.27.0
+
+# WebSocket support
+websockets>=12.0
+
+# File uploads
+python-multipart>=0.0.6
+
+# Environment detection
+distro>=1.8.0
+
+# Process management
+psutil>=5.9.0
+
+# Retry utilities
+tenacity>=8.2.0
+
+# UUID utilities
+shortuuid>=1.0.11
+
+# Color output for logging
+colorama>=0.4.6
+
+# Progress bars
+tqdm>=4.66.0
+
+# Configuration file formats
+toml>=0.10.2
+configparser>=6.0.0
+
+# String utilities
+inflection>=0.5.1
+
+# Date/time utilities
+arrow>=1.3.0
+
+# Validation schemas
+cerberus>=1.3.5
+
+# API documentation
+sphinx>=7.1.0
+sphinx-rtd-theme>=1.3.0
+
+# Code quality
+black>=23.9.0
+isort>=5.12.0
+flake8>=6.1.0
+mypy>=1.6.0
+
+# Security scanning
+bandit>=1.7.5
+safety>=2.3.0
+
+# Performance monitoring
+py-spy>=0.3.14
+
+# Memory profiling
+memory-profiler>=0.61.0
+
+# Debugging
+pdb-attach>=3.2.0
+ipdb>=0.13.13
+
+# Testing utilities
+factory-boy>=3.3.0
+faker>=19.12.0
+responses>=0.24.0
+
+# Mock utilities
+pytest-mock>=3.12.0
+unittest-mock>=1.0.1
+
+# Coverage reporting
+coverage>=7.3.0
+
+# Load testing
+locust>=2.17.0
+
+# API testing
+httpx>=0.25.2
+pytest-httpx>=0.26.0
+
+# Database testing
+pytest-postgresql>=5.0.0
+sqlalchemy-utils>=0.41.0
+
+# Async testing
+pytest-asyncio>=0.21.0
+asynctest>=0.13.0
+
+# Environment management
+python-decouple>=3.8
+
+# Secrets management
+keyring>=24.3.0
+
+# Backup and restore
+dill>=0.3.7
+
+# Serialization
+msgpack>=1.0.7
+
+# Compression
+zstandard>=0.22.0
+
+# Hashing
+xxhash>=3.4.0
+
+# Random utilities
+random2>=1.0.1
+
+# Math utilities
+scipy>=1.11.0
+
+# Statistics
+statsmodels>=0.14.0
+
+# Machine learning (if needed for analytics)
+scikit-learn>=1.3.0
+
+# Natural language processing
+nltk>=3.8.1
+spacy>=3.7.0
+
+# Text processing
+textblob>=0.17.1
+
+# Language detection
+langdetect>=1.0.9
+
+# Sentiment analysis
+vaderSentiment>=3.3.2
+
+# Web scraping (if needed)
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# PDF processing
+PyPDF2>=3.0.1
+pdfplumber>=0.10.0
+
+# Excel processing
+xlsxwriter>=3.1.9
+
+# CSV processing
+csvkit>=1.1.1
+
+# Data visualization
+matplotlib>=3.8.0
+seaborn>=0.13.0
+plotly>=5.17.0
+
+# Interactive widgets
+ipywidgets>=8.1.0
+
+# Jupyter support
+jupyter>=1.0.0
+notebook>=7.0.0
+
+# Documentation generation
+mkdocs>=1.5.0
+mkdocs-material>=9.4.0
+
+# API client generation
+openapi-generator-cli>=7.0.0
+
+# Schema validation
+jsonschema>=4.19.0
+
+# XML processing
+xmltodict>=0.13.0
+
+# YAML processing
+ruamel.yaml>=0.18.0
+
+# Configuration validation
+schema>=0.7.5
+
+# Environment variable validation
+environs>=10.0.0
+
+# CLI utilities
+click>=8.1.0
+typer>=0.9.0
+
+# Progress tracking
+rich>=13.6.0
+
+# Table formatting
+tabulate>=0.9.0
+
+# Tree structures
+anytree>=2.9.0
+
+# Graph algorithms
+igraph>=0.11.0
+
+# Network analysis
+networkx>=3.2.0
+
+# Geospatial data
+geopy>=2.4.0
+folium>=0.15.0
+
+# Time series analysis
+prophet>=1.1.4
+
+# Financial calculations
+numpy-financial>=1.0.0
+
+# Currency handling
+forex-python>=1.8
+
+# Payment processing
+stripe>=7.0.0
+
+# Email handling
+sendgrid>=6.10.0
+mailgun>=0.1.1
+
+# SMS handling
+twilio>=8.10.0
+
+# Push notifications
+pyfcm>=1.5.4
+
+# Social media APIs
+tweepy>=4.14.0
+facebook-sdk>=3.1.0
+
+# Calendar integration
+google-api-python-client>=2.108.0
+microsoft-graph>=1.0.0
+
+# File storage
+boto3>=1.34.0
+google-cloud-storage>=2.10.0
+
+# CDN integration
+cloudflare>=2.11.0
+
+# Monitoring services
+sentry-sdk>=1.38.0
+rollbar>=0.16.3
+
+# Analytics
+mixpanel>=4.10.0
+segment-analytics-python>=2.2.3
+
+# A/B testing
+optimizely-sdk>=4.1.0
+
+# Feature flags
+launchdarkly-server-sdk>=8.2.0
+
+# Search engines
+elasticsearch>=8.11.0
+whoosh>=2.7.4
+
+# Full-text search
+solr>=2.1.0
+
+# Recommendation engines
+surprise>=1.1.3
+
+# Machine learning pipelines
+mlflow>=2.8.0
+
+# Model serving
+bentoml>=1.1.0
+
+# AutoML
+auto-sklearn>=0.15.0
+
+# Deep learning
+tensorflow>=2.15.0
+torch>=2.1.0
+
+# Computer vision
+opencv-python>=4.8.0
+
+# Audio processing
+librosa>=0.10.0
+
+# Video processing
+moviepy>=1.0.3
+
+# Image optimization
+pillow-simd>=10.0.0
+
+# QR codes
+qrcode>=7.4.2
+
+# Barcodes
+python-barcode>=0.15.1
+
+# OCR
+pytesseract>=0.3.10
+
+# Speech recognition
+SpeechRecognition>=3.10.0
+
+# Text-to-speech
+pyttsx3>=2.90
+
+# Language translation
+googletrans>=4.0.0
+
+# Timezone handling
+babel>=2.13.0
+
+# Internationalization
+flask-babel>=4.0.0
+
+# Localization
+polib>=1.2.0
+
+# Content management
+wagtail>=5.2.0
+
+# E-commerce
+django-oscar>=3.2.0
+
+# CRM integration
+salesforce-api>=0.1.47
+
+# ERP integration
+odoo-api>=1.0.0
+
+# Accounting
+quickbooks-online>=0.6.0
+
+# HR systems
+bamboohr-api>=1.0.0
+
+# Project management
+asana>=3.2.0
+trello>=0.9.4
+
+# Communication
+slack-sdk>=3.23.0
+discord.py>=2.3.0
+
+# Video conferencing
+zoom-sdk>=1.0.0
+
+# Document management
+box-sdk-gen>=1.0.0
+dropbox>=11.36.0
+
+# Version control
+gitpython>=3.1.40
+
+# Code analysis
+radon>=6.0.1
+vulture>=2.10
+
+# Documentation
+sphinx-autodoc-typehints>=1.25.0
+
+# API documentation
+flasgger>=0.9.7.1
+
+# OpenAPI
+openapi3>=1.8.2
+
+# GraphQL
+graphene>=3.3.0
+
+# WebRTC
+aiortc>=1.6.0
+
+# Blockchain
+web3>=6.11.0
+
+# Cryptocurrency
+ccxt>=4.1.0
+
+# IoT
+paho-mqtt>=1.6.1
+
+# Hardware interfaces
+pyserial>=3.5
+
+# GPIO (Raspberry Pi)
+RPi.GPIO>=0.7.1
+
+# Sensors
+adafruit-circuitpython-dht>=3.7.0
+
+# Robotics
+rospy>=1.16.0
+
+# Game development
+pygame>=2.5.0
+
+# 3D graphics
+moderngl>=5.8.0
+
+# GUI development
+tkinter>=8.6
+PyQt5>=5.15.0
+
+# Desktop applications
+kivy>=2.2.0
+
+# Mobile development
+buildozer>=1.5.0
+
+# Cross-platform
+electron>=1.0.0
+
+# Packaging
+pyinstaller>=6.2.0
+cx-freeze>=6.15.0
+
+# Distribution
+twine>=4.0.0
+wheel>=0.42.0
+
+# Virtual environments
+virtualenv>=20.25.0
+pipenv>=2023.11.0
+
+# Dependency management
+pip-tools>=7.3.0
+poetry>=1.7.0
+
+# Code formatting
+autopep8>=2.0.0
+yapf>=0.40.0
+
+# Import sorting
+isort>=5.12.0
+
+# Code complexity
+mccabe>=0.7.0
+
+# Security linting
+semgrep>=1.45.0
+
+# Performance profiling
+line-profiler>=4.1.0
+scalene>=1.5.0
+
+# Memory debugging
+pympler>=0.9
+
+# System monitoring
+psutil>=5.9.0
+gputil>=1.4.0
+
+# Network monitoring
+scapy>=2.5.0
+
+# Log analysis
+loguru>=0.7.0
+
+# Error tracking
+bugsnag>=4.6.0
+
+# Performance monitoring
+newrelic>=9.2.0
+
+# Application monitoring
+datadog>=0.48.0
+
+# Infrastructure monitoring
+prometheus-client>=0.19.0
+
+# Alerting
+pagerduty>=2.0.0
+
+# Incident management
+opsgenie-sdk>=2.1.0
+
+# Status pages
+statuspage>=1.0.0
+
+# Uptime monitoring
+pingdom>=1.0.0
+
+# Load balancing
+haproxy-stats>=2.0.0
+
+# Service discovery
+consul>=1.1.0
+
+# Configuration management
+ansible>=8.7.0
+
+# Container orchestration
+kubernetes>=28.1.0
+
+# Serverless
+chalice>=1.31.0
+
+# Cloud functions
+google-cloud-functions>=1.16.0
+
+# Message queues
+rabbitmq>=0.2.0
+
+# Event streaming
+kafka-python>=2.0.2
+
+# Data pipelines
+apache-airflow>=2.7.0
+
+# ETL
+petl>=1.7.0
+
+# Data warehousing
+snowflake-connector-python>=3.5.0
+
+# Business intelligence
+tableau-api-lib>=0.1.47
+
+# Reporting
+reportlab>=4.0.0
+
+# Dashboard creation
+dash>=2.14.0
+
+# Data visualization
+bokeh>=3.3.0
+
+# Interactive plots
+altair>=5.2.0
+
+# Statistical analysis
+pingouin>=0.5.3
+
+# Time series forecasting
+sktime>=0.24.0
+
+# Anomaly detection
+pyod>=1.1.0
+
+# Clustering
+scikit-learn-extra>=0.3.0
+
+# Dimensionality reduction
+umap-learn>=0.5.4
+
+# Feature selection
+scikit-feature>=1.1.0
+
+# Model interpretation
+shap>=0.43.0
+
+# Hyperparameter tuning
+optuna>=3.4.0
+
+# Experiment tracking
+wandb>=0.16.0
+
+# Model versioning
+dvc>=3.30.0
+
+# Data validation
+great-expectations>=0.18.0
+
+# Schema evolution
+alembic>=1.13.0
+
+# Database migrations
+yoyo-migrations>=8.2.0
+
+# Connection pooling
+sqlalchemy-pool>=2.0.0
+
+# Query optimization
+sqlparse>=0.4.4
+
+# Database profiling
+django-debug-toolbar>=4.2.0
+
+# Cache backends
+django-redis>=5.4.0
+
+# Session management
+flask-session>=0.5.0
+
+# Authentication backends
+authlib>=1.2.0
+
+# OAuth providers
+social-auth-app-django>=5.4.0
+
+# JWT handling
+pyjwt>=2.8.0
+
+# Password hashing
+argon2-cffi>=23.1.0
+
+# Two-factor authentication
+pyotp>=2.9.0
+
+# CAPTCHA
+captcha>=0.5.0
+
+# Rate limiting
+flask-limiter>=3.5.0
+
+# API throttling
+django-ratelimit>=4.1.0
+
+# Request validation
+marshmallow>=3.20.0
+
+# Response serialization
+django-rest-framework>=3.14.0
+
+# API versioning
+django-rest-framework-version-transforms>=0.3.0
+
+# Content negotiation
+django-rest-framework-negotiation>=0.1.0
+
+# Pagination
+django-rest-framework-pagination>=0.1.0
+
+# Filtering
+django-filter>=23.4
+
+# Search
+django-haystack>=3.2.1
+
+# Tagging
+django-taggit>=4.0.0
+
+# Categories
+django-mptt>=0.15.0
+
+# Comments
+django-contrib-comments>=2.2.0
+
+# Ratings
+django-star-ratings>=0.9.2
+
+# Notifications
+django-notifications-hq>=1.8.0
+
+# Activity streams
+django-activity-stream>=2.0.0
+
+# Audit trails
+django-simple-history>=3.4.0
+
+# Soft deletion
+django-safedelete>=1.3.0
+
+# Bulk operations
+django-bulk-update>=2.2.0
+
+# Import/export
+django-import-export>=3.3.0
+
+# Admin interface
+django-admin-interface>=0.28.0
+
+# Forms
+django-crispy-forms>=2.1
+
+# File uploads
+django-storages>=1.14.0
+
+# Image processing
+django-imagekit>=5.0.0
+
+# Thumbnails
+sorl-thumbnail>=12.10.0
+
+# Media management
+django-filer>=3.1.0
+
+# SEO
+django-meta>=2.4.0
+
+# Sitemaps
+django-sitemap>=2.3.0
+
+# RSS feeds
+feedparser>=6.0.10
+
+# Web scraping
+scrapy>=2.11.0
+
+# Browser automation
+selenium>=4.15.0
+
+# API testing
+tavern>=2.4.0
+
+# Load testing
+artillery>=2.0.0
+
+# Security testing
+zap-api-python>=0.0.21
+
+# Penetration testing
+python-nmap>=0.7.1
+
+# Vulnerability scanning
+safety>=2.3.0
+
+# Code coverage
+pytest-cov>=4.1.0
+
+# Test reporting
+pytest-html>=4.1.0
+
+# Parallel testing
+pytest-xdist>=3.5.0
+
+# Database testing
+pytest-django>=4.7.0
+
+# Mock testing
+responses>=0.24.0
+
+# Property-based testing
+hypothesis>=6.88.0
+
+# Snapshot testing
+syrupy>=4.6.0
+
+# Visual regression testing
+percy>=2.0.2
+
+# End-to-end testing
+playwright>=1.40.0
+
+# Mobile testing
+appium-python-client>=3.1.0
+
+# Performance testing
+locust>=2.17.0
+
+# Chaos engineering
+chaostoolkit>=1.17.0
+
+# Monitoring
+prometheus-client>=0.19.0
+
+# Logging
+structlog>=23.0.0
+
+# Tracing
+opentelemetry-api>=1.21.0
+
+# Metrics
+statsd>=4.0.1
+
+# Health checks
+healthcheck>=1.3.3
+
+# Circuit breakers
+pybreaker>=1.0.1
+
+# Retry mechanisms
+tenacity>=8.2.0
+
+# Caching
+cachetools>=5.3.0
+
+# Configuration
+dynaconf>=3.2.0
+
+# Environment management
+python-decouple>=3.8
+
+# Secrets management
+hvac>=2.0.0
+
+# Service mesh
+istio>=1.0.0
+
+# API gateway
+kong>=3.0.0
+
+# Load balancing
+nginx>=1.0.0
+
+# Reverse proxy
+traefik>=3.0.0
+
+# SSL/TLS
+certbot>=2.7.0
+
+# DNS
+dnspython>=2.4.0
+
+# Network utilities
+netaddr>=0.10.0
+
+# IP address handling
+ipaddress>=1.0.23
+
+# URL parsing
+urllib3>=2.1.0
+
+# HTTP clients
+httpx>=0.25.2
+
+# WebSocket clients
+websocket-client>=1.6.0
+
+# FTP clients
+ftplib>=3.11.0
+
+# SSH clients
+paramiko>=3.4.0
+
+# SFTP clients
+pysftp>=0.2.9
+
+# Email clients
+imaplib>=3.11.0
+
+# SMTP clients
+smtplib>=3.11.0
+
+# Calendar clients
+caldav>=1.3.0
+
+# WebDAV clients
+webdavclient3>=3.14.6
+
+# Cloud storage clients
+google-cloud-storage>=2.10.0
+
+# File synchronization
+rsync>=1.0.0
+
+# Backup utilities
+duplicity>=2.1.0
+
+# Compression utilities
+zipfile>=3.11.0
+
+# Archive utilities
+tarfile>=3.11.0
+
+# Encryption utilities
+cryptography>=41.0.0
+
+# Hashing utilities
+hashlib>=3.11.0
+
+# Random utilities
+secrets>=3.11.0
+
+# UUID utilities
+uuid>=3.11.0
+
+# Date/time utilities
+datetime>=3.11.0
+
+# Regular expressions
+re>=3.11.0
+
+# String utilities
+string>=3.11.0
+
+# Math utilities
+math>=3.11.0
+
+# Statistics utilities
+statistics>=3.11.0
+
+# Collections utilities
+collections>=3.11.0
+
+# Itertools utilities
+itertools>=3.11.0
+
+# Functools utilities
+functools>=3.11.0
+
+# Operator utilities
+operator>=3.11.0
+
+# Copy utilities
+copy>=3.11.0
+
+# Pickle utilities
+pickle>=3.11.0
+
+# JSON utilities
+json>=3.11.0
+
+# CSV utilities
+csv>=3.11.0
+
+# XML utilities
+xml>=3.11.0
+
+# HTML utilities
+html>=3.11.0
+
+# URL utilities
+urllib>=3.11.0
+
+# Path utilities
+pathlib>=3.11.0
+
+# OS utilities
+os>=3.11.0
+
+# System utilities
+sys>=3.11.0
+
+# Platform utilities
+platform>=3.11.0
+
+# Subprocess utilities
+subprocess>=3.11.0
+
+# Threading utilities
+threading>=3.11.0
+
+# Multiprocessing utilities
+multiprocessing>=3.11.0
+
+# Asyncio utilities
+asyncio>=3.11.0
+
+# Concurrent futures
+concurrent.futures>=3.11.0
+
+# Queue utilities
+queue>=3.11.0
+
+# Socket utilities
+socket>=3.11.0
+
+# Select utilities
+select>=3.11.0
+
+# Signal utilities
+signal>=3.11.0
+
+# Time utilities
+time>=3.11.0
+
+# Locale utilities
+locale>=3.11.0
+
+# Gettext utilities
+gettext>=3.11.0
+
+# Logging utilities
+logging>=3.11.0
+
+# Warning utilities
+warnings>=3.11.0
+
+# Exception utilities
+traceback>=3.11.0
+
+# Inspection utilities
+inspect>=3.11.0
+
+# Garbage collection utilities
+gc>=3.11.0
+
+# Weak references
+weakref>=3.11.0
+
+# Context managers
+contextlib>=3.11.0
+
+# Abstract base classes
+abc>=3.11.0
+
+# Data classes
+dataclasses>=3.11.0
+
+# Enumerations
+enum>=3.11.0
+
+# Type hints
+typing>=3.11.0
+
+# Annotations
+__future__>=3.11.0

@@ -1,0 +1,426 @@
+{
+  "timestamp": "2025-07-21T19:05:17.067429",
+  "overall_status": "healthy",
+  "summary": {
+    "core_imports": "4/4",
+    "graph_imports": "8/8",
+    "agent_creation": "8/8",
+    "dependencies": "9/9",
+    "function_validation": "4/4"
+  },
+  "detailed_results": {
+    "environment": {
+      "environment": "local",
+      "python_version": "3.13.3 (main, Apr  8 2025, 13:54:08) [Clang 15.0.0 (clang-1500.1.0.2.5)]",
+      "working_directory": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner",
+      "python_path_count": 5,
+      "path_status": {
+        "/home/site/wwwroot": false,
+        "/home/site/wwwroot/app": false,
+        "/home/site/wwwroot/app/agents": false,
+        "/home/site/wwwroot/app/graphs": false,
+        "app": true,
+        "app/agents": true,
+        "app/graphs": true,
+        "app/db": true,
+        "app/middleware": true
+      }
+    },
+    "dependencies": {
+      "fastapi": {
+        "status": "available",
+        "version": "0.115.8",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/fastapi/__init__.py"
+      },
+      "uvicorn": {
+        "status": "available",
+        "version": "0.34.0",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/uvicorn/__init__.py"
+      },
+      "sqlalchemy": {
+        "status": "available",
+        "version": "2.0.38",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/sqlalchemy/__init__.py"
+      },
+      "psycopg2": {
+        "status": "available",
+        "version": "2.9.10 (dt dec pq3 ext lo64)",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/psycopg2/__init__.py"
+      },
+      "pydantic": {
+        "status": "available",
+        "version": "2.10.6",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/pydantic/__init__.py"
+      },
+      "langchain": {
+        "status": "available",
+        "version": "0.3.19",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/langchain/__init__.py"
+      },
+      "langgraph": {
+        "status": "available",
+        "version": "unknown",
+        "file": null
+      },
+      "openai": {
+        "status": "available",
+        "version": "1.64.0",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/openai/__init__.py"
+      },
+      "google.generativeai": {
+        "status": "available",
+        "version": "0.8.5",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/.venv/lib/python3.13/site-packages/google/generativeai/__init__.py"
+      }
+    },
+    "core_imports": {
+      "app.agents.api_router": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/agents/api_router.py",
+        "attributes": [
+          "AGENT_METADATA",
+          "APIRouter",
+          "AgentAnalyticsResponse",
+          "AgentAvailabilityResponse",
+          "AgentFeedbackRequest",
+          "AgentFeedbackResponse",
+          "AgentMessageRequest",
+          "AgentMessageResponse",
+          "AgentMetadata",
+          "Any"
+        ]
+      },
+      "app.agents.agent_factory": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/agents/agent_factory.py",
+        "attributes": [
+          "AgentFactory",
+          "Any",
+          "Dict",
+          "Event",
+          "FeatureNotAvailableError",
+          "List",
+          "Optional",
+          "Session",
+          "Type",
+          "__builtins__"
+        ]
+      },
+      "app.db.session": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/db/session.py",
+        "attributes": [
+          "Generator",
+          "Session",
+          "SessionLocal",
+          "__builtins__",
+          "__cached__",
+          "__doc__",
+          "__file__",
+          "__loader__",
+          "__name__",
+          "__package__"
+        ]
+      },
+      "app.middleware.tenant": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/middleware/tenant.py",
+        "attributes": [
+          "Depends",
+          "Optional",
+          "Organization",
+          "Request",
+          "Session",
+          "__builtins__",
+          "__cached__",
+          "__doc__",
+          "__file__",
+          "__loader__"
+        ]
+      }
+    },
+    "graph_imports": {
+      "app.graphs.coordinator_graph": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/coordinator_graph.py",
+        "attributes": [
+          "AIMessage",
+          "AgentAssignment",
+          "Any",
+          "BaseTool",
+          "COORDINATOR_SYSTEM_PROMPT",
+          "ChatPromptTemplate",
+          "ConversationMemory",
+          "CoordinatorSearchTool",
+          "DelegationTool",
+          "Dict"
+        ]
+      },
+      "app.graphs.resource_planning_graph": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/resource_planning_graph.py",
+        "attributes": [
+          "AIMessage",
+          "Any",
+          "BaseModel",
+          "BaseTool",
+          "ChatPromptTemplate",
+          "Dict",
+          "END",
+          "EquipmentPlanningInput",
+          "EquipmentPlanningTool",
+          "Field"
+        ]
+      },
+      "app.graphs.financial_graph": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/financial_graph.py",
+        "attributes": [
+          "AIMessage",
+          "Any",
+          "BaseTool",
+          "BudgetAllocationTool",
+          "ChatPromptTemplate",
+          "ContractGenerationTool",
+          "Dict",
+          "END",
+          "FINANCIAL_SYSTEM_PROMPT",
+          "FinancialPlanGenerationTool"
+        ]
+      },
+      "app.graphs.stakeholder_management_graph": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/stakeholder_management_graph.py",
+        "attributes": [
+          "AIMessage",
+          "Any",
+          "BaseTool",
+          "ChatPromptTemplate",
+          "Dict",
+          "END",
+          "HumanMessage",
+          "List",
+          "Literal",
+          "MessagesPlaceholder"
+        ]
+      },
+      "app.graphs.marketing_communications_graph": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/marketing_communications_graph.py",
+        "attributes": [
+          "AIMessage",
+          "Any",
+          "Attendee",
+          "AttendeeManagementTool",
+          "BaseTool",
+          "CampaignCreationTool",
+          "ChannelManagementTool",
+          "ChatPromptTemplate",
+          "CommunicationPlan",
+          "CommunicationPlanGenerationTool"
+        ]
+      },
+      "app.graphs.project_management_graph": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/project_management_graph.py",
+        "attributes": [
+          "AIMessage",
+          "Any",
+          "BaseTool",
+          "ChatPromptTemplate",
+          "Dict",
+          "END",
+          "HumanMessage",
+          "List",
+          "Literal",
+          "MessagesPlaceholder"
+        ]
+      },
+      "app.graphs.analytics_graph": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/analytics_graph.py",
+        "attributes": [
+          "AIMessage",
+          "ANALYTICS_SYSTEM_PROMPT",
+          "AnalyticsReport",
+          "AnalyticsSearchTool",
+          "AnalyticsStateDict",
+          "Any",
+          "AttendeeAnalytics",
+          "AttendeeAnalyticsTool",
+          "BaseTool",
+          "ChatPromptTemplate"
+        ]
+      },
+      "app.graphs.compliance_security_graph": {
+        "status": "success",
+        "file": "/Users/paulhawkins/Projects/HawkOne/Agentic/AI-EventPlanner/app/graphs/compliance_security_graph.py",
+        "attributes": [
+          "AIMessage",
+          "Annotated",
+          "Any",
+          "ChatPromptTemplate",
+          "ComplianceSearchTool",
+          "ComplianceSecurityState",
+          "Dict",
+          "END",
+          "HumanMessage",
+          "List"
+        ]
+      }
+    },
+    "function_validation": {
+      "app.agents.api_router.router": {
+        "status": "available",
+        "type": "<class 'fastapi.routing.APIRouter'>",
+        "description": "FastAPI router"
+      },
+      "app.agents.agent_factory.get_agent_factory": {
+        "status": "available",
+        "type": "<class 'function'>",
+        "description": "Agent factory function"
+      },
+      "app.db.session.get_db": {
+        "status": "available",
+        "type": "<class 'function'>",
+        "description": "Database session function"
+      },
+      "app.middleware.tenant.get_current_organization": {
+        "status": "available",
+        "type": "<class 'function'>",
+        "description": "Tenant middleware function"
+      }
+    },
+    "agent_creation": {
+      "coordinator": {
+        "status": "success",
+        "agent_type": "<class 'dict'>",
+        "methods": [
+          "clear",
+          "copy",
+          "fromkeys",
+          "get",
+          "items",
+          "keys",
+          "pop",
+          "popitem",
+          "setdefault",
+          "update"
+        ]
+      },
+      "resource_planning": {
+        "status": "success",
+        "agent_type": "<class 'dict'>",
+        "methods": [
+          "clear",
+          "copy",
+          "fromkeys",
+          "get",
+          "items",
+          "keys",
+          "pop",
+          "popitem",
+          "setdefault",
+          "update"
+        ]
+      },
+      "financial": {
+        "status": "success",
+        "agent_type": "<class 'dict'>",
+        "methods": [
+          "clear",
+          "copy",
+          "fromkeys",
+          "get",
+          "items",
+          "keys",
+          "pop",
+          "popitem",
+          "setdefault",
+          "update"
+        ]
+      },
+      "stakeholder_management": {
+        "status": "success",
+        "agent_type": "<class 'dict'>",
+        "methods": [
+          "clear",
+          "copy",
+          "fromkeys",
+          "get",
+          "items",
+          "keys",
+          "pop",
+          "popitem",
+          "setdefault",
+          "update"
+        ]
+      },
+      "marketing_communications": {
+        "status": "success",
+        "agent_type": "<class 'dict'>",
+        "methods": [
+          "clear",
+          "copy",
+          "fromkeys",
+          "get",
+          "items",
+          "keys",
+          "pop",
+          "popitem",
+          "setdefault",
+          "update"
+        ]
+      },
+      "project_management": {
+        "status": "success",
+        "agent_type": "<class 'dict'>",
+        "methods": [
+          "clear",
+          "copy",
+          "fromkeys",
+          "get",
+          "items",
+          "keys",
+          "pop",
+          "popitem",
+          "setdefault",
+          "update"
+        ]
+      },
+      "analytics": {
+        "status": "success",
+        "agent_type": "<class 'dict'>",
+        "methods": [
+          "clear",
+          "copy",
+          "fromkeys",
+          "get",
+          "items",
+          "keys",
+          "pop",
+          "popitem",
+          "setdefault",
+          "update"
+        ]
+      },
+      "compliance_security": {
+        "status": "success",
+        "agent_type": "<class 'dict'>",
+        "methods": [
+          "clear",
+          "copy",
+          "fromkeys",
+          "get",
+          "items",
+          "keys",
+          "pop",
+          "popitem",
+          "setdefault",
+          "update"
+        ]
+      }
+    }
+  },
+  "recommendations": []
+}

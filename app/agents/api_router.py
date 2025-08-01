@@ -235,19 +235,58 @@ async def get_agent_response(
         HTTPException: If the agent is not available or an error occurs
     """
     start_time = time.time()
+    organization_id = None  # Initialize organization_id to avoid UnboundLocalError
     
     try:
         # Get tenant ID from request
         organization_id = get_tenant_id(request) if request else None
         
-        # Create a new conversation ID if not provided
-        if not conversation_id:
-            conversation_id = str(uuid.uuid4())
-            logger.info(f"Created new conversation ID: {conversation_id}", 
+        # Validate tenant context
+        if not organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Organization context is required"
+            )
+        
+        # Initialize tenant conversation service
+        from app.services.tenant_conversation_service import TenantConversationService
+        from app.tools.tenant_agent_communication_tools import TenantAgentCommunicationTools
+        
+        conversation_service = TenantConversationService(
+            db=db,
+            organization_id=organization_id,
+            user_id=current_user_id
+        )
+        
+        # Handle conversation creation or retrieval
+        tenant_conversation = None
+        if conversation_id:
+            # Try to get existing conversation
+            try:
+                tenant_conversation = conversation_service.get_conversation(
+                    conversation_id=int(conversation_id),
+                    include_messages=True
+                )
+            except (ValueError, TypeError):
+                # Invalid conversation ID format
+                pass
+        
+        if not tenant_conversation:
+            # Create new conversation
+            tenant_conversation = conversation_service.create_conversation(
+                title=f"{agent_type.title()} Conversation",
+                conversation_type="agent_chat",
+                primary_agent_type=agent_type
+            )
+            conversation_id = str(tenant_conversation.id)
+            
+            logger.info(f"Created new tenant conversation: {conversation_id}", 
                        extra={"custom_dimensions": {
                            "agent_type": agent_type,
                            "organization_id": organization_id
                        }})
+        else:
+            conversation_id = str(tenant_conversation.id)
         
         # Log the request
         log_agent_invocation(
@@ -258,7 +297,24 @@ async def get_agent_response(
             organization_id=organization_id
         )
         
-        # Get agent factory with tenant context
+        # Add user message to tenant conversation
+        user_message = conversation_service.add_message(
+            conversation_id=int(conversation_id),
+            role="user",
+            content=message,
+            metadata={"source": "api", "agent_type": agent_type}
+        )
+        
+        # Initialize tenant-aware agent communication tools
+        agent_tools = TenantAgentCommunicationTools(
+            db=db,
+            organization_id=organization_id,
+            user_id=current_user_id,
+            conversation_id=int(conversation_id),
+            agent_type=agent_type
+        )
+        
+        # Get agent factory with tenant context (for backward compatibility)
         agent_factory = get_agent_factory(db=db, organization_id=organization_id)
         
         try:
@@ -268,25 +324,34 @@ async def get_agent_response(
                 conversation_id=conversation_id
             )
             
-            # Add the message to the agent state
+            # Build state from tenant conversation
             state = agent["state"]
-            if "messages" not in state:
-                state["messages"] = []
-                logger.debug(f"Initialized messages array for conversation: {conversation_id}")
             
-            # Add the user message with timestamp
-            user_message = {
-                "role": "user",
-                "content": message,
-                "timestamp": datetime.utcnow().isoformat()
+            # Load messages from tenant conversation
+            messages = []
+            for msg in tenant_conversation.messages:
+                messages.append({
+                    "role": msg.role,
+                    "content": msg.content,
+                    "timestamp": msg.timestamp.isoformat(),
+                    "agent_type": msg.agent_type,
+                    "agent_id": msg.agent_id
+                })
+            
+            state["messages"] = messages
+            
+            # Add tenant context to state
+            state["tenant_context"] = {
+                "organization_id": organization_id,
+                "user_id": current_user_id,
+                "conversation_id": int(conversation_id)
             }
-            state["messages"].append(user_message)
             
             # Log state update
             log_state_update(
                 logger=logger,
                 state_name="messages",
-                state_value=f"Added user message: {message[:50]}{'...' if len(message) > 50 else ''}",
+                state_value=f"Loaded {len(messages)} messages from tenant conversation",
                 conversation_id=conversation_id,
                 organization_id=organization_id
             )
@@ -352,6 +417,10 @@ async def get_agent_response(
             
             # Measure agent graph execution time
             graph_start_time = time.time()
+            
+            # Add memory to the state if available
+            if "memory" in agent:
+                state["memory"] = agent["memory"]
             
             # Run the agent graph with the updated state
             result = agent["graph"].invoke(state)
@@ -1290,3 +1359,119 @@ async def submit_agent_feedback(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error submitting feedback: {str(e)}"
         )
+
+
+@router.get("/agents/debug/memory/{conversation_id}")
+async def get_conversation_memory_debug(
+    conversation_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """
+    Get conversation memory for debugging purposes.
+    
+    Args:
+        conversation_id: Conversation ID
+        request: FastAPI request
+        db: Database session
+        current_user_id: Current user ID
+        
+    Returns:
+        Memory debug information
+    """
+    try:
+        # Get tenant ID from request
+        organization_id = get_tenant_id(request) if request else None
+        
+        # Get agent factory with tenant context
+        agent_factory = get_agent_factory(db=db, organization_id=organization_id)
+        
+        # Get conversation state
+        state = agent_factory.state_manager.get_conversation_state(conversation_id)
+        
+        if not state:
+            return {
+                "conversation_id": conversation_id,
+                "organization_id": organization_id,
+                "error": "Conversation not found",
+                "memory_available": False,
+                "memory_contents": None,
+                "state_contents": None
+            }
+        
+        # Check if the conversation belongs to the current organization
+        if organization_id and state.get("organization_id") != organization_id:
+            return {
+                "conversation_id": conversation_id,
+                "organization_id": organization_id,
+                "error": "Access denied",
+                "memory_available": False,
+                "memory_contents": None,
+                "state_contents": None
+            }
+        
+        # Get memory from state if available
+        memory = state.get("memory")
+        memory_debug = {
+            "memory_available": memory is not None,
+            "memory_type": type(memory).__name__ if memory else None,
+            "memory_contents": None
+        }
+        
+        if memory:
+            try:
+                # Try to get memory contents
+                memory_debug["memory_contents"] = {
+                    "user_preferences": getattr(memory, 'user_preferences', {}),
+                    "decisions": getattr(memory, 'decisions', {}),
+                    "clarifications": getattr(memory, 'clarifications', {}),
+                    "recommendations": getattr(memory, 'recommendations', {}),
+                    "context_summary": memory.get_context_summary() if hasattr(memory, 'get_context_summary') else None,
+                    "conversation_id": getattr(memory, 'conversation_id', None),
+                    "organization_id": getattr(memory, 'organization_id', None)
+                }
+                
+                # Try to get database records if available
+                if hasattr(memory, 'db') and hasattr(memory, 'get_all_memories'):
+                    try:
+                        db_memories = memory.get_all_memories()
+                        memory_debug["database_records"] = [
+                            {
+                                "memory_type": record.memory_type,
+                                "content": record.content,
+                                "context": record.context,
+                                "timestamp": record.timestamp.isoformat() if record.timestamp else None
+                            }
+                            for record in db_memories
+                        ]
+                    except Exception as db_error:
+                        memory_debug["database_error"] = str(db_error)
+                        
+            except Exception as memory_error:
+                memory_debug["memory_error"] = str(memory_error)
+        
+        return {
+            "conversation_id": conversation_id,
+            "organization_id": organization_id,
+            "memory_debug": memory_debug,
+            "state_contents": {
+                "event_details": state.get("event_details", {}),
+                "requirements": state.get("requirements", {}),
+                "information_collected": state.get("information_collected", {}),
+                "current_phase": state.get("current_phase"),
+                "messages_count": len(state.get("messages", [])),
+                "last_message": state.get("messages", [])[-1] if state.get("messages") else None
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in get_conversation_memory_debug: {str(e)}")
+        return {
+            "conversation_id": conversation_id,
+            "organization_id": organization_id,
+            "error": f"Debug error: {str(e)}",
+            "memory_available": False,
+            "memory_contents": None,
+            "state_contents": None
+        }

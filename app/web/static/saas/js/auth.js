@@ -10,12 +10,11 @@ document.addEventListener('DOMContentLoaded', function() {
         loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // Get form values - check for both username and email fields
+            // Get form values
             const usernameField = document.getElementById('username');
-            const emailField = document.getElementById('email');
             const passwordField = document.getElementById('password');
             
-            const username = usernameField ? usernameField.value : emailField.value;
+            const username = usernameField.value;
             const password = passwordField.value;
             const rememberMe = document.getElementById('rememberMe') ? document.getElementById('rememberMe').checked : false;
             
@@ -25,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (!username) {
                 isValid = false;
-                errorMessage += 'Username is required.\n';
+                errorMessage += 'Username or email is required.\n';
             }
             
             if (!password) {
@@ -42,6 +41,14 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Login form submitted:', { username, password, rememberMe });
             
             showLoading();
+            
+            // Disable form elements during login
+            const submitButton = loginForm.querySelector('button[type="submit"]');
+            const formInputs = loginForm.querySelectorAll('input');
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Logging in...';
+            formInputs.forEach(input => input.disabled = true);
             
             // Create form data for OAuth2PasswordRequestForm
             const formData = new FormData();
@@ -64,6 +71,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('tokenType', data.token_type);
                 
                 hideLoading();
+                
+                // Re-enable form elements
+                const submitButton = loginForm.querySelector('button[type="submit"]');
+                const formInputs = loginForm.querySelectorAll('input');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Login';
+                formInputs.forEach(input => input.disabled = false);
+                
                 showToast('Login successful!', 'success');
                 
                 // Redirect to dashboard
@@ -74,7 +89,28 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 hideLoading();
                 console.error('Login error:', error);
-                showToast('Invalid username or password', 'error');
+                
+                // Re-enable form elements
+                const submitButton = loginForm.querySelector('button[type="submit"]');
+                const formInputs = loginForm.querySelectorAll('input');
+                submitButton.disabled = false;
+                submitButton.textContent = 'Login';
+                formInputs.forEach(input => input.disabled = false);
+                
+                // Parse different error types
+                let errorMessage = 'Login failed. Please try again.';
+                
+                if (error.message === 'Invalid credentials') {
+                    errorMessage = 'Invalid username/email or password. Please check your credentials and try again.';
+                } else if (error.message === 'Failed to fetch') {
+                    errorMessage = 'Unable to connect to server. Please check your internet connection.';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'Invalid username/email or password.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Server error. Please try again later.';
+                }
+                
+                showToast(errorMessage, 'error');
             });
         });
     }

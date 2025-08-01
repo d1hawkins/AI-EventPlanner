@@ -29,8 +29,12 @@ def get_password_hash(password: str) -> str:
 
 
 def authenticate_user(db: Session, username: str, password: str) -> User:
-    """Authenticate a user by username and password."""
+    """Authenticate a user by username or email and password."""
+    # Try to find user by username first, then by email
     user = db.query(User).filter(User.username == username).first()
+    if not user:
+        user = db.query(User).filter(User.email == username).first()
+    
     if not user:
         return None
     if not verify_password(password, user.hashed_password):
@@ -41,7 +45,7 @@ def authenticate_user(db: Session, username: str, password: str) -> User:
 @router.post("/register", response_model=UserSchema)
 def register_user(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
     """
-    Register a new user.
+    Register a new user with tenant-aware setup.
     
     Args:
         user_in: User data
@@ -71,6 +75,31 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
         is_active=user_in.is_active,
     )
     db.add(db_user)
+    db.flush()  # Flush to get the user ID
+    
+    # Create organization for the user (personal organization)
+    from app.db.models_saas import Organization, OrganizationUser
+    import uuid
+    
+    organization = Organization(
+        name=f"{user_in.username}'s Organization",
+        slug=f"{user_in.username.lower()}-{uuid.uuid4().hex[:8]}",
+        plan_id="free",
+        is_active=True
+    )
+    db.add(organization)
+    db.flush()  # Flush to get the organization ID
+    
+    # Create organization-user relationship
+    org_user = OrganizationUser(
+        organization_id=organization.id,
+        user_id=db_user.id,
+        role="admin",
+        is_primary=True,
+        is_active=True
+    )
+    db.add(org_user)
+    
     db.commit()
     db.refresh(db_user)
     

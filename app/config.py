@@ -47,17 +47,37 @@ if not TAVILY_API_KEY:
 
 def validate_config():
     """Validate configuration and print warnings for missing values."""
+    validation_errors = []
+    warnings = []
+    
+    # Critical authentication settings
+    if not SECRET_KEY or SECRET_KEY == "development_secret_key":
+        if SECRET_KEY == "development_secret_key":
+            warnings.append("Using default SECRET_KEY. This is insecure for production.")
+        else:
+            validation_errors.append("SECRET_KEY environment variable is not set. Authentication will not work.")
+    
+    if not DATABASE_URL:
+        warnings.append("DATABASE_URL environment variable is not set. Using default SQLite database.")
+    
+    # LLM Provider validation
     if LLM_PROVIDER.lower() == "openai" and not OPENAI_API_KEY:
-        print("WARNING: OPENAI_API_KEY environment variable is not set but LLM_PROVIDER is 'openai'. OpenAI features may be disabled.")
+        warnings.append("OPENAI_API_KEY environment variable is not set but LLM_PROVIDER is 'openai'. OpenAI features may be disabled.")
     
     if LLM_PROVIDER.lower() == "google" and not GOOGLE_API_KEY:
-        print("WARNING: GOOGLE_API_KEY environment variable is not set but LLM_PROVIDER is 'google'. Google AI features may be disabled.")
+        warnings.append("GOOGLE_API_KEY environment variable is not set but LLM_PROVIDER is 'google'. Google AI features may be disabled.")
     
-    # Add more validation as needed
-    if not DATABASE_URL:
-        print("WARNING: DATABASE_URL environment variable is not set. Using default SQLite database.")
-        
-    # You could add checks for other critical variables like SENDGRID_API_KEY if email is essential
+    # Print warnings
+    for warning in warnings:
+        print(f"WARNING: {warning}")
+    
+    # Print errors
+    for error in validation_errors:
+        print(f"ERROR: {error}")
+    
+    if validation_errors:
+        print("Configuration validation failed. Please fix the above errors.")
+        return False
     
     print("Configuration validation check complete.")
     return True

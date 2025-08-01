@@ -1,0 +1,45 @@
+Azure Agent Deployment Summary
+==============================
+Deployment Date: Mon Jul 21 17:10:04 EDT 2025
+Environment: Azure App Service
+Deployment Script: azure-deploy-agents-fixed.sh
+
+Directories Created:
+  - ./app
+  - ./app/agents
+  - ./app/graphs
+  - ./app/tools
+  - ./app/utils
+  - ./app/db
+  - ./app/middleware
+  - ./app/schemas
+  - ./app/auth
+  - ./app/subscription
+  - ./app/state
+  - ./app/web
+  - ./migrations
+  - ./scripts
+
+Key Files Deployed:
+  - app_adapter_azure_agents_fixed.py (Enhanced app adapter)
+  - azure_import_diagnostics.py (Diagnostic system)
+  - Agent modules in app/agents/
+  - Graph modules in app/graphs/
+  - Database modules in app/db/
+  - Middleware modules in app/middleware/
+  - Utility modules in app/utils/
+
+Python Path Configuration:
+  PYTHONPATH=.:./app:./app/agents:./app/graphs:./app/tools:./app/utils:./app/db:./app/middleware
+
+Next Steps:
+1. Verify all environment variables are set
+2. Run health check: GET /api/agents/health
+3. Run diagnostics: GET /api/agents/diagnostics
+4. Test agent functionality: POST /api/agents/chat
+
+Troubleshooting:
+- Check deployment_summary.txt for deployment details
+- Run azure_import_diagnostics.py for detailed import analysis
+- Check application logs for runtime errors
+- Verify database connectivity and environment variables

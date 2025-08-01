@@ -51,38 +51,22 @@ def get_current_user(
     Raises:
         HTTPException: If authentication fails
     """
-    # For demo purposes, bypass authentication and return a dummy user
-    # In a real application, this would validate the token and return the actual user
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     
     try:
-        # Try to decode the token, but don't validate it
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_signature": False})
-        user_id = payload.get("sub")
-        if user_id:
-            user_id = int(user_id)
-            # Try to get the user from the database
-            user = db.query(User).filter(User.id == user_id).first()
-            if user:
-                return user
-    except Exception:
-        # If token decoding fails, just return a dummy user
-        pass
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
     
-    # Return a dummy user for demo purposes
-    # First check if user with ID 1 exists
-    user = db.query(User).filter(User.id == 1).first()
-    if user:
-        return user
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if user is None:
+        raise credentials_exception
     
-    # If no user exists, create a dummy user
-    dummy_user = User(
-        id=1,
-        email="demo@example.com",
-        username="demo",
-        hashed_password="dummy_hash",
-        is_active=True
-    )
-    db.add(dummy_user)
-    db.commit()
-    db.refresh(dummy_user)
-    return dummy_user
+    return user

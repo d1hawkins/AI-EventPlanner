@@ -1,0 +1,11 @@
+{
+  "dockerfile_lines": [
+    "RUN pip install langchain_openai python-dotenv pydantic langchain_core langchain_google_genai"
+  ],
+  "graphs": {
+    "simple_coordinator": "app/graphs/simple_coordinator_graph.py:create_coordinator_graph"
+  },
+  "env": ".env",
+  "node_version": "20",
+  "python_version": "3.10"
+}
