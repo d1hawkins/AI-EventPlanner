@@ -32,6 +32,9 @@ google-generativeai
 requests==2.31.0
 httpx==0.25.2
 
+# Calendar functionality
+icalendar==5.0.7
+
 # Azure Application Insights
 applicationinsights
 
