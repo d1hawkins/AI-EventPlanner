@@ -41,6 +41,8 @@ jobs:
         # Optional API Keys for enhanced functionality (use test/placeholder values)
         TAVILY_API_KEY=test_tavily_api_key_here
         GOOGLE_API_KEY=test_google_api_key_here
+        SENDGRID_API_KEY=test_sendgrid_api_key_here
+        OPENWEATHER_API_KEY=test_openweather_api_key_here
         
         # Database Configuration (Use in-memory SQLite for tests)
         DATABASE_URL=sqlite:///:memory:
