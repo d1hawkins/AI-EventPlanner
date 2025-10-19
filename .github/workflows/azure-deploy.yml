@@ -177,32 +177,9 @@ jobs:
           PYTHON_PATH="python3"
         fi
 
-        # 1) First ensure pip is installed on the remote host
-        echo "Ensuring pip is installed on remote host..."
-        echo "{\"command\":\"$PYTHON_PATH -m ensurepip --upgrade || (curl -s https://bootstrap.pypa.io/get-pip.py -o get-pip.py && $PYTHON_PATH get-pip.py && rm get-pip.py)\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/ensure_pip.json
-
-        ENSURE_PIP_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
-          -H "Content-Type: application/json" \
-          "$KUDU_BASE" \
-          -d @/tmp/ensure_pip.json)
-        ENSURE_PIP_BODY=$(echo "$ENSURE_PIP_RESPONSE" | sed '$d')
-        echo "Ensure pip response: $ENSURE_PIP_BODY"
-        ENSURE_PIP_EXIT=$(echo "$ENSURE_PIP_BODY" | grep -o '"ExitCode":[[:space:]]*[0-9]\+' | grep -o '[0-9]\+' || echo "")
-
-        if [ -z "$ENSURE_PIP_EXIT" ]; then
-          echo "Could not determine pip installation exit code. Full response:"
-          echo "$ENSURE_PIP_BODY"
-          exit 1
-        fi
-        if [ "$ENSURE_PIP_EXIT" -ne 0 ]; then
-          echo "Remote pip installation failed (ExitCode $ENSURE_PIP_EXIT). Response:"
-          echo "$ENSURE_PIP_BODY"
-          exit 1
-        fi
-
-        # 2) Now install dependencies on the remote host
+        # 1) Ensure dependencies installed on the remote host with robust pip bootstrap
         echo "Installing remote dependencies..."
-        echo "{\"command\":\"$PYTHON_PATH -m pip install -r /home/site/wwwroot/requirements.txt --no-cache-dir\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/install_reqs.json
+        echo "{\"command\":\"bash -lc 'set -e; $PYTHON_PATH -m ensurepip --upgrade 2>/dev/null || true; $PYTHON_PATH -m pip install --upgrade pip 2>/dev/null || (curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py && $PYTHON_PATH /tmp/get-pip.py); $PYTHON_PATH -m pip install -r /home/site/wwwroot/requirements.txt --no-cache-dir'\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/install_reqs.json
 
         INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
@@ -223,7 +200,7 @@ jobs:
           exit 1
         fi
 
-        # 3) Run migration by invoking the script file directly (avoid -m import issues)
+        # 2) Run migration by invoking the script file directly (avoid -m import issues)
         echo "Running migrations with command: $PYTHON_PATH /home/site/wwwroot/scripts/migrate.py"
         echo "{\"command\":\"$PYTHON_PATH /home/site/wwwroot/scripts/migrate.py\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/migrate.json
 
@@ -250,6 +227,6 @@ jobs:
         fi
 
         # Clean up temp files
-        rm -f /tmp/find_python.json /tmp/ensure_pip.json /tmp/install_reqs.json /tmp/migrate.json
+        rm -f /tmp/find_python.json /tmp/install_reqs.json /tmp/migrate.json
 
         echo "Migration completed successfully"
