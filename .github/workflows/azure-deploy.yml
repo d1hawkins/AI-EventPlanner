@@ -200,7 +200,58 @@ jobs:
           exit 1
         fi
 
-        # 2) Run migration by invoking the script file directly (avoid -m import issues)
+        # 2) Verify scripts/migrate.py exists, otherwise upload scripts/ via Kudu zip API
+        echo "Verifying migration script exists on remote..."
+        # Check for file
+        echo "{\"command\":\"bash -lc 'test -f /home/site/wwwroot/scripts/migrate.py && echo OK || echo MISSING'\",\"dir\":\"/\"}" > /tmp/check_migrate.json
+        CHECK_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+          -H "Content-Type: application/json" \
+          "$KUDU_BASE" \
+          -d @/tmp/check_migrate.json)
+        CHECK_BODY=$(echo "$CHECK_RESPONSE" | sed '$d')
+        echo "Check response: $CHECK_BODY"
+        IS_PRESENT=$(echo "$CHECK_BODY" | grep -o "OK" || true)
+
+        if [ -z "$IS_PRESENT" ]; then
+          echo "migrate.py not found on remote. Uploading local scripts/ directory via Kudu zip deploy..."
+          # Create a zip of the local scripts folder
+          (cd $(pwd) && zip -r /tmp/scripts_deploy.zip scripts) >/dev/null 2>&1 || (echo "Failed to create zip of scripts/"; exit 1)
+
+          # POST zip to Kudu Zip Deploy endpoint (writes into /site/wwwroot)
+          UPLOAD_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+            -H "Content-Type: application/zip" \
+            --data-binary @/tmp/scripts_deploy.zip \
+            "https://${APP_NAME}.scm.azurewebsites.net/api/zip/site/wwwroot/")
+          echo "Upload response: $UPLOAD_RESPONSE"
+
+          # Re-check the file
+          CHECK_RESPONSE2=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+            -H "Content-Type: application/json" \
+            "$KUDU_BASE" \
+            -d @/tmp/check_migrate.json)
+          CHECK_BODY2=$(echo "$CHECK_RESPONSE2" | sed '$d')
+          echo "Re-check response: $CHECK_BODY2"
+          IS_PRESENT2=$(echo "$CHECK_BODY2" | grep -o "OK" || true)
+
+          if [ -z "$IS_PRESENT2" ]; then
+            echo "ERROR: migrate.py is still missing after upload. Response: $CHECK_BODY2"
+            # Helpful debug listing
+            echo "Remote /home/site/wwwroot listing:"
+            echo "{\"command\":\"bash -lc 'ls -la /home/site/wwwroot || true'\",\"dir\":\"/\"}" > /tmp/ls_root.json
+            LS_ROOT_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+              -H "Content-Type: application/json" \
+              "$KUDU_BASE" \
+              -d @/tmp/ls_root.json)
+            echo "$LS_ROOT_RESPONSE" | sed '$d'
+            exit 1
+          fi
+
+          echo "Upload succeeded and migrate.py present."
+        else
+          echo "migrate.py already present on remote."
+        fi
+
+        # 3) Now run migration by invoking the script file directly (avoid -m import issues)
         echo "Running migrations with command: $PYTHON_PATH /home/site/wwwroot/scripts/migrate.py"
         echo "{\"command\":\"$PYTHON_PATH /home/site/wwwroot/scripts/migrate.py\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/migrate.json
 
@@ -227,6 +278,6 @@ jobs:
         fi
 
         # Clean up temp files
-        rm -f /tmp/find_python.json /tmp/install_reqs.json /tmp/migrate.json /tmp/get-pip.py
+        rm -f /tmp/find_python.json /tmp/install_reqs.json /tmp/migrate.json /tmp/get-pip.py /tmp/check_migrate.json /tmp/scripts_deploy.zip /tmp/ls_root.json
 
         echo "Migration completed successfully"
