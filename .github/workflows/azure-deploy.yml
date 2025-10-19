@@ -179,7 +179,7 @@ jobs:
 
         # 1) Ensure dependencies installed on the remote host with robust pip bootstrap
         echo "Installing remote dependencies..."
-        echo "{\"command\":\"bash -lc 'set -e; $PYTHON_PATH -m ensurepip --upgrade 2>/dev/null || true; $PYTHON_PATH -m pip install --upgrade pip 2>/dev/null || (curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py && $PYTHON_PATH /tmp/get-pip.py); $PYTHON_PATH -m pip install -r /home/site/wwwroot/requirements.txt --no-cache-dir'\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/install_reqs.json
+        echo "{\"command\":\"bash -lc \\\"set -e; $PYTHON_PATH -m ensurepip --upgrade 2>/dev/null || true; $PYTHON_PATH -m pip install --upgrade pip 2>/dev/null || (curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py && $PYTHON_PATH /tmp/get-pip.py); $PYTHON_PATH -m pip install -r /home/site/wwwroot/requirements.txt --no-cache-dir\\\"\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/install_reqs.json
 
         INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
@@ -227,6 +227,6 @@ jobs:
         fi
 
         # Clean up temp files
-        rm -f /tmp/find_python.json /tmp/install_reqs.json /tmp/migrate.json
+        rm -f /tmp/find_python.json /tmp/install_reqs.json /tmp/migrate.json /tmp/get-pip.py
 
         echo "Migration completed successfully"
