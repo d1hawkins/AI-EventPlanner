@@ -9,6 +9,7 @@ class User(Base):
     """User model for authentication and conversation ownership."""
     
     __tablename__ = "users"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
@@ -20,21 +21,25 @@ class User(Base):
     
     # Relationships
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+    organizations = relationship("OrganizationUser", back_populates="user", cascade="all, delete-orphan")
 
 
 class Conversation(Base):
     """Conversation model for tracking chat sessions."""
     
     __tablename__ = "conversations"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
     title = Column(String, default="New Conversation")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     user = relationship("User", back_populates="conversations")
+    organization = relationship("Organization", back_populates="conversations")
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
     agent_state = relationship("AgentState", back_populates="conversation", uselist=False, cascade="all, delete-orphan")
     event = relationship("Event", back_populates="conversation", uselist=False, cascade="all, delete-orphan")
@@ -44,6 +49,7 @@ class Message(Base):
     """Message model for storing chat messages."""
     
     __tablename__ = "messages"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"))
@@ -59,6 +65,7 @@ class AgentState(Base):
     """AgentState model for storing the state of the agent."""
     
     __tablename__ = "agent_states"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"), unique=True)
@@ -73,9 +80,11 @@ class Event(Base):
     """Event model for storing event details."""
     
     __tablename__ = "events"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"), unique=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
     title = Column(String)
     event_type = Column(String)
     description = Column(Text, nullable=True)
@@ -89,6 +98,7 @@ class Event(Base):
     
     # Relationships
     conversation = relationship("Conversation", back_populates="event")
+    organization = relationship("Organization", back_populates="events")
     tasks = relationship("Task", back_populates="event", cascade="all, delete-orphan")
     stakeholders = relationship("Stakeholder", back_populates="event", cascade="all, delete-orphan")
 
@@ -97,6 +107,7 @@ class Task(Base):
     """Task model for tracking event planning tasks."""
     
     __tablename__ = "tasks"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("events.id"))
@@ -116,6 +127,7 @@ class Stakeholder(Base):
     """Stakeholder model for tracking event stakeholders."""
     
     __tablename__ = "stakeholders"
+    __table_args__ = {'extend_existing': True}
     
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("events.id"))
