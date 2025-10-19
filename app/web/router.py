@@ -7,7 +7,16 @@ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, HTTPExce
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from fastapi.responses import StreamingResponse
-import icalendar
+
+# Try to import icalendar, but handle gracefully if not available
+try:
+    import icalendar
+    ICALENDAR_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: icalendar package not available: {e}")
+    print("Calendar export functionality will be disabled")
+    icalendar = None
+    ICALENDAR_AVAILABLE = False
 
 from app.db.session import get_db
 from app.db.models_updated import User, Message, AgentState, Event, Task
@@ -314,9 +323,16 @@ async def export_calendar(
         current_user_id: Current user ID
         
     Returns:
-        iCalendar file
+        iCalendar file or error message
     """
     try:
+        # Check if icalendar is available
+        if not ICALENDAR_AVAILABLE:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Calendar export functionality is currently unavailable. The icalendar package is not installed."
+            )
+        
         # Get tenant ID from request
         organization_id = get_tenant_id(request) if request else None
         
