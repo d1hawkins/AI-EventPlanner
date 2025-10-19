@@ -21,7 +21,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install poetry
-        poetry install --without google --no-root || (sleep 10 && poetry install --without google --no-root) 
+        poetry install --without google --no-root || (sleep 10 && poetry install --without google --no-root)
+        # Install additional test dependencies to fix CI issues
+        pip install psutil email-validator
     
     - name: Create .env.test if missing and run tests
       run: |
@@ -60,6 +62,16 @@ jobs:
         
         # Copy .env.test to .env for running tests
         cp .env.test .env
+        
+        # Export environment variables for tests
+        set -a
+        source .env
+        set +a
+        
+        # Create mock MCP server file to prevent test failures
+        mkdir -p mcp-servers/sendgrid-mcp/build
+        echo "module.exports = {};" > mcp-servers/sendgrid-mcp/build/index.js
+        
         CI=true poetry run pytest
     
     - name: Log in to Azure
