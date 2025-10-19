@@ -19,14 +19,14 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 
-# AI/ML Libraries for conversational agents (pinned versions for stability)
-langchain==0.0.348
-langgraph==0.0.69
-langchain-google-genai==0.0.6
-langchain-openai==0.0.5
-langchain-core==0.1.7
-openai==1.3.0
-google-generativeai==0.3.2
+# AI/ML Libraries for conversational agents (compatible versions)
+langchain>=0.1.0
+langgraph>=0.0.69
+langchain-google-genai>=0.0.6
+langchain-openai>=0.0.5
+langchain-core>=0.1.7
+openai>=1.3.0
+google-generativeai>=0.3.2
 
 # Utilities
 requests==2.31.0
