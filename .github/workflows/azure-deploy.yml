@@ -140,62 +140,82 @@ jobs:
     
     - name: Run database migrations
       run: |
-        # Get publishing credentials
-        CREDS=$(az webapp deployment list-publishing-credentials --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ai-event-planner-saas-py --query "{username:publishingUserName, password:publishingPassword}" -o json)
-        USERNAME=$(echo $CREDS | jq -r '.username')
-        PASSWORD=$(echo $CREDS | jq -r '.password')
-        
-        # First, find the Python executable path (use temp files to avoid JSON quoting issues)
+        set -euo pipefail
+
+        RG="${{ secrets.AZURE_RESOURCE_GROUP }}"
+        APP_NAME="ai-event-planner-saas-py"
+        # Retrieve publishing credentials (use az CLI directly if jq not available)
+        if ! command -v jq &>/dev/null; then
+          USERNAME=$(az webapp deployment list-publishing-credentials --resource-group "$RG" --name "$APP_NAME" --query publishingUserName -o tsv)
+          PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group "$RG" --name "$APP_NAME" --query publishingPassword -o tsv)
+        else
+          CREDS=$(az webapp deployment list-publishing-credentials --resource-group "$RG" --name "$APP_NAME" --query "{username:publishingUserName, password:publishingPassword}" -o json)
+          USERNAME=$(echo "$CREDS" | jq -r '.username')
+          PASSWORD=$(echo "$CREDS" | jq -r '.password')
+        fi
+
+        # Helper: post to Kudu using a temporary JSON file to avoid quoting problems
+        KUDU_BASE="https://${APP_NAME}.scm.azurewebsites.net/api/command"
+
         echo "Finding Python executable path..."
         echo '{"command":"bash -lc \"which python3 || which python || command -v python3 || command -v python\"","dir":"/"}' > /tmp/find_python.json
 
         FIND_PYTHON_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
-          https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
+          "$KUDU_BASE" \
           -d @/tmp/find_python.json)
 
-        FIND_PYTHON_HTTP_STATUS=$(echo "$FIND_PYTHON_RESPONSE" | tail -n1)
         FIND_PYTHON_BODY=$(echo "$FIND_PYTHON_RESPONSE" | sed '$d')
-
         echo "Find Python response: $FIND_PYTHON_BODY"
-        echo "HTTP status: $FIND_PYTHON_HTTP_STATUS"
 
-        # Extract a path-like python result if present
-        PYTHON_PATH=$(echo "$FIND_PYTHON_BODY" | grep -oE '/[A-Za-z0-9/_\.-]*python3?([0-9.]*)?' | head -n 1 || true)
-
+        # Extract python path (if any)
+        PYTHON_PATH=$(echo "$FIND_PYTHON_BODY" | grep -oE '/[A-Za-z0-9/_\.-]*python3?([0-9.]*)?' | head -n1 || true)
         if [ -n "$PYTHON_PATH" ]; then
           echo "Found Python path: $PYTHON_PATH"
         else
-          echo "Python path not found via which; will try PATH-based invocation (python3 or python)."
-          PYTHON_PATH=""
+          echo "Python path not found; will use 'python3' from PATH on remote side."
+          PYTHON_PATH="python3"
         fi
 
-        # Build migration command: prefer absolute path if found, otherwise try python3 or python via bash -lc so PATH is available
-        if [ -n "$PYTHON_PATH" ]; then
-          MIGRATE_CMD="$PYTHON_PATH -m scripts.migrate"
-        else
-          MIGRATE_CMD='bash -lc "python3 -m scripts.migrate || python -m scripts.migrate"'
+        # 1) Ensure dependencies installed on the remote host (pip install -r /home/site/wwwroot/requirements.txt)
+        echo "Installing remote dependencies..."
+        echo "{\"command\":\"$PYTHON_PATH -m pip install -r /home/site/wwwroot/requirements.txt --no-cache-dir\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/install_reqs.json
+
+        INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+          -H "Content-Type: application/json" \
+          "$KUDU_BASE" \
+          -d @/tmp/install_reqs.json)
+        INSTALL_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
+        echo "Install response: $INSTALL_BODY"
+        INSTALL_EXIT=$(echo "$INSTALL_BODY" | grep -o '"ExitCode":[[:space:]]*[0-9]\+' | grep -o '[0-9]\+' || echo "")
+
+        if [ -z "$INSTALL_EXIT" ]; then
+          echo "Could not determine pip install exit code. Full response:"
+          echo "$INSTALL_BODY"
+          exit 1
+        fi
+        if [ "$INSTALL_EXIT" -ne 0 ]; then
+          echo "Remote pip install failed (ExitCode $INSTALL_EXIT). Response:"
+          echo "$INSTALL_BODY"
+          exit 1
         fi
 
-        echo "Running migrations with command: $MIGRATE_CMD"
-        echo "{\"command\":\"$MIGRATE_CMD\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/migrate.json
+        # 2) Run migration by invoking the script file directly (avoid -m import issues)
+        echo "Running migrations with command: $PYTHON_PATH /home/site/wwwroot/scripts/migrate.py"
+        echo "{\"command\":\"$PYTHON_PATH /home/site/wwwroot/scripts/migrate.py\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/migrate.json
 
         RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
-          https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
+          "$KUDU_BASE" \
           -d @/tmp/migrate.json)
 
-        HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
         RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
-
         echo "Migration response: $RESPONSE_BODY"
-        echo "HTTP status: $HTTP_STATUS"
 
-        # Extract ExitCode from the response body (Kudu returns JSON with ExitCode inside body even if HTTP 200)
         EXIT_CODE=$(echo "$RESPONSE_BODY" | grep -o '"ExitCode":[[:space:]]*[0-9]\+' | grep -o '[0-9]\+' || echo "")
 
         if [ -z "$EXIT_CODE" ]; then
-          echo "Warning: Could not detect ExitCode in response. Failing for safety."
+          echo "Warning: Could not detect ExitCode in migration response. Failing for safety."
           echo "$RESPONSE_BODY"
           exit 1
         fi
@@ -207,6 +227,6 @@ jobs:
         fi
 
         # Clean up temp files
-        rm -f /tmp/find_python.json /tmp/migrate.json
-        
+        rm -f /tmp/find_python.json /tmp/install_reqs.json /tmp/migrate.json
+
         echo "Migration completed successfully"
