@@ -88,6 +88,36 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     
+    - name: Ensure Azure Web App exists (create if missing)
+      run: |
+        set -e
+        RG="ai-event-planner-rg"
+        LOCATION="westus2"
+        APP_NAME="ai-event-planner-saas-py"
+        PLAN_NAME="ai-event-planner-plan"
+        SKU="B1"
+
+        echo "Using Resource Group: $RG, Location: $LOCATION, App: $APP_NAME, Plan: $PLAN_NAME"
+
+        # Create resource group (no-op if exists)
+        az group create --name "$RG" --location "$LOCATION" >/dev/null
+
+        # Create App Service plan if missing (Linux plan)
+        if ! az appservice plan show --name "$PLAN_NAME" --resource-group "$RG" >/dev/null 2>&1; then
+          echo "Creating App Service plan: $PLAN_NAME"
+          az appservice plan create --name "$PLAN_NAME" --resource-group "$RG" --sku "$SKU" --is-linux
+        else
+          echo "App Service plan '$PLAN_NAME' already exists."
+        fi
+
+        # Create the web app if missing (Python 3.10)
+        if ! az webapp show --name "$APP_NAME" --resource-group "$RG" >/dev/null 2>&1; then
+          echo "Creating Web app: $APP_NAME"
+          az webapp create --resource-group "$RG" --plan "$PLAN_NAME" --name "$APP_NAME" --runtime "PYTHON|3.10"
+        else
+          echo "Web app '$APP_NAME' already exists."
+        fi
+    
     - name: Set up environment variables
       run: |
         echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env.azure
@@ -159,11 +189,11 @@ jobs:
           echo "Warning: jq is not installed. Using alternative approach."
           
           # Get publishing credentials using direct Azure CLI queries
-          USERNAME=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas --query publishingUserName -o tsv)
-          PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas --query publishingPassword -o tsv)
+          USERNAME=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas-py --query publishingUserName -o tsv)
+          PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas-py --query publishingPassword -o tsv)
         else
           # Get publishing credentials using jq
-          CREDS=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas --query "{username:publishingUserName, password:publishingPassword}" -o json)
+          CREDS=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas-py --query "{username:publishingUserName, password:publishingPassword}" -o json)
           USERNAME=$(echo $CREDS | jq -r '.username')
           PASSWORD=$(echo $CREDS | jq -r '.password')
         fi
@@ -172,7 +202,7 @@ jobs:
         echo "Finding Python executable path..."
         FIND_PYTHON_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
-          https://ai-event-planner-saas.scm.azurewebsites.net/api/command \
+          https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
           -d "{\"command\":\"find / -name python3 2>/dev/null | head -n 1\", \"dir\":\"/\"}")
         
         # Extract status code and response body
@@ -196,7 +226,7 @@ jobs:
         echo "Running migrations..."
         RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
-          https://ai-event-planner-saas.scm.azurewebsites.net/api/command \
+          https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
           -d "{\"command\":\"$PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
         
         # Extract status code and response body
