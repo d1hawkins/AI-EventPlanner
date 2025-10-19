@@ -130,6 +130,10 @@ jobs:
         else
           echo "Web app '$APP_NAME' already exists."
         fi
+
+        # Configure app to build during deployment for more robust dependency management
+        echo "Setting SCM_DO_BUILD_DURING_DEPLOYMENT=true for robust dependency installation"
+        az webapp config appsettings set --resource-group "$RG" --name "$APP_NAME" --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
     
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
@@ -180,11 +184,13 @@ jobs:
           PYTHON_PATH="python3"
         fi
 
-        # Install / bootstrap pip and install requirements (with retry)
-        echo "Installing remote dependencies (bootstrap pip if needed)..."
-        cat > /tmp/install_reqs.json <<JSON
-        {"command":"bash -lc \"set -e; ${PYTHON_PATH} -m ensurepip --upgrade 2>/dev/null || true; ${PYTHON_PATH} -m pip install --upgrade pip 2>/dev/null || (curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py && ${PYTHON_PATH} /tmp/get-pip.py); ${PYTHON_PATH} -m pip install -r /home/site/wwwroot/requirements.txt --no-cache-dir || echo 'PIP_INSTALL_FAILED'\"","dir":"/home/site/wwwroot"}
-        JSON
+        # Install / bootstrap pip and install requirements (with retry and better error handling)
+        echo "Installing remote dependencies with improved error handling..."
+        cat > /tmp/install_reqs.json <<'EOF'
+        {"command":"bash -lc \"set -e; PYTHON_PATH_PLACEHOLDER -m ensurepip --upgrade 2>/dev/null || true; PYTHON_PATH_PLACEHOLDER -m pip install --upgrade pip setuptools wheel 2>&1 || true; if [ -f /home/site/wwwroot/requirements.txt ]; then echo 'Installing requirements from /home/site/wwwroot/requirements.txt'; PYTHON_PATH_PLACEHOLDER -m pip install --no-cache-dir --prefer-binary -r /home/site/wwwroot/requirements.txt 2>&1 || echo 'PIP_INSTALL_FAILED'; else echo 'No requirements.txt found, skipping pip install'; fi\"","dir":"/"}
+        EOF
+        # Replace placeholder with actual Python path
+        sed -i "s/PYTHON_PATH_PLACEHOLDER/${PYTHON_PATH//\//\\/}/g" /tmp/install_reqs.json
 
         INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/install_reqs.json)
         INSTALL_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
