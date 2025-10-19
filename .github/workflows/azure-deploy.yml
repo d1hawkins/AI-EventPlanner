@@ -80,17 +80,68 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     
+    - name: Ensure Azure Web App exists (create if missing / respect existing RG location)
+      run: |
+        set -euo pipefail
+
+        # Use secrets (or hardcoded defaults)
+        RG="${{ secrets.AZURE_RESOURCE_GROUP }}"                 # e.g. ai-event-planner-rg
+        DESIRED_LOCATION="${{ secrets.AZURE_LOCATION }}"         # e.g. westus2 (optional)
+        APP_NAME="ai-event-planner-saas-py"
+        PLAN_NAME="ai-event-planner-plan"
+        SKU="B1"
+
+        echo "Resource Group: $RG"
+        if az group show --name "$RG" >/dev/null 2>&1; then
+          EXISTING_LOCATION=$(az group show --name "$RG" --query location -o tsv)
+          echo "Resource group '$RG' already exists in location: $EXISTING_LOCATION"
+
+          if [ -n "${DESIRED_LOCATION:-}" ] && [ "$DESIRED_LOCATION" != "$EXISTING_LOCATION" ]; then
+            echo "Warning: desired location ($DESIRED_LOCATION) differs from existing group location ($EXISTING_LOCATION)."
+            echo "Proceeding using existing resource group location: $EXISTING_LOCATION"
+          fi
+
+          LOCATION="$EXISTING_LOCATION"
+        else
+          # Create the resource group in DESIRED_LOCATION (fail if not provided)
+          if [ -z "${DESIRED_LOCATION:-}" ]; then
+            echo "ERROR: Resource group '$RG' does not exist and AZURE_LOCATION is not set. Set the AZURE_LOCATION secret or create the RG manually."
+            exit 1
+          fi
+          echo "Creating resource group '$RG' in location: $DESIRED_LOCATION"
+          az group create --name "$RG" --location "$DESIRED_LOCATION"
+          LOCATION="$DESIRED_LOCATION"
+        fi
+
+        echo "Using Location: $LOCATION"
+
+        # Create App Service plan if missing (Linux plan)
+        if ! az appservice plan show --name "$PLAN_NAME" --resource-group "$RG" >/dev/null 2>&1; then
+          echo "Creating App Service plan: $PLAN_NAME"
+          az appservice plan create --name "$PLAN_NAME" --resource-group "$RG" --sku "$SKU" --is-linux
+        else
+          echo "App Service plan '$PLAN_NAME' already exists."
+        fi
+
+        # Create the web app if missing (Python 3.10)
+        if ! az webapp show --name "$APP_NAME" --resource-group "$RG" >/dev/null 2>&1; then
+          echo "Creating Web app: $APP_NAME"
+          az webapp create --resource-group "$RG" --plan "$PLAN_NAME" --name "$APP_NAME" --runtime "PYTHON|3.10"
+        else
+          echo "Web app '$APP_NAME' already exists."
+        fi
+    
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
       with:
-        app-name: 'ai-event-planner'
+        app-name: 'ai-event-planner-saas-py'
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         package: .
     
     - name: Run database migrations
       run: |
         # Get publishing credentials
-        CREDS=$(az webapp deployment list-publishing-credentials --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ai-event-planner --query "{username:publishingUserName, password:publishingPassword}" -o json)
+        CREDS=$(az webapp deployment list-publishing-credentials --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ai-event-planner-saas-py --query "{username:publishingUserName, password:publishingPassword}" -o json)
         USERNAME=$(echo $CREDS | jq -r '.username')
         PASSWORD=$(echo $CREDS | jq -r '.password')
         
@@ -98,7 +149,7 @@ jobs:
         echo "Finding Python executable path..."
         FIND_PYTHON_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
-          https://ai-event-planner.scm.azurewebsites.net/api/command \
+          https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
           -d "{\"command\":\"find / -name python3 2>/dev/null | head -n 1\", \"dir\":\"/\"}")
         
         # Extract status code and response body
@@ -122,7 +173,7 @@ jobs:
         echo "Running migrations..."
         RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
-          https://ai-event-planner.scm.azurewebsites.net/api/command \
+          https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
           -d "{\"command\":\"$PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
         
         # Extract status code and response body
