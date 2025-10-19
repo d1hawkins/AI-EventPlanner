@@ -138,13 +138,24 @@ jobs:
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         package: .
     
+    - name: Verify deployed files on Kudu
+      run: |
+        set -euo pipefail
+        RG="${{ secrets.AZURE_RESOURCE_GROUP }}"
+        APP_NAME="ai-event-planner-saas-py"
+        USERNAME=$(az webapp deployment list-publishing-credentials --resource-group "$RG" --name "$APP_NAME" --query publishingUserName -o tsv)
+        PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group "$RG" --name "$APP_NAME" --query publishingPassword -o tsv)
+        KUDU_BASE="https://${APP_NAME}.scm.azurewebsites.net/api/command"
+        echo '{"command":"bash -lc \"ls -la /home/site/wwwroot || true; echo '--- /home/site/wwwroot/scripts ---'; ls -la /home/site/wwwroot/scripts || true\"","dir":"/"}' > /tmp/ls_root.json
+        curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/ls_root.json | sed '$d'
+    
     - name: Run database migrations
       run: |
         set -euo pipefail
 
         RG="${{ secrets.AZURE_RESOURCE_GROUP }}"
         APP_NAME="ai-event-planner-saas-py"
-        # Retrieve publishing credentials (use az CLI directly if jq not available)
+        # Get publishing creds
         if ! command -v jq &>/dev/null; then
           USERNAME=$(az webapp deployment list-publishing-credentials --resource-group "$RG" --name "$APP_NAME" --query publishingUserName -o tsv)
           PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group "$RG" --name "$APP_NAME" --query publishingPassword -o tsv)
@@ -154,21 +165,13 @@ jobs:
           PASSWORD=$(echo "$CREDS" | jq -r '.password')
         fi
 
-        # Helper: post to Kudu using a temporary JSON file to avoid quoting problems
         KUDU_BASE="https://${APP_NAME}.scm.azurewebsites.net/api/command"
 
         echo "Finding Python executable path..."
         echo '{"command":"bash -lc \"which python3 || which python || command -v python3 || command -v python\"","dir":"/"}' > /tmp/find_python.json
-
-        FIND_PYTHON_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
-          -H "Content-Type: application/json" \
-          "$KUDU_BASE" \
-          -d @/tmp/find_python.json)
-
+        FIND_PYTHON_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/find_python.json)
         FIND_PYTHON_BODY=$(echo "$FIND_PYTHON_RESPONSE" | sed '$d')
         echo "Find Python response: $FIND_PYTHON_BODY"
-
-        # Extract python path (if any)
         PYTHON_PATH=$(echo "$FIND_PYTHON_BODY" | grep -oE '/[A-Za-z0-9/_\.-]*python3?([0-9.]*)?' | head -n1 || true)
         if [ -n "$PYTHON_PATH" ]; then
           echo "Found Python path: $PYTHON_PATH"
@@ -177,107 +180,89 @@ jobs:
           PYTHON_PATH="python3"
         fi
 
-        # 1) Ensure dependencies installed on the remote host with robust pip bootstrap
-        echo "Installing remote dependencies..."
-        echo "{\"command\":\"bash -lc \\\"set -e; $PYTHON_PATH -m ensurepip --upgrade 2>/dev/null || true; $PYTHON_PATH -m pip install --upgrade pip 2>/dev/null || (curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py && $PYTHON_PATH /tmp/get-pip.py); $PYTHON_PATH -m pip install -r /home/site/wwwroot/requirements.txt --no-cache-dir\\\"\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/install_reqs.json
+        # Install / bootstrap pip and install requirements (with retry)
+        echo "Installing remote dependencies (bootstrap pip if needed)..."
+        cat > /tmp/install_reqs.json <<JSON
+        {"command":"bash -lc \"set -e; ${PYTHON_PATH} -m ensurepip --upgrade 2>/dev/null || true; ${PYTHON_PATH} -m pip install --upgrade pip 2>/dev/null || (curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py && ${PYTHON_PATH} /tmp/get-pip.py); ${PYTHON_PATH} -m pip install -r /home/site/wwwroot/requirements.txt --no-cache-dir || echo 'PIP_INSTALL_FAILED'\"","dir":"/home/site/wwwroot"}
+        JSON
 
-        INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
-          -H "Content-Type: application/json" \
-          "$KUDU_BASE" \
-          -d @/tmp/install_reqs.json)
+        INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/install_reqs.json)
         INSTALL_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
         echo "Install response: $INSTALL_BODY"
-        INSTALL_EXIT=$(echo "$INSTALL_BODY" | grep -o '"ExitCode":[[:space:]]*[0-9]\+' | grep -o '[0-9]\+' || echo "")
 
-        if [ -z "$INSTALL_EXIT" ]; then
-          echo "Could not determine pip install exit code. Full response:"
-          echo "$INSTALL_BODY"
-          exit 1
-        fi
-        if [ "$INSTALL_EXIT" -ne 0 ]; then
-          echo "Remote pip install failed (ExitCode $INSTALL_EXIT). Response:"
-          echo "$INSTALL_BODY"
-          exit 1
+        # If pip install printed PIP_INSTALL_FAILED marker, retry once and then fail with full logs
+        if echo "$INSTALL_BODY" | grep -q "PIP_INSTALL_FAILED"; then
+          echo "Initial pip install indicated failure. Retrying once..."
+          # try a second time (capture)
+          INSTALL_RESPONSE2=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/install_reqs.json)
+          INSTALL_BODY2=$(echo "$INSTALL_RESPONSE2" | sed '$d')
+          echo "Retry install response: $INSTALL_BODY2"
+          if echo "$INSTALL_BODY2" | grep -q "PIP_INSTALL_FAILED"; then
+            echo "Remote pip install failed after retry. Full response:"
+            echo "$INSTALL_BODY2"
+            # print a short remote environment diagnostic
+            echo '{"command":"bash -lc \"python --version || true; uname -a || true; ls -la /home/site/wwwroot || true\"","dir":"/"}' > /tmp/diagnostic.json
+            curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/diagnostic.json | sed '$d'
+            exit 1
+          fi
         fi
 
-        # 2) Verify scripts/migrate.py exists, otherwise upload scripts/ via Kudu zip API
+        # Verify migrate.py exists, upload scripts/ if missing
         echo "Verifying migration script exists on remote..."
-        # Check for file
         echo "{\"command\":\"bash -lc 'test -f /home/site/wwwroot/scripts/migrate.py && echo OK || echo MISSING'\",\"dir\":\"/\"}" > /tmp/check_migrate.json
-        CHECK_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
-          -H "Content-Type: application/json" \
-          "$KUDU_BASE" \
-          -d @/tmp/check_migrate.json)
+        CHECK_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/check_migrate.json)
         CHECK_BODY=$(echo "$CHECK_RESPONSE" | sed '$d')
         echo "Check response: $CHECK_BODY"
         IS_PRESENT=$(echo "$CHECK_BODY" | grep -o "OK" || true)
 
         if [ -z "$IS_PRESENT" ]; then
           echo "migrate.py not found on remote. Uploading local scripts/ directory via Kudu zip deploy..."
-          # Create a zip of the local scripts folder
-          (cd $(pwd) && zip -r /tmp/scripts_deploy.zip scripts) >/dev/null 2>&1 || (echo "Failed to create zip of scripts/"; exit 1)
+          if [ ! -d "scripts" ]; then
+            echo "ERROR: Local scripts/ directory not found in repo workspace. Ensure scripts/ is committed."
+            exit 1
+          fi
+          zip -r /tmp/scripts_deploy.zip scripts >/dev/null
 
-          # POST zip to Kudu Zip Deploy endpoint (writes into /site/wwwroot)
-          UPLOAD_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
-            -H "Content-Type: application/zip" \
-            --data-binary @/tmp/scripts_deploy.zip \
-            "https://${APP_NAME}.scm.azurewebsites.net/api/zip/site/wwwroot/")
+          UPLOAD_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/zip" --data-binary @/tmp/scripts_deploy.zip "https://${APP_NAME}.scm.azurewebsites.net/api/zip/site/wwwroot/")
           echo "Upload response: $UPLOAD_RESPONSE"
 
-          # Re-check the file
-          CHECK_RESPONSE2=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
-            -H "Content-Type: application/json" \
-            "$KUDU_BASE" \
-            -d @/tmp/check_migrate.json)
+          # Re-check presence
+          CHECK_RESPONSE2=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/check_migrate.json)
           CHECK_BODY2=$(echo "$CHECK_RESPONSE2" | sed '$d')
           echo "Re-check response: $CHECK_BODY2"
           IS_PRESENT2=$(echo "$CHECK_BODY2" | grep -o "OK" || true)
-
           if [ -z "$IS_PRESENT2" ]; then
-            echo "ERROR: migrate.py is still missing after upload. Response: $CHECK_BODY2"
-            # Helpful debug listing
-            echo "Remote /home/site/wwwroot listing:"
+            echo "ERROR: migrate.py is still missing after upload. Remote listing for debug:"
             echo "{\"command\":\"bash -lc 'ls -la /home/site/wwwroot || true'\",\"dir\":\"/\"}" > /tmp/ls_root.json
-            LS_ROOT_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
-              -H "Content-Type: application/json" \
-              "$KUDU_BASE" \
-              -d @/tmp/ls_root.json)
-            echo "$LS_ROOT_RESPONSE" | sed '$d'
+            curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/ls_root.json | sed '$d'
             exit 1
           fi
-
           echo "Upload succeeded and migrate.py present."
         else
           echo "migrate.py already present on remote."
         fi
 
-        # 3) Now run migration by invoking the script file directly (avoid -m import issues)
+        # Run migrations
         echo "Running migrations with command: $PYTHON_PATH /home/site/wwwroot/scripts/migrate.py"
         echo "{\"command\":\"$PYTHON_PATH /home/site/wwwroot/scripts/migrate.py\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/migrate.json
-
-        RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
-          -H "Content-Type: application/json" \
-          "$KUDU_BASE" \
-          -d @/tmp/migrate.json)
-
+        RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/migrate.json)
         RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
         echo "Migration response: $RESPONSE_BODY"
-
         EXIT_CODE=$(echo "$RESPONSE_BODY" | grep -o '"ExitCode":[[:space:]]*[0-9]\+' | grep -o '[0-9]\+' || echo "")
-
         if [ -z "$EXIT_CODE" ]; then
           echo "Warning: Could not detect ExitCode in migration response. Failing for safety."
           echo "$RESPONSE_BODY"
           exit 1
         fi
-
         if [ "$EXIT_CODE" -ne 0 ]; then
           echo "Migration failed with ExitCode $EXIT_CODE"
           echo "Response: $RESPONSE_BODY"
+          # show remote working dir for debugging
+          echo "{\"command\":\"bash -lc 'pwd; ls -la /home/site/wwwroot || true'\",\"dir\":\"/\"}" > /tmp/diag2.json
+          curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/diag2.json | sed '$d'
           exit 1
         fi
 
-        # Clean up temp files
-        rm -f /tmp/find_python.json /tmp/install_reqs.json /tmp/migrate.json /tmp/get-pip.py /tmp/check_migrate.json /tmp/scripts_deploy.zip /tmp/ls_root.json
-
+        # Clean up
+        rm -f /tmp/find_python.json /tmp/install_reqs.json /tmp/migrate.json /tmp/check_migrate.json /tmp/ls_root.json /tmp/scripts_deploy.zip /tmp/get-pip.py /tmp/diagnostic.json /tmp/diag2.json
         echo "Migration completed successfully"
