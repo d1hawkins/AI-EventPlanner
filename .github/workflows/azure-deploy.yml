@@ -145,55 +145,68 @@ jobs:
         USERNAME=$(echo $CREDS | jq -r '.username')
         PASSWORD=$(echo $CREDS | jq -r '.password')
         
-        # First, find the Python executable path
+        # First, find the Python executable path (use temp files to avoid JSON quoting issues)
         echo "Finding Python executable path..."
+        echo '{"command":"bash -lc \"which python3 || which python || command -v python3 || command -v python\"","dir":"/"}' > /tmp/find_python.json
+
         FIND_PYTHON_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
           https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-          -d "{\"command\":\"find / -name python3 2>/dev/null | head -n 1\", \"dir\":\"/\"}")
-        
-        # Extract status code and response body
+          -d @/tmp/find_python.json)
+
         FIND_PYTHON_HTTP_STATUS=$(echo "$FIND_PYTHON_RESPONSE" | tail -n1)
         FIND_PYTHON_BODY=$(echo "$FIND_PYTHON_RESPONSE" | sed '$d')
-        
+
         echo "Find Python response: $FIND_PYTHON_BODY"
         echo "HTTP status: $FIND_PYTHON_HTTP_STATUS"
-        
-        # Extract Python path from the response
-        PYTHON_PATH=$(echo "$FIND_PYTHON_BODY" | grep -o '/[a-zA-Z0-9/_.-]*python3' | head -n 1 || echo "")
-        
-        if [ -z "$PYTHON_PATH" ]; then
-          echo "Python path not found, using default /usr/local/bin/python3"
-          PYTHON_PATH="/usr/local/bin/python3"
-        else
+
+        # Extract a path-like python result if present
+        PYTHON_PATH=$(echo "$FIND_PYTHON_BODY" | grep -oE '/[A-Za-z0-9/_\.-]*python3?([0-9.]*)?' | head -n 1 || true)
+
+        if [ -n "$PYTHON_PATH" ]; then
           echo "Found Python path: $PYTHON_PATH"
+        else
+          echo "Python path not found via which; will try PATH-based invocation (python3 or python)."
+          PYTHON_PATH=""
         fi
-        
-        # Use the Python path to run the migration script
-        echo "Running migrations..."
+
+        # Build migration command: prefer absolute path if found, otherwise try python3 or python via bash -lc so PATH is available
+        if [ -n "$PYTHON_PATH" ]; then
+          MIGRATE_CMD="$PYTHON_PATH -m scripts.migrate"
+        else
+          MIGRATE_CMD='bash -lc "python3 -m scripts.migrate || python -m scripts.migrate"'
+        fi
+
+        echo "Running migrations with command: $MIGRATE_CMD"
+        echo "{\"command\":\"$MIGRATE_CMD\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/migrate.json
+
         RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
           https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-          -d "{\"command\":\"$PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
-        
-        # Extract status code and response body
+          -d @/tmp/migrate.json)
+
         HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
         RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
-        
+
         echo "Migration response: $RESPONSE_BODY"
         echo "HTTP status: $HTTP_STATUS"
-        
-        # Check if the request was successful
-        if [ "$HTTP_STATUS" -ne 200 ]; then
-          echo "Migration failed with status $HTTP_STATUS"
+
+        # Extract ExitCode from the response body (Kudu returns JSON with ExitCode inside body even if HTTP 200)
+        EXIT_CODE=$(echo "$RESPONSE_BODY" | grep -o '"ExitCode":[[:space:]]*[0-9]\+' | grep -o '[0-9]\+' || echo "")
+
+        if [ -z "$EXIT_CODE" ]; then
+          echo "Warning: Could not detect ExitCode in response. Failing for safety."
+          echo "$RESPONSE_BODY"
+          exit 1
+        fi
+
+        if [ "$EXIT_CODE" -ne 0 ]; then
+          echo "Migration failed with ExitCode $EXIT_CODE"
           echo "Response: $RESPONSE_BODY"
           exit 1
         fi
-        
-        # Check if the response contains error messages
-        if echo "$RESPONSE_BODY" | grep -i "error"; then
-          echo "Migration script reported errors"
-          exit 1
-        fi
+
+        # Clean up temp files
+        rm -f /tmp/find_python.json /tmp/migrate.json
         
         echo "Migration completed successfully"
