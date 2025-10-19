@@ -87,13 +87,13 @@ jobs:
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
       with:
-        app-name: 'ai-event-planner-saas'
+        app-name: 'ai-event-planner-saas-py'
         slot-name: 'production'
         package: './deploy.zip'
     
     - name: Configure Azure Web App
       run: |
-        az webapp config set --name ai-event-planner-saas --resource-group ai-event-planner-rg --startup-file "gunicorn app.main_saas:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
+        az webapp config set --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --startup-file "gunicorn app.main_saas:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000"
         
         # Set environment variables
         while IFS='=' read -r key value; do
@@ -103,7 +103,7 @@ jobs:
           fi
           
           # Set environment variable
-          az webapp config appsettings set --name ai-event-planner-saas --resource-group ai-event-planner-rg --settings "$key=$value"
+          az webapp config appsettings set --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --settings "$key=$value"
         done < .env.azure
     
     - name: Run database migrations
