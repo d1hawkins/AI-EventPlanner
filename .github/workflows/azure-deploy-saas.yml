@@ -88,19 +88,40 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     
-    - name: Ensure Azure Web App exists (create if missing)
+    - name: Ensure Azure Web App exists (create if missing / respect existing RG location)
       run: |
-        set -e
-        RG="ai-event-planner-rg"
-        LOCATION="westus2"
+        set -euo pipefail
+
+        # Use secrets (or hardcoded defaults)
+        RG="${{ secrets.AZURE_RESOURCE_GROUP }}"                 # e.g. ai-event-planner-rg
+        DESIRED_LOCATION="${{ secrets.AZURE_LOCATION }}"         # e.g. westus2 (optional)
         APP_NAME="ai-event-planner-saas-py"
         PLAN_NAME="ai-event-planner-plan"
         SKU="B1"
 
-        echo "Using Resource Group: $RG, Location: $LOCATION, App: $APP_NAME, Plan: $PLAN_NAME"
+        echo "Resource Group: $RG"
+        if az group show --name "$RG" >/dev/null 2>&1; then
+          EXISTING_LOCATION=$(az group show --name "$RG" --query location -o tsv)
+          echo "Resource group '$RG' already exists in location: $EXISTING_LOCATION"
 
-        # Create resource group (no-op if exists)
-        az group create --name "$RG" --location "$LOCATION" >/dev/null
+          if [ -n "${DESIRED_LOCATION:-}" ] && [ "$DESIRED_LOCATION" != "$EXISTING_LOCATION" ]; then
+            echo "Warning: desired location ($DESIRED_LOCATION) differs from existing group location ($EXISTING_LOCATION)."
+            echo "Proceeding using existing resource group location: $EXISTING_LOCATION"
+          fi
+
+          LOCATION="$EXISTING_LOCATION"
+        else
+          # Create the resource group in DESIRED_LOCATION (fail if not provided)
+          if [ -z "${DESIRED_LOCATION:-}" ]; then
+            echo "ERROR: Resource group '$RG' does not exist and AZURE_LOCATION is not set. Set the AZURE_LOCATION secret or create the RG manually."
+            exit 1
+          fi
+          echo "Creating resource group '$RG' in location: $DESIRED_LOCATION"
+          az group create --name "$RG" --location "$DESIRED_LOCATION"
+          LOCATION="$DESIRED_LOCATION"
+        fi
+
+        echo "Using Location: $LOCATION"
 
         # Create App Service plan if missing (Linux plan)
         if ! az appservice plan show --name "$PLAN_NAME" --resource-group "$RG" >/dev/null 2>&1; then
