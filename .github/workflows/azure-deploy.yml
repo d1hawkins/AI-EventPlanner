@@ -141,8 +141,8 @@ jobs:
         # 2) Set Python runtime version explicitly
         az webapp config set --resource-group "$RG" --name "$APP_NAME" --linux-fx-version "PYTHON|3.10"
         
-        # 3) Configure FastAPI startup command with gunicorn + uvicorn worker
-        az webapp config set --resource-group "$RG" --name "$APP_NAME" --startup-file "gunicorn -w 4 -k uvicorn.workers.UvicornWorker --timeout 120 --bind 0.0.0.0:8000 app.main_saas:app"
+        # 3) Configure FastAPI startup command - use simpler uvicorn approach
+        az webapp config set --resource-group "$RG" --name "$APP_NAME" --startup-file "python -m uvicorn app.main_saas:app --host 0.0.0.0 --port 8000"
         
         # 4) Enable Always On for reliability
         az webapp config appsettings set --resource-group "$RG" --name "$APP_NAME" --settings WEBSITES_ALWAYS_ON=true
