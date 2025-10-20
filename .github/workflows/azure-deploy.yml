@@ -232,33 +232,28 @@ jobs:
           # create zip
           zip -r /tmp/scripts_deploy.zip scripts >/dev/null
 
-          # upload to Kudu zipdeploy endpoint
-          UPLOAD_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
-            -H "Content-Type: application/zip" --data-binary @/tmp/scripts_deploy.zip \
-            "https://${APP_NAME}.scm.azurewebsites.net/api/zipdeploy")
-
-          UPLOAD_BODY=$(echo "$UPLOAD_RESPONSE" | sed '$d')
-          UPLOAD_CODE=$(echo "$UPLOAD_RESPONSE" | tail -n1)
-          echo "Upload response body: $UPLOAD_BODY"
-          echo "Upload http code: $UPLOAD_CODE"
-
-          if [ "$UPLOAD_CODE" -lt 200 ] || [ "$UPLOAD_CODE" -ge 300 ]; then
-            echo "ERROR: Zip upload failed (http code: $UPLOAD_CODE). Full response:"
-            echo "$UPLOAD_BODY"
-            # Show remote debug listing
-            echo '{"command":"bash -lc \"ls -la /home/site/wwwroot || true\"","dir":"/"}' > /tmp/ls_root.json
+          # Use az CLI zip deploy (more reliable than ad-hoc Kudu curl in this runner)
+          echo "Deploying scripts via az webapp deployment source config-zip..."
+          az webapp deployment source config-zip --resource-group "$RG" --name "$APP_NAME" --src /tmp/scripts_deploy.zip --verbose || {
+            echo "ERROR: az webapp deployment source config-zip failed"
+            echo '{"command":"bash -lc \"ls -la /home/site/wwwroot || true; ls -la /home/site/wwwroot/scripts || true\"","dir":"/"}' > /tmp/ls_root.json
             curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/ls_root.json | sed '$d'
             exit 1
-          fi
+          }
+
+          # Give Kudu a few seconds to extract / propagate
+          echo "Waiting 5s for deployment to complete..."
+          sleep 5
 
           # Re-check presence
-          CHECK_RESPONSE2=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/check_migrate.json)
+          CHECK_RESPONSE2=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+            -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/check_migrate.json)
           CHECK_BODY2=$(echo "$CHECK_RESPONSE2" | sed '$d')
           echo "Re-check response: $CHECK_BODY2"
           IS_PRESENT2=$(echo "$CHECK_BODY2" | grep -o "OK" || true)
           if [ -z "$IS_PRESENT2" ]; then
-            echo "ERROR: migrate.py is still missing after upload. Remote listing for debug:"
-            echo "{\"command\":\"bash -lc 'ls -la /home/site/wwwroot || true'\",\"dir\":\"/\"}" > /tmp/ls_root.json
+            echo "ERROR: migrate.py is still missing after az zip deploy. Remote listing for debug:"
+            echo '{"command":"bash -lc \"ls -la /home/site/wwwroot || true; ls -la /home/site/wwwroot/scripts || true\"","dir":"/"}' > /tmp/ls_root.json
             curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/ls_root.json | sed '$d'
             exit 1
           fi
