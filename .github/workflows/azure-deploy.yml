@@ -154,6 +154,7 @@ jobs:
         curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/ls_root.json | sed '$d'
     
     - name: Run database migrations
+      if: secrets.SKIP_AZURE_MIGRATIONS != 'true'
       run: |
         set -euo pipefail
 
@@ -186,11 +187,9 @@ jobs:
 
         # Install / bootstrap pip and install requirements (with retry and better error handling)
         echo "Installing remote dependencies with improved error handling..."
-        cat > /tmp/install_reqs.json <<'EOF'
-        {"command":"bash -lc \"set -e; PYTHON_PATH_PLACEHOLDER -m ensurepip --upgrade 2>/dev/null || true; PYTHON_PATH_PLACEHOLDER -m pip install --upgrade pip setuptools wheel 2>&1 || true; if [ -f /home/site/wwwroot/requirements.txt ]; then echo 'Installing requirements from /home/site/wwwroot/requirements.txt'; PYTHON_PATH_PLACEHOLDER -m pip install --no-cache-dir --prefer-binary -r /home/site/wwwroot/requirements.txt 2>&1 || echo 'PIP_INSTALL_FAILED'; else echo 'No requirements.txt found, skipping pip install'; fi\"","dir":"/"}
+        cat > /tmp/install_reqs.json <<EOF
+        {"command":"bash -lc \"set -e; ${PYTHON_PATH} -m ensurepip --upgrade 2>/dev/null || true; ${PYTHON_PATH} -m pip install --upgrade pip setuptools wheel 2>&1 || true; if [ -f /home/site/wwwroot/requirements.txt ]; then echo 'Installing requirements...'; ${PYTHON_PATH} -m pip install --no-cache-dir --prefer-binary -r /home/site/wwwroot/requirements.txt 2>&1 || echo 'PIP_INSTALL_FAILED'; else echo 'No requirements.txt found, skipping pip install'; fi\"","dir":"/"}
         EOF
-        # Replace placeholder with actual Python path
-        sed -i "s/PYTHON_PATH_PLACEHOLDER/${PYTHON_PATH//\//\\/}/g" /tmp/install_reqs.json
 
         INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/install_reqs.json)
         INSTALL_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
@@ -215,7 +214,7 @@ jobs:
 
         # Verify migrate.py exists, upload scripts/ if missing
         echo "Verifying migration script exists on remote..."
-        echo "{\"command\":\"bash -lc 'test -f /home/site/wwwroot/scripts/migrate.py && echo OK || echo MISSING'\",\"dir\":\"/\"}" > /tmp/check_migrate.json
+        echo '{"command":"bash -lc \"test -f /home/site/wwwroot/scripts/migrate.py && echo OK || echo MISSING\"","dir":"/"}' > /tmp/check_migrate.json
         CHECK_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/check_migrate.json)
         CHECK_BODY=$(echo "$CHECK_RESPONSE" | sed '$d')
         echo "Check response: $CHECK_BODY"
@@ -227,10 +226,27 @@ jobs:
             echo "ERROR: Local scripts/ directory not found in repo workspace. Ensure scripts/ is committed."
             exit 1
           fi
+          # Create zip
           zip -r /tmp/scripts_deploy.zip scripts >/dev/null
 
-          UPLOAD_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/zip" --data-binary @/tmp/scripts_deploy.zip "https://${APP_NAME}.scm.azurewebsites.net/api/zip/site/wwwroot/")
-          echo "Upload response: $UPLOAD_RESPONSE"
+          # Upload to zip API (no trailing slash)
+          UPLOAD_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+            -H "Content-Type: application/zip" --data-binary @/tmp/scripts_deploy.zip \
+            "https://${APP_NAME}.scm.azurewebsites.net/api/zip/site/wwwroot")
+
+          UPLOAD_BODY=$(echo "$UPLOAD_RESPONSE" | sed '$d')
+          UPLOAD_CODE=$(echo "$UPLOAD_RESPONSE" | tail -n1)
+          echo "Upload response body: $UPLOAD_BODY"
+          echo "Upload http code: $UPLOAD_CODE"
+
+          if [ "$UPLOAD_CODE" -lt 200 ] || [ "$UPLOAD_CODE" -ge 300 ]; then
+            echo "ERROR: Zip upload failed (http code: $UPLOAD_CODE). Full response:"
+            echo "$UPLOAD_BODY"
+            # Show remote debug listing
+            echo '{"command":"bash -lc \"ls -la /home/site/wwwroot || true\"","dir":"/"}' > /tmp/ls_root.json
+            curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/ls_root.json | sed '$d'
+            exit 1
+          fi
 
           # Re-check presence
           CHECK_RESPONSE2=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/check_migrate.json)
