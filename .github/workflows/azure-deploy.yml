@@ -137,6 +137,8 @@ jobs:
 
     - name: Export requirements.txt for Azure build
       run: |
+        # Install poetry export plugin (required for Poetry 2.0+)
+        poetry self add poetry-plugin-export
         # Export locked dependencies for production (no dev)
         poetry export -f requirements.txt --output requirements.txt --without-hashes --no-dev
         echo "requirements.txt generated (first 20 lines):"
