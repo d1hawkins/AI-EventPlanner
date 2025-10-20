@@ -153,8 +153,11 @@ jobs:
         echo '{"command":"bash -lc \"ls -la /home/site/wwwroot || true; echo '--- /home/site/wwwroot/scripts ---'; ls -la /home/site/wwwroot/scripts || true\"","dir":"/"}' > /tmp/ls_root.json
         curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/ls_root.json | sed '$d'
     
+    - name: Set migration skip flag
+      run: echo "SKIP_MIGRATIONS=${{ secrets.SKIP_AZURE_MIGRATIONS || 'false' }}" >> $GITHUB_ENV
+    
     - name: Run database migrations
-      if: secrets.SKIP_AZURE_MIGRATIONS != 'true'
+      if: env.SKIP_MIGRATIONS != 'true'
       run: |
         set -euo pipefail
 
