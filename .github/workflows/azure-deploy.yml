@@ -229,13 +229,13 @@ jobs:
             echo "ERROR: Local scripts/ directory not found in repo workspace. Ensure scripts/ is committed."
             exit 1
           fi
-          # Create zip
+          # create zip
           zip -r /tmp/scripts_deploy.zip scripts >/dev/null
 
-          # Upload to zip API (no trailing slash)
+          # upload to Kudu zipdeploy endpoint
           UPLOAD_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
             -H "Content-Type: application/zip" --data-binary @/tmp/scripts_deploy.zip \
-            "https://${APP_NAME}.scm.azurewebsites.net/api/zip/site/wwwroot")
+            "https://${APP_NAME}.scm.azurewebsites.net/api/zipdeploy")
 
           UPLOAD_BODY=$(echo "$UPLOAD_RESPONSE" | sed '$d')
           UPLOAD_CODE=$(echo "$UPLOAD_RESPONSE" | tail -n1)
