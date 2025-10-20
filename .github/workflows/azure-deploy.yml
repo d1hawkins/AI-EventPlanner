@@ -135,8 +135,8 @@ jobs:
         # Configure critical app settings for FastAPI deployment
         echo "Configuring App Service settings for FastAPI..."
         
-        # 1) Disable platform build - we handle dependencies manually to avoid pip PATH issues
-        az webapp config appsettings set --resource-group "$RG" --name "$APP_NAME" --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
+        # 1) Enable platform build - let Azure/Oryx handle dependency installation from requirements.txt
+        az webapp config appsettings set --resource-group "$RG" --name "$APP_NAME" --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
         
         # 2) Set Python runtime version explicitly
         az webapp config set --resource-group "$RG" --name "$APP_NAME" --linux-fx-version "PYTHON|3.10"
@@ -212,41 +212,8 @@ jobs:
         
         echo "Deployment upload completed successfully"
 
-    - name: Install dependencies remotely using python3 -m pip
-      run: |
-        set -euo pipefail
-        RG="${{ secrets.AZURE_RESOURCE_GROUP }}"
-        APP_NAME="ai-event-planner-saas-py"
-        USERNAME=$(az webapp deployment list-publishing-credentials --resource-group "$RG" --name "$APP_NAME" --query publishingUserName -o tsv)
-        PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group "$RG" --name "$APP_NAME" --query publishingPassword -o tsv)
-        KUDU_BASE="https://${APP_NAME}.scm.azurewebsites.net/api/command"
-
-        echo "Installing dependencies on remote using python3 -m pip (avoids needing pip binary on PATH)..."
-
-        # find a python binary on remote (use 'which python3' fallback)
-        echo '{"command":"bash -lc \"which python3 || which python || command -v python3 || command -v python\"","dir":"/"}' > /tmp/find_python.json
-        PY_RESP=$(curl -s -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" -X POST "$KUDU_BASE" -d @/tmp/find_python.json)
-        REMOTE_PYTHON=$(echo "$PY_RESP" | sed -n '1,1p' | tr -d '\r\n' | grep -oE '/[A-Za-z0-9/_\.-]*python3?([0-9.]*)?' | head -n1 || echo "/usr/bin/python3")
-        [ -n "$REMOTE_PYTHON" ] || REMOTE_PYTHON="/usr/bin/python3"
-        echo "Remote python: $REMOTE_PYTHON"
-
-        # ensure pip is available and use python -m pip install -r requirements.txt
-        cat > /tmp/remote_install.json <<EOF
-        {"command":"bash -lc \"set -e; PY=$REMOTE_PYTHON; \$PY -m ensurepip --upgrade 2>/dev/null || true; \$PY -m pip install --upgrade pip setuptools wheel 2>&1 || true; if [ -f /home/site/wwwroot/requirements.txt ]; then \$PY -m pip install --prefer-binary --no-cache-dir -r /home/site/wwwroot/requirements.txt; else echo 'No requirements.txt found at /home/site/wwwroot'; fi\"","dir":"/home/site/wwwroot"}
-        EOF
-
-        # run remote install
-        curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/remote_install.json | sed '$d'
-
-        echo "Remote dependency install finished. (Check logs at: https://${APP_NAME}.scm.azurewebsites.net/api/logs/docker )"
-
-        # Optional verification: show installed packages
-        echo "Verifying installed packages..."
-        echo "{\"command\":\"bash -lc \\\"$REMOTE_PYTHON -m pip list | head -50\\\"\",\"dir\":\"/home/site/wwwroot\"}" > /tmp/pip_list.json
-        curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/pip_list.json | sed '$d'
-
-        # Clean up temporary files
-        rm -f /tmp/find_python.json /tmp/remote_install.json /tmp/pip_list.json
+    # NOTE: With SCM_DO_BUILD_DURING_DEPLOYMENT=true, Azure will automatically install dependencies
+    # from requirements.txt during deployment, so no manual pip install step is needed
 
     - name: Wait for app startup and perform health check
       run: |
@@ -379,32 +346,9 @@ jobs:
           PYTHON_PATH="python3"
         fi
 
-        # Install / bootstrap pip and install requirements (with retry and better error handling)
-        echo "Installing remote dependencies with improved error handling..."
-        cat > /tmp/install_reqs.json <<EOF
-        {"command":"bash -lc \"set -e; ${PYTHON_PATH} -m ensurepip --upgrade 2>/dev/null || true; ${PYTHON_PATH} -m pip install --upgrade pip setuptools wheel 2>&1 || true; if [ -f /home/site/wwwroot/requirements.txt ]; then echo 'Installing requirements...'; ${PYTHON_PATH} -m pip install --no-cache-dir --prefer-binary -r /home/site/wwwroot/requirements.txt 2>&1 || echo 'PIP_INSTALL_FAILED'; else echo 'No requirements.txt found, skipping pip install'; fi\"","dir":"/"}
-        EOF
-
-        INSTALL_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/install_reqs.json)
-        INSTALL_BODY=$(echo "$INSTALL_RESPONSE" | sed '$d')
-        echo "Install response: $INSTALL_BODY"
-
-        # If pip install printed PIP_INSTALL_FAILED marker, retry once and then fail with full logs
-        if echo "$INSTALL_BODY" | grep -q "PIP_INSTALL_FAILED"; then
-          echo "Initial pip install indicated failure. Retrying once..."
-          # try a second time (capture)
-          INSTALL_RESPONSE2=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/install_reqs.json)
-          INSTALL_BODY2=$(echo "$INSTALL_RESPONSE2" | sed '$d')
-          echo "Retry install response: $INSTALL_BODY2"
-          if echo "$INSTALL_BODY2" | grep -q "PIP_INSTALL_FAILED"; then
-            echo "Remote pip install failed after retry. Full response:"
-            echo "$INSTALL_BODY2"
-            # print a short remote environment diagnostic
-            echo '{"command":"bash -lc \"python --version || true; uname -a || true; ls -la /home/site/wwwroot || true\"","dir":"/"}' > /tmp/diagnostic.json
-            curl -s -X POST -u "$USERNAME:$PASSWORD" -H "Content-Type: application/json" "$KUDU_BASE" -d @/tmp/diagnostic.json | sed '$d'
-            exit 1
-          fi
-        fi
+        # NOTE: Dependencies are now installed automatically by Azure platform build during deployment
+        # No manual pip installation needed since SCM_DO_BUILD_DURING_DEPLOYMENT=true
+        echo "Dependencies should already be installed by Azure platform build..."
 
         # Verify migrate.py exists, upload scripts/ if missing
         echo "Verifying migration script exists on remote..."
