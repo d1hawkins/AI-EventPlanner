@@ -134,6 +134,13 @@ jobs:
         # Configure app to build during deployment for more robust dependency management
         echo "Setting SCM_DO_BUILD_DURING_DEPLOYMENT=true for robust dependency installation"
         az webapp config appsettings set --resource-group "$RG" --name "$APP_NAME" --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+
+    - name: Export requirements.txt for Azure build
+      run: |
+        # Export locked dependencies for production (no dev)
+        poetry export -f requirements.txt --output requirements.txt --without-hashes --no-dev
+        echo "requirements.txt generated (first 20 lines):"
+        head -n 20 requirements.txt
     
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
@@ -141,6 +148,19 @@ jobs:
         app-name: 'ai-event-planner-saas-py'
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         package: .
+
+    - name: Fetch Kudu deployment logs (diagnostic)
+      if: failure()
+      run: |
+        RG="${{ secrets.AZURE_RESOURCE_GROUP }}"
+        APP_NAME="ai-event-planner-saas-py"
+        USERNAME=$(az webapp deployment list-publishing-credentials --resource-group "$RG" --name "$APP_NAME" --query publishingUserName -o tsv)
+        PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group "$RG" --name "$APP_NAME" --query publishingPassword -o tsv)
+        BASE="https://${APP_NAME}.scm.azurewebsites.net"
+        echo "Deployments summary:"
+        curl -s -u "$USERNAME:$PASSWORD" "$BASE/api/deployments" | jq -r '.[0]'
+        echo "Latest deployment log:"
+        curl -s -u "$USERNAME:$PASSWORD" "$BASE/api/deployments/latest/log" | sed -n '1,500p'
     
     - name: Verify deployed files on Kudu
       run: |
