@@ -413,7 +413,7 @@ jobs:
         MIGRATION_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
           https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-          -d "{\"command\":\"cd /home/site/wwwroot && $PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
+          -d "{\"command\":\"$PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
         
         MIGRATION_HTTP_STATUS=$(echo "$MIGRATION_RESPONSE" | tail -n1)
         MIGRATION_BODY=$(echo "$MIGRATION_RESPONSE" | sed '$d')
@@ -438,7 +438,7 @@ jobs:
           ALT_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
             -H "Content-Type: application/json" \
             https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-            -d "{\"command\":\"cd /home/site/wwwroot && $PYTHON_PATH -c 'import sys; sys.path.append(\\\".\\\")'  && $PYTHON_PATH -c 'from scripts.migrate import main; main()'\", \"dir\":\"/home/site/wwwroot\"}")
+            -d "{\"command\":\"$PYTHON_PATH -c \\\"import sys; sys.path.append('.'); from scripts.migrate import main; main()\\\"\", \"dir\":\"/home/site/wwwroot\"}")
           
           ALT_HTTP_STATUS=$(echo "$ALT_RESPONSE" | tail -n1)
           ALT_BODY=$(echo "$ALT_RESPONSE" | sed '$d')
