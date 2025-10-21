@@ -87,74 +87,169 @@ jobs:
       env:
         AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
         AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
+        echo "=== Checking required GitHub secrets ==="
+        MISSING_SECRETS=()
+        
         if [ -z "${AZURE_RESOURCE_GROUP:-}" ]; then
-          echo "ERROR: AZURE_RESOURCE_GROUP is not available to this job"
-          exit 1
+          echo "❌ ERROR: AZURE_RESOURCE_GROUP secret is not set"
+          MISSING_SECRETS+=("AZURE_RESOURCE_GROUP")
         else
-          echo "AZURE_RESOURCE_GROUP is available"
+          echo "✅ AZURE_RESOURCE_GROUP is available: $AZURE_RESOURCE_GROUP"
         fi
+        
         if [ -z "${AZURE_LOCATION:-}" ]; then
-          echo "ERROR: AZURE_LOCATION is not available to this job"
-          exit 1
+          echo "❌ ERROR: AZURE_LOCATION secret is not set"
+          MISSING_SECRETS+=("AZURE_LOCATION")
         else
-          echo "AZURE_LOCATION is available"
+          echo "✅ AZURE_LOCATION is available: $AZURE_LOCATION"
         fi
+        
+        if [ -z "${AZURE_CREDENTIALS:-}" ]; then
+          echo "❌ ERROR: AZURE_CREDENTIALS secret is not set"
+          MISSING_SECRETS+=("AZURE_CREDENTIALS")
+        else
+          echo "✅ AZURE_CREDENTIALS is available (length: ${#AZURE_CREDENTIALS})"
+        fi
+        
+        if [ -z "${DATABASE_URL:-}" ]; then
+          echo "❌ ERROR: DATABASE_URL secret is not set"
+          MISSING_SECRETS+=("DATABASE_URL")
+        else
+          echo "✅ DATABASE_URL is available"
+        fi
+        
+        if [ -z "${SECRET_KEY:-}" ]; then
+          echo "❌ ERROR: SECRET_KEY secret is not set"
+          MISSING_SECRETS+=("SECRET_KEY")
+        else
+          echo "✅ SECRET_KEY is available"
+        fi
+        
+        if [ -z "${OPENAI_API_KEY:-}" ]; then
+          echo "❌ ERROR: OPENAI_API_KEY secret is not set"
+          MISSING_SECRETS+=("OPENAI_API_KEY")
+        else
+          echo "✅ OPENAI_API_KEY is available"
+        fi
+        
+        if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+          echo ""
+          echo "=== DEPLOYMENT FAILED: Missing Required Secrets ==="
+          echo "Please add the following secrets to your GitHub repository:"
+          echo "Repository Settings → Secrets and variables → Actions"
+          echo ""
+          for secret in "${MISSING_SECRETS[@]}"; do
+            case $secret in
+              "AZURE_RESOURCE_GROUP")
+                echo "• $secret: Your Azure resource group name (e.g., 'ai-event-planner-rg')"
+                ;;
+              "AZURE_LOCATION")
+                echo "• $secret: Your Azure location (e.g., 'eastus', 'westus2')"
+                ;;
+              "AZURE_CREDENTIALS")
+                echo "• $secret: Azure service principal credentials JSON (see Azure docs)"
+                ;;
+              "DATABASE_URL")
+                echo "• $secret: PostgreSQL connection string for Azure Database"
+                ;;
+              "SECRET_KEY")
+                echo "• $secret: Application secret key for JWT tokens"
+                ;;
+              "OPENAI_API_KEY")
+                echo "• $secret: OpenAI API key starting with 'sk-'"
+                ;;
+            esac
+          done
+          echo ""
+          echo "For help setting up these secrets, see the AZURE_DEPLOYMENT_SETUP_GUIDE.md"
+          exit 1
+        fi
+        
+        echo "✅ All required secrets are available"
     
     - name: Login to Azure
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     
-    - name: Ensure Azure Web App exists (create if missing / respect existing RG location)
+    - name: Ensure Azure Web App exists with Python 3.10 runtime
       run: |
         set -euo pipefail
 
-        # Use secrets (or hardcoded defaults)
-        RG="${{ secrets.AZURE_RESOURCE_GROUP }}"                 # e.g. ai-event-planner-rg
-        DESIRED_LOCATION="${{ secrets.AZURE_LOCATION }}"         # e.g. westus2 (optional)
+        # Use secrets (required now due to earlier validation)
+        RG="${{ secrets.AZURE_RESOURCE_GROUP }}"
+        DESIRED_LOCATION="${{ secrets.AZURE_LOCATION }}"
         APP_NAME="ai-event-planner-saas-py"
         PLAN_NAME="ai-event-planner-plan"
         SKU="B1"
 
+        echo "=== Setting up Azure Web App with Python 3.10 ==="
         echo "Resource Group: $RG"
+        echo "Location: $DESIRED_LOCATION"
+        echo "App Name: $APP_NAME"
+
         if az group show --name "$RG" >/dev/null 2>&1; then
           EXISTING_LOCATION=$(az group show --name "$RG" --query location -o tsv)
-          echo "Resource group '$RG' already exists in location: $EXISTING_LOCATION"
+          echo "✅ Resource group '$RG' exists in location: $EXISTING_LOCATION"
 
-          if [ -n "${DESIRED_LOCATION:-}" ] && [ "$DESIRED_LOCATION" != "$EXISTING_LOCATION" ]; then
-            echo "Warning: desired location ($DESIRED_LOCATION) differs from existing group location ($EXISTING_LOCATION)."
-            echo "Proceeding using existing resource group location: $EXISTING_LOCATION"
+          if [ "$DESIRED_LOCATION" != "$EXISTING_LOCATION" ]; then
+            echo "⚠️ Warning: Desired location ($DESIRED_LOCATION) differs from existing group location ($EXISTING_LOCATION)"
+            echo "Using existing resource group location: $EXISTING_LOCATION"
+            LOCATION="$EXISTING_LOCATION"
+          else
+            LOCATION="$DESIRED_LOCATION"
           fi
-
-          LOCATION="$EXISTING_LOCATION"
         else
-          # Create the resource group in DESIRED_LOCATION (fail if not provided)
-          if [ -z "${DESIRED_LOCATION:-}" ]; then
-            echo "ERROR: Resource group '$RG' does not exist and AZURE_LOCATION is not set. Set the AZURE_LOCATION secret or create the RG manually."
-            exit 1
-          fi
           echo "Creating resource group '$RG' in location: $DESIRED_LOCATION"
           az group create --name "$RG" --location "$DESIRED_LOCATION"
           LOCATION="$DESIRED_LOCATION"
+          echo "✅ Resource group created"
         fi
-
-        echo "Using Location: $LOCATION"
 
         # Create App Service plan if missing (Linux plan)
         if ! az appservice plan show --name "$PLAN_NAME" --resource-group "$RG" >/dev/null 2>&1; then
-          echo "Creating App Service plan: $PLAN_NAME"
+          echo "Creating App Service plan: $PLAN_NAME (Linux, SKU: $SKU)"
           az appservice plan create --name "$PLAN_NAME" --resource-group "$RG" --sku "$SKU" --is-linux
+          echo "✅ App Service plan created"
         else
-          echo "App Service plan '$PLAN_NAME' already exists."
+          echo "✅ App Service plan '$PLAN_NAME' already exists"
         fi
 
-        # Create the web app if missing (Python 3.10)
+        # Create or update the web app with Python 3.10
         if ! az webapp show --name "$APP_NAME" --resource-group "$RG" >/dev/null 2>&1; then
-          echo "Creating Web app: $APP_NAME"
+          echo "Creating Web app: $APP_NAME with Python 3.10"
           az webapp create --resource-group "$RG" --plan "$PLAN_NAME" --name "$APP_NAME" --runtime "PYTHON|3.10"
+          echo "✅ Web app created with Python 3.10 runtime"
         else
-          echo "Web app '$APP_NAME' already exists."
+          echo "✅ Web app '$APP_NAME' already exists"
+          
+          # Ensure runtime is set to Python 3.10 even for existing apps
+          CURRENT_RUNTIME=$(az webapp config show --name "$APP_NAME" --resource-group "$RG" --query linuxFxVersion -o tsv)
+          echo "Current runtime: $CURRENT_RUNTIME"
+          
+          if [[ "$CURRENT_RUNTIME" != "PYTHON|3.10" ]]; then
+            echo "⚠️ Runtime is not Python 3.10, updating..."
+            az webapp config set --name "$APP_NAME" --resource-group "$RG" --linux-fx-version "PYTHON|3.10"
+            
+            # Verify the change took effect
+            sleep 15
+            UPDATED_RUNTIME=$(az webapp config show --name "$APP_NAME" --resource-group "$RG" --query linuxFxVersion -o tsv)
+            
+            if [[ "$UPDATED_RUNTIME" != "PYTHON|3.10" ]]; then
+              echo "❌ ERROR: Failed to set Python runtime to PYTHON|3.10"
+              echo "Expected: PYTHON|3.10, Got: $UPDATED_RUNTIME"
+              exit 1
+            fi
+            
+            echo "✅ Runtime successfully updated to Python 3.10"
+          else
+            echo "✅ Runtime is already correctly set to Python 3.10"
+          fi
         fi
     
     - name: Set up environment variables
@@ -246,95 +341,119 @@ jobs:
           echo "Runtime is already correctly set to PYTHON|3.10"
         fi
     
-    - name: Install Azure CLI extensions and run database migrations
+    - name: Run database migrations with improved Python detection
       run: |
-        # Display Azure CLI info for debugging
-        echo "Azure CLI version:"
-        az --version
+        echo "=== Running Database Migrations ==="
         
-        echo "Current extensions:"
-        az extension list --output table
+        # Skip Azure CLI extensions that may fail (they're not needed for our approach)
+        echo "ℹ️ Skipping Azure CLI db-up extension (not required for current approach)"
         
-        # Install db-up extension with robust error handling
-        echo "Installing/updating db-up extension..."
-        if ! az extension add --name db-up 2>/dev/null; then
-          echo "Failed to add db-up extension, trying update..."
-          if ! az extension update --name db-up 2>/dev/null; then
-            echo "Failed to install/update db-up via az extension, skipping extension-dependent operations..."
-            echo "Note: db-up extension may not be needed for current migration approach"
+        echo "Getting Azure Web App deployment credentials..."
+        USERNAME=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingUserName -o tsv)
+        PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingPassword -o tsv)
+        
+        if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
+          echo "❌ ERROR: Failed to retrieve deployment credentials"
+          echo "Ensure the web app is deployed and accessible"
+          exit 1
+        fi
+        
+        echo "✅ Deployment credentials retrieved successfully"
+        
+        # Try multiple approaches to find Python
+        echo "🔍 Searching for Python 3.10 executable..."
+        
+        # First, try standard Python 3.10 paths for Azure App Service
+        PYTHON_CANDIDATES=(
+          "/opt/python/3.10.*/bin/python3"
+          "/usr/bin/python3.10"
+          "/usr/local/bin/python3.10"
+          "/usr/bin/python3"
+          "/home/site/wwwroot/antenv/bin/python"
+          "python3"
+        )
+        
+        PYTHON_PATH=""
+        for candidate in "${PYTHON_CANDIDATES[@]}"; do
+          echo "Testing Python path: $candidate"
+          
+          TEST_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+            -H "Content-Type: application/json" \
+            https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
+            -d "{\"command\":\"$candidate --version\", \"dir\":\"/home/site/wwwroot\"}" || echo -e "\nERROR")
+          
+          TEST_HTTP_STATUS=$(echo "$TEST_RESPONSE" | tail -n1)
+          TEST_BODY=$(echo "$TEST_RESPONSE" | sed '$d')
+          
+          if [ "$TEST_HTTP_STATUS" = "200" ] && echo "$TEST_BODY" | grep -q "Python 3"; then
+            echo "✅ Found working Python: $candidate"
+            PYTHON_PATH="$candidate"
+            break
+          fi
+        done
+        
+        if [ -z "$PYTHON_PATH" ]; then
+          echo "❌ ERROR: Could not find a working Python 3 executable"
+          echo ""
+          echo "🔧 Troubleshooting steps:"
+          echo "1. Verify that Python 3.10 runtime is set:"
+          echo "   az webapp config show --name ai-event-planner-saas-py --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query linuxFxVersion"
+          echo ""
+          echo "2. Check if the app has been deployed successfully"
+          echo ""
+          echo "3. Manually set the runtime if needed:"
+          echo "   az webapp config set --name ai-event-planner-saas-py --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --linux-fx-version 'PYTHON|3.10'"
+          echo ""
+          exit 1
+        fi
+        
+        echo "🚀 Running database migration with Python: $PYTHON_PATH"
+        
+        # Run the migration with better error handling
+        MIGRATION_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+          -H "Content-Type: application/json" \
+          https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
+          -d "{\"command\":\"cd /home/site/wwwroot && $PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
+        
+        MIGRATION_HTTP_STATUS=$(echo "$MIGRATION_RESPONSE" | tail -n1)
+        MIGRATION_BODY=$(echo "$MIGRATION_RESPONSE" | sed '$d')
+        
+        echo "Migration HTTP Status: $MIGRATION_HTTP_STATUS"
+        echo "Migration Response:"
+        echo "$MIGRATION_BODY"
+        
+        if [ "$MIGRATION_HTTP_STATUS" != "200" ]; then
+          echo "❌ ERROR: Migration request failed with HTTP status $MIGRATION_HTTP_STATUS"
+          echo "Response: $MIGRATION_BODY"
+          exit 1
+        fi
+        
+        # Check for common error patterns in the response
+        if echo "$MIGRATION_BODY" | grep -iE "(error|exception|failed|traceback)"; then
+          echo "❌ ERROR: Migration script reported errors or exceptions"
+          
+          # Try alternative migration approach
+          echo "🔄 Attempting alternative migration approach..."
+          
+          ALT_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+            -H "Content-Type: application/json" \
+            https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
+            -d "{\"command\":\"cd /home/site/wwwroot && $PYTHON_PATH -c 'import sys; sys.path.append(\\\".\\\")'  && $PYTHON_PATH -c 'from scripts.migrate import main; main()'\", \"dir\":\"/home/site/wwwroot\"}")
+          
+          ALT_HTTP_STATUS=$(echo "$ALT_RESPONSE" | tail -n1)
+          ALT_BODY=$(echo "$ALT_RESPONSE" | sed '$d')
+          
+          echo "Alternative migration response:"
+          echo "$ALT_BODY"
+          
+          if [ "$ALT_HTTP_STATUS" != "200" ] || echo "$ALT_BODY" | grep -iE "(error|exception|failed|traceback)"; then
+            echo "❌ ERROR: Both migration approaches failed"
+            echo "Manual intervention may be required"
+            exit 1
           fi
         fi
         
-        # Check if jq is installed
-        if ! command -v jq &> /dev/null; then
-          echo "Warning: jq is not installed. Using alternative approach."
-          
-          # Get publishing credentials using direct Azure CLI queries
-          USERNAME=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingUserName -o tsv)
-          PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingPassword -o tsv)
-        else
-          # Get publishing credentials using jq
-          CREDS=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query "{username:publishingUserName, password:publishingPassword}" -o json)
-          USERNAME=$(echo $CREDS | jq -r '.username')
-          PASSWORD=$(echo $CREDS | jq -r '.password')
-        fi
-        
-        # First, find the Python executable path
-        echo "Finding Python executable path..."
-        FIND_PYTHON_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
-          -H "Content-Type: application/json" \
-          https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-          -d "{\"command\":\"find / -name python3 2>/dev/null | head -n 1\", \"dir\":\"/\"}")
-        
-        # Extract status code and response body
-        FIND_PYTHON_HTTP_STATUS=$(echo "$FIND_PYTHON_RESPONSE" | tail -n1)
-        FIND_PYTHON_BODY=$(echo "$FIND_PYTHON_RESPONSE" | sed '$d')
-        
-        echo "Find Python response: $FIND_PYTHON_BODY"
-        echo "HTTP status: $FIND_PYTHON_HTTP_STATUS"
-        
-        # Extract Python path from the response
-        PYTHON_PATH=$(echo "$FIND_PYTHON_BODY" | grep -o '/[a-zA-Z0-9/_.-]*python3' | head -n 1 || echo "")
-        
-        if [ -z "$PYTHON_PATH" ]; then
-          echo "ERROR: Could not find a valid python3 executable on the Azure Web App instance."
-          echo "Check that the App Service runtime is set to Python 3.10 and the app is deployed correctly."
-          echo "You can verify the runtime setting with:"
-          echo "az webapp config show --name ai-event-planner-saas-py --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query linuxFxVersion"
-          echo "Expected value: PYTHON|3.10"
-          exit 1
-        else
-          echo "Found Python path: $PYTHON_PATH"
-        fi
-        
-        # Use the Python path to run the migration script
-        echo "Running migrations..."
-        RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
-          -H "Content-Type: application/json" \
-          https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-          -d "{\"command\":\"$PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
-        
-        # Extract status code and response body
-        HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
-        RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
-        
-        echo "Migration response: $RESPONSE_BODY"
-        echo "HTTP status: $HTTP_STATUS"
-        
-        # Check if the request was successful
-        if [ "$HTTP_STATUS" -ne 200 ]; then
-          echo "Migration failed with status $HTTP_STATUS"
-          echo "Response: $RESPONSE_BODY"
-          exit 1
-        fi
-        
-        # Check if the response contains error messages
-        if echo "$RESPONSE_BODY" | grep -i "error"; then
-          echo "Migration script reported errors"
-          exit 1
-        fi
-        
-        echo "Migration completed successfully"
+        echo "✅ Database migration completed successfully"
     
     - name: Start Azure Web App after deployment
       run: |
