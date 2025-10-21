@@ -209,6 +209,38 @@ jobs:
           "ENVIRONMENT=production" \
           "PYTHONPATH=/home/site/wwwroot"
     
+    - name: Verify Python Runtime Configuration
+      run: |
+        echo "Verifying Azure Web App Python runtime configuration..."
+        
+        # Check current runtime version
+        CURRENT_RUNTIME=$(az webapp config show --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --query linuxFxVersion -o tsv)
+        echo "Current runtime: $CURRENT_RUNTIME"
+        
+        # Ensure it's set to Python 3.10
+        if [[ "$CURRENT_RUNTIME" != "PYTHON|3.10" ]]; then
+          echo "Runtime is not set to PYTHON|3.10. Updating..."
+          az webapp config set --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --linux-fx-version "PYTHON|3.10"
+          
+          # Wait a moment for the configuration to take effect
+          echo "Waiting 30 seconds for runtime configuration to take effect..."
+          sleep 30
+          
+          # Verify the change
+          UPDATED_RUNTIME=$(az webapp config show --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --query linuxFxVersion -o tsv)
+          echo "Updated runtime: $UPDATED_RUNTIME"
+          
+          if [[ "$UPDATED_RUNTIME" != "PYTHON|3.10" ]]; then
+            echo "ERROR: Failed to set Python runtime to PYTHON|3.10"
+            echo "Current runtime is still: $UPDATED_RUNTIME"
+            exit 1
+          fi
+          
+          echo "Successfully updated runtime to PYTHON|3.10"
+        else
+          echo "Runtime is already correctly set to PYTHON|3.10"
+        fi
+    
     - name: Install Azure CLI extensions and run database migrations
       run: |
         # Display Azure CLI info for debugging
@@ -260,8 +292,12 @@ jobs:
         PYTHON_PATH=$(echo "$FIND_PYTHON_BODY" | grep -o '/[a-zA-Z0-9/_.-]*python3' | head -n 1 || echo "")
         
         if [ -z "$PYTHON_PATH" ]; then
-          echo "Python path not found, using default /usr/local/bin/python3"
-          PYTHON_PATH="/usr/local/bin/python3"
+          echo "ERROR: Could not find a valid python3 executable on the Azure Web App instance."
+          echo "Check that the App Service runtime is set to Python 3.10 and the app is deployed correctly."
+          echo "You can verify the runtime setting with:"
+          echo "az webapp config show --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --query linuxFxVersion"
+          echo "Expected value: PYTHON|3.10"
+          exit 1
         else
           echo "Found Python path: $PYTHON_PATH"
         fi
