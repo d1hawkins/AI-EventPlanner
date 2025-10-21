@@ -29,12 +29,71 @@ if not SECRET_KEY:
 ALGORITHM: str = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
-# Database - Handle Azure APPSETTING_ prefix
+def _construct_azure_postgres_url() -> Optional[str]:
+    """Construct PostgreSQL URL from Azure environment variables if available."""
+    # Try to get individual components that Azure might provide
+    host = (
+        os.getenv("POSTGRES_HOST") or 
+        os.getenv("AZURE_POSTGRES_HOST") or 
+        os.getenv("DB_HOST")
+    )
+    port = (
+        os.getenv("POSTGRES_PORT") or 
+        os.getenv("AZURE_POSTGRES_PORT") or 
+        os.getenv("DB_PORT", "5432")
+    )
+    database = (
+        os.getenv("POSTGRES_DB") or 
+        os.getenv("AZURE_POSTGRES_DB") or 
+        os.getenv("DB_NAME") or
+        "eventplanner"
+    )
+    username = (
+        os.getenv("POSTGRES_USER") or 
+        os.getenv("AZURE_POSTGRES_USER") or 
+        os.getenv("DB_USER")
+    )
+    password = (
+        os.getenv("POSTGRES_PASSWORD") or 
+        os.getenv("AZURE_POSTGRES_PASSWORD") or 
+        os.getenv("DB_PASSWORD")
+    )
+    
+    if host and username and password:
+        return f"postgresql://{username}:{password}@{host}:{port}/{database}?sslmode=require"
+    
+    return None
+
+# Database - Handle Azure APPSETTING_ prefix and various Azure environment variable formats
 DATABASE_URL: str = (
     os.getenv("DATABASE_URL") or 
-    os.getenv("APPSETTING_DATABASE_URL") or 
-    "sqlite:///./app.db"
+    os.getenv("APPSETTING_DATABASE_URL") or
+    os.getenv("AZURE_POSTGRESQL_CONNECTIONSTRING") or
+    os.getenv("POSTGRESQL_URL") or
+    os.getenv("POSTGRES_URL") or
+    # If we're in Azure and have individual connection parameters, construct the URL
+    _construct_azure_postgres_url() or
+    # Only fall back to SQLite in development
+    ("sqlite:///./app.db" if os.getenv("ENVIRONMENT", "").lower() in ["development", "dev", "local"] else None)
 )
+
+# Validate DATABASE_URL is set for production
+if not DATABASE_URL:
+    error_msg = "DATABASE_URL is not set and could not be constructed from environment variables."
+    print(f"ERROR: {error_msg}")
+    print("Available environment variables:")
+    for key, value in os.environ.items():
+        if any(keyword in key.upper() for keyword in ['DATABASE', 'DB', 'POSTGRES', 'SQL']):
+            # Mask sensitive information
+            display_value = value[:10] + "..." if len(value) > 10 and 'PASSWORD' in key.upper() else value
+            print(f"  {key}={display_value}")
+    
+    # Force PostgreSQL in production environments
+    if os.getenv("ENVIRONMENT", "").lower() not in ["development", "dev", "local"]:
+        raise ValueError("DATABASE_URL must be set for production deployment")
+    else:
+        DATABASE_URL = "sqlite:///./app.db"
+        print("Using SQLite for local development")
 
 # Server
 HOST: str = os.getenv("HOST", "0.0.0.0")

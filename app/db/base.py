@@ -49,7 +49,21 @@ def create_db_engine(database_url: str):
             connect_args={"check_same_thread": False}
         )
 
+# Log the database type being used
+db_type = "PostgreSQL" if DATABASE_URL and DATABASE_URL.startswith("postgresql") else ("SQLite" if DATABASE_URL and DATABASE_URL.startswith("sqlite") else "Unknown")
 print(f"Initializing database with URL: {DATABASE_URL}")
+print(f"Database type: {db_type}")
+
+# Additional debugging for Azure deployment
+if not DATABASE_URL or DATABASE_URL.startswith("sqlite"):
+    print("WARNING: Using SQLite database. This may not be intended for production deployment.")
+    print("Environment variables check:")
+    for key, value in os.environ.items():
+        if any(keyword in key.upper() for keyword in ['DATABASE', 'DB', 'POSTGRES', 'SQL', 'AZURE', 'APPSETTING']):
+            # Mask sensitive information
+            display_value = value[:20] + "..." if len(value) > 20 and any(sensitive in key.upper() for sensitive in ['PASSWORD', 'SECRET', 'KEY']) else value
+            print(f"  {key}={display_value}")
+
 engine = create_db_engine(DATABASE_URL)
 
 # Create sessionmaker
