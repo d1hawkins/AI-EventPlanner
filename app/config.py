@@ -29,8 +29,12 @@ if not SECRET_KEY:
 ALGORITHM: str = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
-# Database
-DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
+# Database - Handle Azure APPSETTING_ prefix
+DATABASE_URL: str = (
+    os.getenv("DATABASE_URL") or 
+    os.getenv("APPSETTING_DATABASE_URL") or 
+    "sqlite:///./app.db"
+)
 
 # Server
 HOST: str = os.getenv("HOST", "0.0.0.0")

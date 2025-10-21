@@ -180,3 +180,50 @@ echo "  3. Run deployment workflow"
 echo ""
 echo "💡 To set additional secrets, use:"
 echo "   az webapp config appsettings set --name $WEB_APP_NAME --resource-group $RESOURCE_GROUP --settings KEY=VALUE"
+
+# Fix existing deployment function
+fix_deployment() {
+    echo ""
+    echo "🔧 FIXING EXISTING DEPLOYMENT..."
+    echo "================================="
+    
+    local EXISTING_APP_NAME="ai-event-planner-saas-py"
+    local DATABASE_URL="postgresql://dbadmin:VM*admin@ai-event-planner-db.postgres.database.azure.com:5432/eventplanner?sslmode=require"
+    
+    echo "Updating environment variables for: $EXISTING_APP_NAME"
+    
+    # Update App Settings with correct DATABASE_URL and other settings
+    az webapp config appsettings set --name "$EXISTING_APP_NAME" --resource-group "$RESOURCE_GROUP" --settings \
+        "DATABASE_URL=$DATABASE_URL" \
+        "SECRET_KEY=$(openssl rand -hex 32)" \
+        "LLM_PROVIDER=openai" \
+        "LLM_MODEL=gpt-4" \
+        "HOST=0.0.0.0" \
+        "PORT=8000" \
+        "ENVIRONMENT=production" \
+        "PYTHONPATH=/home/site/wwwroot"
+    
+    echo "✅ App settings updated successfully"
+    
+    # Restart the app to pick up new settings
+    echo "Restarting Azure Web App..."
+    az webapp restart --name "$EXISTING_APP_NAME" --resource-group "$RESOURCE_GROUP"
+    
+    echo "✅ Web app restarted"
+    
+    # Check app status
+    echo "Application status:"
+    az webapp show --name "$EXISTING_APP_NAME" --resource-group "$RESOURCE_GROUP" --query "state" -o tsv
+    
+    echo ""
+    echo "🎉 Deployment fix completed!"
+    echo "Wait 2-3 minutes for the app to fully restart"
+    echo "Visit: https://$EXISTING_APP_NAME.azurewebsites.net"
+    echo ""
+}
+
+# Check if this script is being run with 'fix' argument
+if [[ "${1:-}" == "fix" ]]; then
+    fix_deployment
+    exit 0
+fi
