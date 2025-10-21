@@ -183,20 +183,25 @@ jobs:
         zip -r ../deploy.zip .
         cd ..
     
+    - name: Stop Azure Web App before deployment
+      run: |
+        echo "Stopping Web App to prevent deployment conflicts..."
+        az webapp stop --name ai-event-planner-saas-py --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" || echo "Web App may already be stopped"
+
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
       with:
         app-name: 'ai-event-planner-saas-py'
         slot-name: 'production'
         package: './deploy.zip'
-    
+
     - name: Configure Azure Web App
       run: |
         # Use the startup.sh script
-        az webapp config set --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --startup-file "./startup.sh"
+        az webapp config set --name ai-event-planner-saas-py --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --startup-file "./startup.sh"
         
         # Set essential environment variables with fallbacks
-        az webapp config appsettings set --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --settings \
+        az webapp config appsettings set --name ai-event-planner-saas-py --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --settings \
           "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
           "SECRET_KEY=${{ secrets.SECRET_KEY }}" \
           "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" \
@@ -214,20 +219,20 @@ jobs:
         echo "Verifying Azure Web App Python runtime configuration..."
         
         # Check current runtime version
-        CURRENT_RUNTIME=$(az webapp config show --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --query linuxFxVersion -o tsv)
+        CURRENT_RUNTIME=$(az webapp config show --name ai-event-planner-saas-py --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --query linuxFxVersion -o tsv)
         echo "Current runtime: $CURRENT_RUNTIME"
         
         # Ensure it's set to Python 3.10
         if [[ "$CURRENT_RUNTIME" != "PYTHON|3.10" ]]; then
           echo "Runtime is not set to PYTHON|3.10. Updating..."
-          az webapp config set --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --linux-fx-version "PYTHON|3.10"
+          az webapp config set --name ai-event-planner-saas-py --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --linux-fx-version "PYTHON|3.10"
           
           # Wait a moment for the configuration to take effect
           echo "Waiting 30 seconds for runtime configuration to take effect..."
           sleep 30
           
           # Verify the change
-          UPDATED_RUNTIME=$(az webapp config show --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --query linuxFxVersion -o tsv)
+          UPDATED_RUNTIME=$(az webapp config show --name ai-event-planner-saas-py --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --query linuxFxVersion -o tsv)
           echo "Updated runtime: $UPDATED_RUNTIME"
           
           if [[ "$UPDATED_RUNTIME" != "PYTHON|3.10" ]]; then
@@ -265,11 +270,11 @@ jobs:
           echo "Warning: jq is not installed. Using alternative approach."
           
           # Get publishing credentials using direct Azure CLI queries
-          USERNAME=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas-py --query publishingUserName -o tsv)
-          PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas-py --query publishingPassword -o tsv)
+          USERNAME=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingUserName -o tsv)
+          PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingPassword -o tsv)
         else
           # Get publishing credentials using jq
-          CREDS=$(az webapp deployment list-publishing-credentials --resource-group ai-event-planner-rg --name ai-event-planner-saas-py --query "{username:publishingUserName, password:publishingPassword}" -o json)
+          CREDS=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query "{username:publishingUserName, password:publishingPassword}" -o json)
           USERNAME=$(echo $CREDS | jq -r '.username')
           PASSWORD=$(echo $CREDS | jq -r '.password')
         fi
@@ -295,7 +300,7 @@ jobs:
           echo "ERROR: Could not find a valid python3 executable on the Azure Web App instance."
           echo "Check that the App Service runtime is set to Python 3.10 and the app is deployed correctly."
           echo "You can verify the runtime setting with:"
-          echo "az webapp config show --name ai-event-planner-saas-py --resource-group ai-event-planner-rg --query linuxFxVersion"
+          echo "az webapp config show --name ai-event-planner-saas-py --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --query linuxFxVersion"
           echo "Expected value: PYTHON|3.10"
           exit 1
         else
@@ -330,6 +335,12 @@ jobs:
         fi
         
         echo "Migration completed successfully"
+    
+    - name: Start Azure Web App after deployment
+      run: |
+        echo "Starting Web App after deployment..."
+        az webapp start --name ai-event-planner-saas-py --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}"
+        echo "Web App started successfully"
     
     - name: Logout from Azure
       run: |
