@@ -83,6 +83,24 @@ jobs:
         # Run tests with CI optimizations for faster execution
         CI=true poetry run pytest -x --tb=short --disable-warnings -q
     
+    - name: Verify required secrets are available
+      env:
+        AZURE_LOCATION: ${{ secrets.AZURE_LOCATION }}
+        AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+      run: |
+        if [ -z "${AZURE_RESOURCE_GROUP:-}" ]; then
+          echo "ERROR: AZURE_RESOURCE_GROUP is not available to this job"
+          exit 1
+        else
+          echo "AZURE_RESOURCE_GROUP is available"
+        fi
+        if [ -z "${AZURE_LOCATION:-}" ]; then
+          echo "ERROR: AZURE_LOCATION is not available to this job"
+          exit 1
+        else
+          echo "AZURE_LOCATION is available"
+        fi
+    
     - name: Login to Azure
       uses: azure/login@v1
       with:
@@ -191,10 +209,24 @@ jobs:
           "ENVIRONMENT=production" \
           "PYTHONPATH=/home/site/wwwroot"
     
-    - name: Run database migrations
+    - name: Install Azure CLI extensions and run database migrations
       run: |
-        # Install Azure CLI extensions
-        az extension add --name db-up
+        # Display Azure CLI info for debugging
+        echo "Azure CLI version:"
+        az --version
+        
+        echo "Current extensions:"
+        az extension list --output table
+        
+        # Install db-up extension with robust error handling
+        echo "Installing/updating db-up extension..."
+        if ! az extension add --name db-up 2>/dev/null; then
+          echo "Failed to add db-up extension, trying update..."
+          if ! az extension update --name db-up 2>/dev/null; then
+            echo "Failed to install/update db-up via az extension, skipping extension-dependent operations..."
+            echo "Note: db-up extension may not be needed for current migration approach"
+          fi
+        fi
         
         # Check if jq is installed
         if ! command -v jq &> /dev/null; then
