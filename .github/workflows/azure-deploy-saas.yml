@@ -262,21 +262,49 @@ jobs:
     
     - name: Create deployment package
       run: |
+        set -euxo pipefail
+
         mkdir -p deploy
+        
+        # Fail if required directories are missing so CI surfaces the issue immediately
+        if [ ! -d app ]; then
+          echo "❌ app/ directory not found" >&2
+          exit 1
+        fi
+        if [ ! -d migrations ]; then
+          echo "❌ migrations/ directory not found" >&2
+          exit 1
+        fi
+        if [ ! -d scripts ]; then
+          echo "❌ scripts/ directory not found — expected scripts/migrate.py to exist" >&2
+          exit 1
+        fi
+        
+        # Verify critical files exist
+        if [ ! -f scripts/migrate.py ]; then
+          echo "❌ scripts/migrate.py not found - this file is required for database migrations" >&2
+          exit 1
+        fi
+        
         cp -r app deploy/
         cp -r migrations deploy/
         cp -r scripts deploy/
         cp alembic.ini deploy/
-        cp requirements.txt deploy/
-        cp startup.sh deploy/
-        
+        cp requirements.txt deploy/ || true
+        cp startup.sh deploy/ || true
+
         # Make startup script executable
-        chmod +x deploy/startup.sh
-        
-        # Create zip file
+        chmod +x deploy/startup.sh || true
+
+        # Create zip file and list contents for debugging
         cd deploy
         zip -r ../deploy.zip .
         cd ..
+        echo "=== deploy.zip contents ==="
+        unzip -l deploy.zip
+        echo "=== Key files verification ==="
+        echo "✅ Checking scripts/migrate.py in zip:"
+        unzip -l deploy.zip | grep "scripts/migrate.py" || echo "❌ WARNING: migrate.py not found in zip!"
     
     - name: Stop Azure Web App before deployment
       run: |
@@ -340,6 +368,70 @@ jobs:
         else
           echo "Runtime is already correctly set to PYTHON|3.10"
         fi
+
+    - name: Verify deployed files on Kudu
+      run: |
+        set -euo pipefail
+        
+        echo "=== Verifying Deployed Files on Azure Web App ==="
+        
+        USERNAME=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingUserName -o tsv)
+        PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingPassword -o tsv)
+        
+        if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
+          echo "❌ ERROR: Failed to retrieve deployment credentials for file verification"
+          echo "Cannot verify deployed files - proceeding with migration attempt"
+        else
+          echo "✅ Got deployment credentials for file verification"
+          
+          echo "📁 Listing /site/wwwroot root directory:"
+          ROOT_RESPONSE=$(curl -s -u "$USERNAME:$PASSWORD" https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/ || echo "ERROR_FETCHING_ROOT")
+          
+          if [[ "$ROOT_RESPONSE" == "ERROR_FETCHING_ROOT" ]]; then
+            echo "❌ Failed to fetch root directory listing"
+          else
+            echo "$ROOT_RESPONSE" | sed -n '1,50p'  # Show first 50 lines to avoid overflow
+          fi
+          
+          echo ""
+          echo "📁 Checking for scripts directory:"
+          SCRIPTS_RESPONSE=$(curl -s -u "$USERNAME:$PASSWORD" https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/scripts/ || echo "ERROR_FETCHING_SCRIPTS")
+          
+          if [[ "$SCRIPTS_RESPONSE" == "ERROR_FETCHING_SCRIPTS" ]]; then
+            echo "❌ scripts/ directory not found or inaccessible"
+          else
+            echo "✅ scripts/ directory found. Contents:"
+            echo "$SCRIPTS_RESPONSE" | sed -n '1,20p'  # Show first 20 lines
+            
+            # Check specifically for migrate.py
+            if echo "$SCRIPTS_RESPONSE" | grep -q "migrate.py"; then
+              echo "✅ migrate.py found in scripts directory"
+            else
+              echo "❌ WARNING: migrate.py NOT found in scripts directory"
+            fi
+          fi
+          
+          echo ""
+          echo "📁 Checking for other key directories:"
+          
+          # Check app directory
+          APP_RESPONSE=$(curl -s -u "$USERNAME:$PASSWORD" https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/app/ || echo "ERROR_FETCHING_APP")
+          if [[ "$APP_RESPONSE" != "ERROR_FETCHING_APP" ]]; then
+            echo "✅ app/ directory exists"
+          else
+            echo "❌ app/ directory not found"
+          fi
+          
+          # Check migrations directory
+          MIGRATIONS_RESPONSE=$(curl -s -u "$USERNAME:$PASSWORD" https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/migrations/ || echo "ERROR_FETCHING_MIGRATIONS")
+          if [[ "$MIGRATIONS_RESPONSE" != "ERROR_FETCHING_MIGRATIONS" ]]; then
+            echo "✅ migrations/ directory exists"
+          else
+            echo "❌ migrations/ directory not found"
+          fi
+        fi
+        
+        echo "=== File verification complete ==="
     
     - name: Run database migrations with improved Python detection
       run: |
@@ -409,11 +501,11 @@ jobs:
         
         echo "🚀 Running database migration with Python: $PYTHON_PATH"
         
-        # Run the migration with better error handling - using direct script path
+        # Run the migration with better error handling - using absolute paths with fallback
         MIGRATION_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
           https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-          -d "{\"command\":\"$PYTHON_PATH scripts/migrate.py\", \"dir\":\"/home/site/wwwroot\"}")
+          -d "{\"command\":\"$PYTHON_PATH /home/site/wwwroot/scripts/migrate.py || $PYTHON_PATH /home/site/wwwroot/app/scripts/migrate.py\", \"dir\":\"/home/site/wwwroot\"}")
         
         MIGRATION_HTTP_STATUS=$(echo "$MIGRATION_RESPONSE" | tail -n1)
         MIGRATION_BODY=$(echo "$MIGRATION_RESPONSE" | sed '$d')
