@@ -22,5 +22,9 @@ def run_migrations():
         print(f"Error running migrations: {e}")
         sys.exit(1)
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the migration script."""
     run_migrations()
+
+if __name__ == "__main__":
+    main()
