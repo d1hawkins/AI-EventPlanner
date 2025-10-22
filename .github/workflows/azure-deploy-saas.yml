@@ -409,11 +409,11 @@ jobs:
         
         echo "🚀 Running database migration with Python: $PYTHON_PATH"
         
-        # Run the migration with better error handling
+        # Run the migration with better error handling - using direct script path
         MIGRATION_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
           https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-          -d "{\"command\":\"$PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
+          -d "{\"command\":\"$PYTHON_PATH scripts/migrate.py\", \"dir\":\"/home/site/wwwroot\"}")
         
         MIGRATION_HTTP_STATUS=$(echo "$MIGRATION_RESPONSE" | tail -n1)
         MIGRATION_BODY=$(echo "$MIGRATION_RESPONSE" | sed '$d')
@@ -432,13 +432,13 @@ jobs:
         if echo "$MIGRATION_BODY" | grep -iE "(error|exception|failed|traceback)"; then
           echo "❌ ERROR: Migration script reported errors or exceptions"
           
-          # Try alternative migration approach
-          echo "🔄 Attempting alternative migration approach..."
+          # Try alternative migration approach with PYTHONPATH
+          echo "🔄 Attempting alternative migration approach with PYTHONPATH..."
           
           ALT_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
             -H "Content-Type: application/json" \
             https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-            -d "{\"command\":\"$PYTHON_PATH -c \\\"import sys; sys.path.append('.'); from scripts.migrate import main; main()\\\"\", \"dir\":\"/home/site/wwwroot\"}")
+            -d "{\"command\":\"export PYTHONPATH=/home/site/wwwroot:/home/site/wwwroot:\\$PYTHONPATH && $PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
           
           ALT_HTTP_STATUS=$(echo "$ALT_RESPONSE" | tail -n1)
           ALT_BODY=$(echo "$ALT_RESPONSE" | sed '$d')
