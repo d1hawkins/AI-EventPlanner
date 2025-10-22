@@ -515,11 +515,11 @@ jobs:
         
         echo "🚀 Running database migration with Python: $PYTHON_PATH"
         
-        # Run the migration with robust path checking and clear error diagnostics
+        # Run the migration with robust path checking using bash -c for proper shell interpretation
         MIGRATION_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
           https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-          -d "{\"command\":\"if [ -f /home/site/wwwroot/scripts/migrate.py ]; then $PYTHON_PATH /home/site/wwwroot/scripts/migrate.py; elif [ -f /home/site/wwwroot/app/scripts/migrate.py ]; then $PYTHON_PATH /home/site/wwwroot/app/scripts/migrate.py; else echo 'ERROR: MIGRATE_NOT_FOUND - Neither /home/site/wwwroot/scripts/migrate.py nor /home/site/wwwroot/app/scripts/migrate.py exists' && exit 2; fi\", \"dir\":\"/home/site/wwwroot\"}")
+          -d "{\"command\":\"bash -c 'if [ -f /home/site/wwwroot/scripts/migrate.py ]; then $PYTHON_PATH /home/site/wwwroot/scripts/migrate.py; elif [ -f /home/site/wwwroot/app/scripts/migrate.py ]; then $PYTHON_PATH /home/site/wwwroot/app/scripts/migrate.py; else echo ERROR_MIGRATE_NOT_FOUND && exit 2; fi'\", \"dir\":\"/home/site/wwwroot\"}")
         
         MIGRATION_HTTP_STATUS=$(echo "$MIGRATION_RESPONSE" | tail -n1)
         MIGRATION_BODY=$(echo "$MIGRATION_RESPONSE" | sed '$d')
