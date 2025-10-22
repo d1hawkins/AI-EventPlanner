@@ -265,46 +265,60 @@ jobs:
         set -euxo pipefail
 
         mkdir -p deploy
-        
-        # Fail if required directories are missing so CI surfaces the issue immediately
-        if [ ! -d app ]; then
+
+        # Copy app, migrations if present
+        if [ -d app ]; then
+          cp -r app deploy/ || true
+        else
           echo "❌ app/ directory not found" >&2
           exit 1
         fi
-        if [ ! -d migrations ]; then
+
+        if [ -d migrations ]; then
+          cp -r migrations deploy/ || true
+        else
           echo "❌ migrations/ directory not found" >&2
           exit 1
         fi
-        if [ ! -d scripts ]; then
-          echo "❌ scripts/ directory not found — expected scripts/migrate.py to exist" >&2
+
+        # Ensure scripts are included - create deploy/scripts if needed
+        mkdir -p deploy/scripts
+        
+        # Copy scripts directory contents if it exists
+        if [ -d scripts ]; then
+          cp -r scripts/* deploy/scripts/ || true
+        fi
+
+        # Verify critical migration script is present
+        if [ ! -f deploy/scripts/migrate.py ]; then
+          echo "❌ ERROR: deploy/scripts/migrate.py not found after copy - migrations will fail" >&2
           exit 1
         fi
-        
-        # Verify critical files exist
-        if [ ! -f scripts/migrate.py ]; then
-          echo "❌ scripts/migrate.py not found - this file is required for database migrations" >&2
-          exit 1
-        fi
-        
-        cp -r app deploy/
-        cp -r migrations deploy/
-        cp -r scripts deploy/
-        cp alembic.ini deploy/
+
+        # Copy other required files
+        cp alembic.ini deploy/ || true
         cp requirements.txt deploy/ || true
         cp startup.sh deploy/ || true
-
-        # Make startup script executable
         chmod +x deploy/startup.sh || true
 
-        # Create zip file and list contents for debugging
+        # Create zip and list contents for debugging
         cd deploy
         zip -r ../deploy.zip .
         cd ..
+        
         echo "=== deploy.zip contents ==="
         unzip -l deploy.zip
+        
+        echo ""
         echo "=== Key files verification ==="
-        echo "✅ Checking scripts/migrate.py in zip:"
-        unzip -l deploy.zip | grep "scripts/migrate.py" || echo "❌ WARNING: migrate.py not found in zip!"
+        if unzip -l deploy.zip | grep -q "scripts/migrate.py"; then
+          echo "✅ scripts/migrate.py found in zip"
+        else
+          echo "❌ ERROR: migrate.py not found in zip!" >&2
+          exit 1
+        fi
+        
+        echo "✅ Deployment package created successfully"
     
     - name: Stop Azure Web App before deployment
       run: |
@@ -501,11 +515,11 @@ jobs:
         
         echo "🚀 Running database migration with Python: $PYTHON_PATH"
         
-        # Run the migration with better error handling - using absolute paths with fallback
+        # Run the migration with robust path checking and clear error diagnostics
         MIGRATION_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
           https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-          -d "{\"command\":\"$PYTHON_PATH /home/site/wwwroot/scripts/migrate.py || $PYTHON_PATH /home/site/wwwroot/app/scripts/migrate.py\", \"dir\":\"/home/site/wwwroot\"}")
+          -d "{\"command\":\"if [ -f /home/site/wwwroot/scripts/migrate.py ]; then $PYTHON_PATH /home/site/wwwroot/scripts/migrate.py; elif [ -f /home/site/wwwroot/app/scripts/migrate.py ]; then $PYTHON_PATH /home/site/wwwroot/app/scripts/migrate.py; else echo 'ERROR: MIGRATE_NOT_FOUND - Neither /home/site/wwwroot/scripts/migrate.py nor /home/site/wwwroot/app/scripts/migrate.py exists' && exit 2; fi\", \"dir\":\"/home/site/wwwroot\"}")
         
         MIGRATION_HTTP_STATUS=$(echo "$MIGRATION_RESPONSE" | tail -n1)
         MIGRATION_BODY=$(echo "$MIGRATION_RESPONSE" | sed '$d')
