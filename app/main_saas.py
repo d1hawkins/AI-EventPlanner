@@ -34,6 +34,13 @@ app = FastAPI(title="AI Event Planner SaaS", description="AI-powered event plann
 # Request timing middleware
 class RequestTimingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # Skip detailed logging for static files to improve performance
+        is_static = request.url.path.startswith(('/static/', '/saas/'))
+        
+        if is_static:
+            # Fast path for static files - no logging
+            return await call_next(request)
+        
         start_time = time.time()
         
         # Get organization ID from request state if available
@@ -151,7 +158,24 @@ async def root(request: Request):
 @app.get("/health")
 async def health_check():
     """
-    Health check endpoint with agent test.
+    Lightweight health check for Azure load balancers and monitoring.
+    
+    Returns:
+        Basic health status
+    """
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "version": os.getenv("APP_VERSION", "1.0.0"),
+        "environment": os.getenv("ENVIRONMENT", "development")
+    }
+
+
+@app.get("/health/detailed")
+async def detailed_health_check():
+    """
+    Detailed health check with agent testing (for manual testing only).
+    WARNING: This endpoint is resource-intensive and should not be used for automated health checks.
     
     Returns:
         Health status including agent functionality test

@@ -56,8 +56,8 @@ async def tenant_middleware(request: Request, call_next):
     Returns:
         Response
     """
-    # Skip database operations for health check requests
-    if request.url.path == "/health":
+    # Skip database operations for health check and static files (performance optimization)
+    if request.url.path == "/health" or request.url.path.startswith(("/static/", "/saas/")):
         return await call_next(request)
     
     try:
@@ -71,13 +71,8 @@ async def tenant_middleware(request: Request, call_next):
     except Exception as e:
         # Log the error but continue with the request
         print(f"Error in tenant middleware: {e}")
-        # If this is a health check or static file, continue without the database
-        if request.url.path.startswith("/static") or request.url.path.startswith("/saas"):
-            pass
-        else:
-            # For API requests, we might want to return an error
-            # But for now, let's just continue and let the route handler handle it
-            pass
+        # For API requests, let the route handler handle it
+        pass
     
     # Continue with request
     response = await call_next(request)
