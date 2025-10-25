@@ -65,6 +65,7 @@ def _construct_azure_postgres_url() -> Optional[str]:
     return None
 
 # Database - Handle Azure APPSETTING_ prefix and various Azure environment variable formats
+# PostgreSQL is required for ALL environments (local, test, production)
 DATABASE_URL: str = (
     os.getenv("DATABASE_URL") or 
     os.getenv("APPSETTING_DATABASE_URL") or
@@ -73,27 +74,38 @@ DATABASE_URL: str = (
     os.getenv("POSTGRES_URL") or
     # If we're in Azure and have individual connection parameters, construct the URL
     _construct_azure_postgres_url() or
-    # Only fall back to SQLite in development
-    ("sqlite:///./app.db" if os.getenv("ENVIRONMENT", "").lower() in ["development", "dev", "local"] else None)
+    None
 )
 
-# Validate DATABASE_URL is set for production
+# Validate DATABASE_URL is set - PostgreSQL is required for ALL environments
 if not DATABASE_URL:
     error_msg = "DATABASE_URL is not set and could not be constructed from environment variables."
     print(f"ERROR: {error_msg}")
     print("Available environment variables:")
     for key, value in os.environ.items():
-        if any(keyword in key.upper() for keyword in ['DATABASE', 'DB', 'POSTGRES', 'SQL']):
+        if any(keyword in key.upper() for keyword in ['DATABASE', 'DB', 'POSTGRES', 'SQL', 'ENVIRONMENT', 'APPSETTING']):
             # Mask sensitive information
-            display_value = value[:10] + "..." if len(value) > 10 and 'PASSWORD' in key.upper() else value
+            display_value = value[:20] + "..." if len(value) > 20 and any(sensitive in key.upper() for sensitive in ['PASSWORD', 'SECRET', 'KEY']) else value
             print(f"  {key}={display_value}")
     
-    # Force PostgreSQL in production environments
-    if os.getenv("ENVIRONMENT", "").lower() not in ["development", "dev", "local"]:
-        raise ValueError("DATABASE_URL must be set for production deployment")
-    else:
-        DATABASE_URL = "sqlite:///./app.db"
-        print("Using SQLite for local development")
+    # PostgreSQL is REQUIRED for all environments
+    env = os.getenv("ENVIRONMENT", "").lower()
+    raise ValueError(
+        f"DATABASE_URL must be set for ALL environments. Current ENVIRONMENT: '{env}'. "
+        "PostgreSQL is required for local development, testing, and production. "
+        "Please set DATABASE_URL in your environment or .env file. "
+        "For local development, see docs/LOCAL_POSTGRES_SETUP.md"
+    )
+
+# Additional validation: Reject non-PostgreSQL databases
+if DATABASE_URL and not DATABASE_URL.startswith("postgresql"):
+    env = os.getenv("ENVIRONMENT", "").lower()
+    raise ValueError(
+        f"Only PostgreSQL databases are supported. "
+        f"Current ENVIRONMENT: '{env}', DATABASE_URL starts with: {DATABASE_URL.split(':')[0]} "
+        "Please configure a PostgreSQL DATABASE_URL. "
+        "For local development, see docs/LOCAL_POSTGRES_SETUP.md"
+    )
 
 # Server
 HOST: str = os.getenv("HOST", "0.0.0.0")

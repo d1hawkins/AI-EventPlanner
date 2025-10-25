@@ -2,7 +2,7 @@ from fastapi import Request, Depends
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.db.session import get_db
-from app.db.models_updated import Organization
+from app.db.models_saas import Organization
 
 
 async def extract_tenant_id(request: Request) -> Optional[int]:

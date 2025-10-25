@@ -8,7 +8,7 @@ from passlib.context import CryptContext
 
 from app.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from app.db.session import get_db
-from app.db.models_updated import User
+from app.db.models import User
 from app.schemas.user import User as UserSchema, UserCreate, Token
 from app.auth.dependencies import create_access_token, get_current_user
 
@@ -84,8 +84,7 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
     organization = Organization(
         name=f"{user_in.username}'s Organization",
         slug=f"{user_in.username.lower()}-{uuid.uuid4().hex[:8]}",
-        plan_id="free",
-        is_active=True
+        plan_id="free"
     )
     db.add(organization)
     db.flush()  # Flush to get the organization ID
@@ -95,8 +94,7 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
         organization_id=organization.id,
         user_id=db_user.id,
         role="admin",
-        is_primary=True,
-        is_active=True
+        is_primary=True
     )
     db.add(org_user)
     

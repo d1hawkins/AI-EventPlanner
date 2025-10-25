@@ -19,7 +19,8 @@ except ImportError as e:
     ICALENDAR_AVAILABLE = False
 
 from app.db.session import get_db
-from app.db.models_updated import User, Message, AgentState, Event, Task
+from app.db.models import User
+from app.db.models_updated import Message, AgentState, Event, Task
 from app.db.models_updated import Conversation as ConversationModel
 from app.auth.dependencies import get_current_user
 from app.schemas.event import ConversationCreate, Conversation as ConversationSchema, ConversationMessage, EventUpdate

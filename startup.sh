@@ -3,9 +3,33 @@
 # Azure App Service startup script
 echo "Starting AI Event Planner application..."
 
-# Check and set default environment variables if not provided
-export DATABASE_URL=${DATABASE_URL:-"sqlite:///./azure_app.db"}
-export SECRET_KEY=${SECRET_KEY:-"azure_production_secret_key_change_me"}
+# CRITICAL: Do NOT default to SQLite in production
+# If DATABASE_URL is not set, the application should fail loudly
+if [ -z "$DATABASE_URL" ]; then
+    echo "ERROR: DATABASE_URL environment variable is not set!"
+    echo "This is required for production deployment."
+    echo "Please configure DATABASE_URL in Azure App Service settings."
+    exit 1
+fi
+
+# Validate that we're not using SQLite in production
+if [[ "$DATABASE_URL" == sqlite* ]]; then
+    echo "ERROR: SQLite database detected in production!"
+    echo "DATABASE_URL: $DATABASE_URL"
+    echo "Production deployments must use PostgreSQL."
+    exit 1
+fi
+
+# Set ENVIRONMENT to production if not already set
+export ENVIRONMENT=${ENVIRONMENT:-"production"}
+
+# Check and set other environment variables with validation
+export SECRET_KEY=${SECRET_KEY:-""}
+if [ -z "$SECRET_KEY" ]; then
+    echo "ERROR: SECRET_KEY environment variable is not set!"
+    exit 1
+fi
+
 export OPENAI_API_KEY=${OPENAI_API_KEY:-""}
 export GOOGLE_API_KEY=${GOOGLE_API_KEY:-""}
 export TAVILY_API_KEY=${TAVILY_API_KEY:-""}
