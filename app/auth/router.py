@@ -151,3 +151,44 @@ def read_users_me(current_user: User = Depends(get_current_user)) -> Any:
         Current user
     """
     return current_user
+
+
+@router.get("/me/organization")
+def get_user_organization(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Get the current user's primary organization.
+    
+    Args:
+        current_user: Current authenticated user
+        db: Database session
+        
+    Returns:
+        Organization information
+    """
+    from app.db.models_saas import OrganizationUser
+    
+    # Get user's primary organization
+    org_user = db.query(OrganizationUser).filter(
+        OrganizationUser.user_id == current_user.id,
+        OrganizationUser.is_primary == True
+    ).first()
+    
+    if not org_user:
+        # If no primary organization, get any organization
+        org_user = db.query(OrganizationUser).filter(
+            OrganizationUser.user_id == current_user.id
+        ).first()
+    
+    if not org_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User has no organization",
+        )
+    
+    return {
+        "organization_id": org_user.organization_id,
+        "role": org_user.role
+    }

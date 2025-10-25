@@ -70,6 +70,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('authToken', data.access_token);
                 localStorage.setItem('tokenType', data.token_type);
                 
+                // Fetch user info to get organization ID
+                return fetch('/auth/me', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${data.access_token}`
+                    }
+                });
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch user info');
+                }
+                return response.json();
+            })
+            .then(userData => {
+                // Fetch user's organization
+                const authToken = localStorage.getItem('authToken');
+                return fetch('/auth/me/organization', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // If organizations endpoint doesn't exist, set default
+                    console.warn('Could not fetch organization, using default');
+                    localStorage.setItem('organizationId', '1');
+                    return null;
+                }
+                return response.json();
+            })
+            .then(orgData => {
+                // Store the organization ID
+                if (orgData && orgData.organization_id) {
+                    localStorage.setItem('organizationId', orgData.organization_id.toString());
+                } else {
+                    // Fallback to default
+                    localStorage.setItem('organizationId', '1');
+                }
+                
                 hideLoading();
                 
                 // Re-enable form elements

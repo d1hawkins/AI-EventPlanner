@@ -25,15 +25,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedAgentType = null;
     let agents = [];
     let conversations = [];
-    let isAuthenticated = true; // Bypass authentication check for testing
     let currentConversationId = null;
     
     // Debug mode
     window.debugMode = false;
-    
-    // Set a mock auth token for testing
-    localStorage.setItem('authToken', 'mock-auth-token');
-    localStorage.setItem('organizationId', '1');
     
     // Initialize
     init();
@@ -44,8 +39,10 @@ document.addEventListener('DOMContentLoaded', function() {
     async function init() {
         try {
             // Check authentication
-            if (!isAuthenticated) {
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
                 // Redirect to login if not authenticated
+                console.log('No auth token found, redirecting to login');
                 window.location.href = '/saas/login.html';
                 return;
             }
