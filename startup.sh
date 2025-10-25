@@ -54,7 +54,10 @@ mkdir -p /home/site/wwwroot/logs
 
 # Run database migrations if needed
 echo "Running database migrations..."
-python -m scripts.migrate || echo "Migration failed, continuing with application start..."
+python scripts/run_azure_migration_comprehensive.py --max-retries 3 --retry-delay 5 || {
+    echo "WARNING: Comprehensive migration failed, trying fallback migration..."
+    python -m scripts.migrate || echo "Migration failed, continuing with application start..."
+}
 
 # Start the application
 echo "Starting uvicorn server..."
