@@ -289,10 +289,16 @@ jobs:
           cp -r scripts/* deploy/scripts/ || true
         fi
 
-        # Verify critical migration script is present
+        # Verify critical migration scripts are present
         if [ ! -f deploy/scripts/migrate.py ]; then
           echo "❌ ERROR: deploy/scripts/migrate.py not found after copy - migrations will fail" >&2
           exit 1
+        fi
+
+        if [ ! -f deploy/scripts/run_azure_migration_comprehensive.py ]; then
+          echo "⚠️  WARNING: deploy/scripts/run_azure_migration_comprehensive.py not found - will fallback to basic migration" >&2
+        else
+          echo "✅ Comprehensive migration script found"
         fi
 
         # Copy other required files
@@ -447,28 +453,25 @@ jobs:
         
         echo "=== File verification complete ==="
     
-    - name: Run database migrations with improved Python detection
+    - name: Run database migrations with comprehensive script
       run: |
         echo "=== Running Database Migrations ==="
-        
-        # Skip Azure CLI extensions that may fail (they're not needed for our approach)
-        echo "ℹ️ Skipping Azure CLI db-up extension (not required for current approach)"
-        
+
         echo "Getting Azure Web App deployment credentials..."
         USERNAME=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingUserName -o tsv)
         PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingPassword -o tsv)
-        
+
         if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
           echo "❌ ERROR: Failed to retrieve deployment credentials"
           echo "Ensure the web app is deployed and accessible"
           exit 1
         fi
-        
+
         echo "✅ Deployment credentials retrieved successfully"
-        
+
         # Try multiple approaches to find Python
         echo "🔍 Searching for Python 3.10 executable..."
-        
+
         # First, try standard Python 3.10 paths for Azure App Service
         PYTHON_CANDIDATES=(
           "/opt/python/3.10.*/bin/python3"
@@ -478,26 +481,26 @@ jobs:
           "/home/site/wwwroot/antenv/bin/python"
           "python3"
         )
-        
+
         PYTHON_PATH=""
         for candidate in "${PYTHON_CANDIDATES[@]}"; do
           echo "Testing Python path: $candidate"
-          
+
           TEST_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
             -H "Content-Type: application/json" \
             https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
             -d "{\"command\":\"$candidate --version\", \"dir\":\"/home/site/wwwroot\"}" || echo -e "\nERROR")
-          
+
           TEST_HTTP_STATUS=$(echo "$TEST_RESPONSE" | tail -n1)
           TEST_BODY=$(echo "$TEST_RESPONSE" | sed '$d')
-          
+
           if [ "$TEST_HTTP_STATUS" = "200" ] && echo "$TEST_BODY" | grep -q "Python 3"; then
             echo "✅ Found working Python: $candidate"
             PYTHON_PATH="$candidate"
             break
           fi
         done
-        
+
         if [ -z "$PYTHON_PATH" ]; then
           echo "❌ ERROR: Could not find a working Python 3 executable"
           echo ""
@@ -512,54 +515,69 @@ jobs:
           echo ""
           exit 1
         fi
-        
-        echo "🚀 Running database migration with Python: $PYTHON_PATH"
-        
-        # Run the migration with robust path checking - fixed quote escaping
-        MIGRATION_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+
+        echo "🚀 Running comprehensive database migration with Python: $PYTHON_PATH"
+
+        # First, check which migration script is available and install dependencies if needed
+        CHECK_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
           -H "Content-Type: application/json" \
           https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-          -d "{\"command\":\"bash -c \\\"if [ -f /home/site/wwwroot/scripts/migrate.py ]; then $PYTHON_PATH /home/site/wwwroot/scripts/migrate.py; elif [ -f /home/site/wwwroot/app/scripts/migrate.py ]; then $PYTHON_PATH /home/site/wwwroot/app/scripts/migrate.py; else echo ERROR_MIGRATE_NOT_FOUND && exit 2; fi\\\"\", \"dir\":\"/home/site/wwwroot\"}")
-        
-        MIGRATION_HTTP_STATUS=$(echo "$MIGRATION_RESPONSE" | tail -n1)
-        MIGRATION_BODY=$(echo "$MIGRATION_RESPONSE" | sed '$d')
-        
-        echo "Migration HTTP Status: $MIGRATION_HTTP_STATUS"
-        echo "Migration Response:"
-        echo "$MIGRATION_BODY"
-        
-        if [ "$MIGRATION_HTTP_STATUS" != "200" ]; then
-          echo "❌ ERROR: Migration request failed with HTTP status $MIGRATION_HTTP_STATUS"
-          echo "Response: $MIGRATION_BODY"
-          exit 1
-        fi
-        
-        # Check for common error patterns in the response
-        if echo "$MIGRATION_BODY" | grep -iE "(error|exception|failed|traceback)"; then
-          echo "❌ ERROR: Migration script reported errors or exceptions"
-          
-          # Try alternative migration approach with PYTHONPATH
-          echo "🔄 Attempting alternative migration approach with PYTHONPATH..."
-          
-          ALT_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+          -d "{\"command\":\"bash -c \\\"if [ -f /home/site/wwwroot/scripts/run_azure_migration_comprehensive.py ]; then echo COMPREHENSIVE_FOUND; elif [ -f /home/site/wwwroot/scripts/migrate.py ]; then echo BASIC_FOUND; else echo NONE_FOUND; fi\\\"\", \"dir\":\"/home/site/wwwroot\"}")
+
+        CHECK_BODY=$(echo "$CHECK_RESPONSE" | sed '$d')
+        echo "Migration script check: $CHECK_BODY"
+
+        # Try comprehensive migration first, then fallback to basic migration
+        if echo "$CHECK_BODY" | grep -q "COMPREHENSIVE_FOUND"; then
+          echo "✅ Using comprehensive migration script with retry logic and validation"
+
+          MIGRATION_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
             -H "Content-Type: application/json" \
             https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
-            -d "{\"command\":\"export PYTHONPATH=/home/site/wwwroot:/home/site/wwwroot:\\$PYTHONPATH && $PYTHON_PATH -m scripts.migrate\", \"dir\":\"/home/site/wwwroot\"}")
-          
-          ALT_HTTP_STATUS=$(echo "$ALT_RESPONSE" | tail -n1)
-          ALT_BODY=$(echo "$ALT_RESPONSE" | sed '$d')
-          
-          echo "Alternative migration response:"
-          echo "$ALT_BODY"
-          
-          if [ "$ALT_HTTP_STATUS" != "200" ] || echo "$ALT_BODY" | grep -iE "(error|exception|failed|traceback)"; then
-            echo "❌ ERROR: Both migration approaches failed"
-            echo "Manual intervention may be required"
-            exit 1
-          fi
+            -d "{\"command\":\"cd /home/site/wwwroot && $PYTHON_PATH scripts/run_azure_migration_comprehensive.py --max-retries 3 --retry-delay 5 2>&1\", \"dir\":\"/home/site/wwwroot\"}")
+        elif echo "$CHECK_BODY" | grep -q "BASIC_FOUND"; then
+          echo "⚠️  Using basic migration script (comprehensive script not found)"
+
+          MIGRATION_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST -u "$USERNAME:$PASSWORD" \
+            -H "Content-Type: application/json" \
+            https://ai-event-planner-saas-py.scm.azurewebsites.net/api/command \
+            -d "{\"command\":\"cd /home/site/wwwroot && $PYTHON_PATH -m scripts.migrate 2>&1\", \"dir\":\"/home/site/wwwroot\"}")
+        else
+          echo "❌ ERROR: No migration script found in /home/site/wwwroot/scripts/"
+          exit 1
         fi
-        
-        echo "✅ Database migration completed successfully"
+
+        MIGRATION_HTTP_STATUS=$(echo "$MIGRATION_RESPONSE" | tail -n1)
+        MIGRATION_BODY=$(echo "$MIGRATION_RESPONSE" | sed '$d')
+
+        echo ""
+        echo "=== Migration Output ==="
+        echo "$MIGRATION_BODY"
+        echo "======================="
+        echo ""
+        echo "Migration HTTP Status: $MIGRATION_HTTP_STATUS"
+
+        if [ "$MIGRATION_HTTP_STATUS" != "200" ]; then
+          echo "❌ ERROR: Migration request failed with HTTP status $MIGRATION_HTTP_STATUS"
+          exit 1
+        fi
+
+        # Check for common error patterns in the response
+        if echo "$MIGRATION_BODY" | grep -iE "error.*running.*migration|migration.*failed|traceback \(most recent call last\)"; then
+          echo "❌ ERROR: Migration script reported errors"
+          echo ""
+          echo "Migration will be retried automatically by the startup script when the app starts."
+          echo "Check the application logs for more details."
+          exit 1
+        fi
+
+        # Check for success indicators
+        if echo "$MIGRATION_BODY" | grep -qE "✅|completed successfully|Migrations completed"; then
+          echo "✅ Database migration completed successfully"
+        else
+          echo "⚠️  Migration response doesn't contain clear success indicator"
+          echo "Migration will be verified by the startup script when the app starts."
+        fi
     
     - name: Start Azure Web App after deployment
       run: |
