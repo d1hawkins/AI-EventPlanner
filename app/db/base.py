@@ -38,7 +38,8 @@ def create_db_engine(database_url: str):
         )
     
     # Validate PostgreSQL URL
-    if not database_url.startswith("postgresql"):
+    # Accept both 'postgres://' and 'postgresql://' URL schemes (both are valid for PostgreSQL)
+    if not (database_url.startswith("postgresql") or database_url.startswith("postgres://")):
         raise ValueError(
             f"Only PostgreSQL databases are supported. "
             f"DATABASE_URL starts with: {database_url.split(':')[0]} "

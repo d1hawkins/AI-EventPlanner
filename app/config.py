@@ -98,7 +98,8 @@ if not DATABASE_URL:
     )
 
 # Additional validation: Reject non-PostgreSQL databases
-if DATABASE_URL and not DATABASE_URL.startswith("postgresql"):
+# Accept both 'postgres://' and 'postgresql://' URL schemes (both are valid for PostgreSQL)
+if DATABASE_URL and not (DATABASE_URL.startswith("postgresql") or DATABASE_URL.startswith("postgres://")):
     env = os.getenv("ENVIRONMENT", "").lower()
     raise ValueError(
         f"Only PostgreSQL databases are supported. "
