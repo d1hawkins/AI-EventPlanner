@@ -16,7 +16,8 @@ import threading
 from sqlalchemy.orm import Session
 
 from app.state.manager import StateManager
-from app.db.models_updated import Organization, Conversation, AgentState
+from app.db.models_saas import Organization
+from app.db.models_updated import Conversation, AgentState
 from app.db.session import get_db
 
 
