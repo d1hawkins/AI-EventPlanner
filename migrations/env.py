@@ -65,6 +65,10 @@ if database_url:
                     parsed.fragment
                 ))
 
+                # Escape % for ConfigParser (Alembic's INI parser treats % as interpolation)
+                # Replace % with %% so ConfigParser will convert it back to %
+                database_url = database_url.replace('%', '%%')
+
                 print("INFO: URL-encoded credentials for Azure PostgreSQL compatibility")
     except Exception as e:
         print(f"WARNING: Could not URL-encode credentials: {e}")
