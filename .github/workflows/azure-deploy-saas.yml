@@ -389,69 +389,91 @@ jobs:
           echo "Runtime is already correctly set to PYTHON|3.10"
         fi
 
-    - name: Verify deployed files on Kudu
+    - name: Verify and upload scripts to Azure
       run: |
         set -euo pipefail
-        
-        echo "=== Verifying Deployed Files on Azure Web App ==="
-        
+
+        echo "=== Verifying and Uploading Scripts to Azure Web App ==="
+
         USERNAME=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingUserName -o tsv)
         PASSWORD=$(az webapp deployment list-publishing-credentials --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" --name ai-event-planner-saas-py --query publishingPassword -o tsv)
-        
+
         if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
-          echo "❌ ERROR: Failed to retrieve deployment credentials for file verification"
-          echo "Cannot verify deployed files - proceeding with migration attempt"
-        else
-          echo "✅ Got deployment credentials for file verification"
-          
-          echo "📁 Listing /site/wwwroot root directory:"
-          ROOT_RESPONSE=$(curl -s -u "$USERNAME:$PASSWORD" https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/ || echo "ERROR_FETCHING_ROOT")
-          
-          if [[ "$ROOT_RESPONSE" == "ERROR_FETCHING_ROOT" ]]; then
-            echo "❌ Failed to fetch root directory listing"
-          else
-            echo "$ROOT_RESPONSE" | sed -n '1,50p'  # Show first 50 lines to avoid overflow
-          fi
-          
-          echo ""
-          echo "📁 Checking for scripts directory:"
-          SCRIPTS_RESPONSE=$(curl -s -u "$USERNAME:$PASSWORD" https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/scripts/ || echo "ERROR_FETCHING_SCRIPTS")
-          
-          if [[ "$SCRIPTS_RESPONSE" == "ERROR_FETCHING_SCRIPTS" ]]; then
-            echo "❌ scripts/ directory not found or inaccessible"
-          else
-            echo "✅ scripts/ directory found. Contents:"
-            echo "$SCRIPTS_RESPONSE" | sed -n '1,20p'  # Show first 20 lines
-            
-            # Check specifically for migrate.py
-            if echo "$SCRIPTS_RESPONSE" | grep -q "migrate.py"; then
-              echo "✅ migrate.py found in scripts directory"
-            else
-              echo "❌ WARNING: migrate.py NOT found in scripts directory"
-            fi
-          fi
-          
-          echo ""
-          echo "📁 Checking for other key directories:"
-          
-          # Check app directory
-          APP_RESPONSE=$(curl -s -u "$USERNAME:$PASSWORD" https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/app/ || echo "ERROR_FETCHING_APP")
-          if [[ "$APP_RESPONSE" != "ERROR_FETCHING_APP" ]]; then
-            echo "✅ app/ directory exists"
-          else
-            echo "❌ app/ directory not found"
-          fi
-          
-          # Check migrations directory
-          MIGRATIONS_RESPONSE=$(curl -s -u "$USERNAME:$PASSWORD" https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/migrations/ || echo "ERROR_FETCHING_MIGRATIONS")
-          if [[ "$MIGRATIONS_RESPONSE" != "ERROR_FETCHING_MIGRATIONS" ]]; then
-            echo "✅ migrations/ directory exists"
-          else
-            echo "❌ migrations/ directory not found"
-          fi
+          echo "❌ ERROR: Failed to retrieve deployment credentials"
+          echo "Cannot upload scripts - they must be in the main deployment"
+          exit 0  # Don't fail the workflow
         fi
-        
-        echo "=== File verification complete ==="
+
+        echo "✅ Got deployment credentials"
+
+        # Check if scripts directory and migrate.py exist on Azure
+        echo "📁 Checking for scripts/migrate.py on Azure..."
+        MIGRATE_CHECK=$(curl -s -o /dev/null -w "%{http_code}" -u "$USERNAME:$PASSWORD" \
+          https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/scripts/migrate.py)
+
+        if [ "$MIGRATE_CHECK" == "200" ]; then
+          echo "✅ scripts/migrate.py already exists on Azure"
+        else
+          echo "⚠️  scripts/migrate.py NOT found on Azure - uploading scripts directory..."
+
+          # Create a zip of the scripts directory
+          echo "Creating scripts.zip..."
+          if [ ! -d "scripts" ]; then
+            echo "❌ ERROR: scripts/ directory not found in repository!"
+            exit 1
+          fi
+
+          cd scripts
+          zip -r ../scripts.zip .
+          cd ..
+
+          echo "📦 Uploading scripts.zip to Azure via Kudu API..."
+          UPLOAD_RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT -u "$USERNAME:$PASSWORD" \
+            --data-binary @scripts.zip \
+            -H "Content-Type: application/zip" \
+            https://ai-event-planner-saas-py.scm.azurewebsites.net/api/zip/site/wwwroot/scripts/)
+
+          UPLOAD_HTTP_CODE=$(echo "$UPLOAD_RESPONSE" | tail -n1)
+
+          if [ "$UPLOAD_HTTP_CODE" == "200" ] || [ "$UPLOAD_HTTP_CODE" == "201" ]; then
+            echo "✅ Scripts uploaded successfully"
+          else
+            echo "⚠️  Upload response code: $UPLOAD_HTTP_CODE"
+          fi
+
+          # Wait for extraction
+          echo "Waiting 5 seconds for file extraction..."
+          sleep 5
+
+          # Verify the upload
+          echo "Verifying upload..."
+          VERIFY_CHECK=$(curl -s -o /dev/null -w "%{http_code}" -u "$USERNAME:$PASSWORD" \
+            https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/scripts/migrate.py)
+
+          if [ "$VERIFY_CHECK" == "200" ]; then
+            echo "✅ Verified: scripts/migrate.py is now on Azure"
+          else
+            echo "❌ ERROR: migrate.py still not found after upload (HTTP $VERIFY_CHECK)"
+            echo "Attempting to list scripts directory..."
+            curl -s -u "$USERNAME:$PASSWORD" \
+              https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/scripts/ || echo "Could not list scripts"
+          fi
+
+          # Clean up local zip
+          rm -f scripts.zip
+        fi
+
+        # Also check for comprehensive migration script
+        COMPREHENSIVE_CHECK=$(curl -s -o /dev/null -w "%{http_code}" -u "$USERNAME:$PASSWORD" \
+          https://ai-event-planner-saas-py.scm.azurewebsites.net/api/vfs/site/wwwroot/scripts/run_azure_migration_comprehensive.py)
+
+        if [ "$COMPREHENSIVE_CHECK" == "200" ]; then
+          echo "✅ run_azure_migration_comprehensive.py found on Azure"
+        else
+          echo "⚠️  run_azure_migration_comprehensive.py not found (will use basic migration)"
+        fi
+
+        echo "=== Script verification and upload complete ==="
     
     - name: Run database migrations with comprehensive script
       run: |
