@@ -19,8 +19,9 @@ from app.db.models_tenant_conversations import (
     ConversationContext,
     ConversationParticipant
 )
+from app.db.models import User
 from app.db.models_saas import Organization
-from app.db.models_updated import User, Event
+from app.db.models_updated import Event
 from app.utils.conversation_memory import ConversationMemory
 from app.middleware.tenant import get_tenant_id, get_current_organization
 

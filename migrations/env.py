@@ -31,6 +31,45 @@ target_metadata = Base.metadata
 # Override the sqlalchemy.url with the DATABASE_URL from environment
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
+    # Convert postgres:// to postgresql:// for SQLAlchemy 2.0 compatibility
+    # SQLAlchemy 2.0+ requires 'postgresql://' as the dialect name
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+        print("INFO: Converted postgres:// URL to postgresql:// for SQLAlchemy 2.0 compatibility")
+
+    # URL-encode username and password for Azure PostgreSQL compatibility
+    # Azure usernames contain @ which must be encoded for SQLAlchemy
+    try:
+        from urllib.parse import urlparse, quote, urlunparse
+        parsed = urlparse(database_url)
+
+        if parsed.username and parsed.password:
+            # Check if username contains @ (Azure PostgreSQL format: user@server)
+            if '@' in parsed.username:
+                # URL-encode the username and password
+                encoded_username = quote(parsed.username, safe='')
+                encoded_password = quote(parsed.password, safe='')
+
+                # Reconstruct the netloc with encoded credentials
+                netloc = f"{encoded_username}:{encoded_password}@{parsed.hostname}"
+                if parsed.port:
+                    netloc += f":{parsed.port}"
+
+                # Reconstruct the full URL
+                database_url = urlunparse((
+                    parsed.scheme,
+                    netloc,
+                    parsed.path,
+                    parsed.params,
+                    parsed.query,
+                    parsed.fragment
+                ))
+
+                print("INFO: URL-encoded credentials for Azure PostgreSQL compatibility")
+    except Exception as e:
+        print(f"WARNING: Could not URL-encode credentials: {e}")
+        # Continue with the original URL
+
     config.set_main_option("sqlalchemy.url", database_url)
     # Mask the password in the URL for logging
     masked_url = database_url

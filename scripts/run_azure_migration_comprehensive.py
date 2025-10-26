@@ -51,17 +51,44 @@ def verify_database_connection() -> Tuple[bool, Optional[str]]:
         print("INFO: Converted postgres:// URL to postgresql:// for SQLAlchemy 2.0 compatibility")
 
     try:
-        # Parse the DATABASE_URL to extract connection parameters
-        from urllib.parse import urlparse
+        # Parse and reconstruct URL with proper encoding for psycopg2
+        from urllib.parse import urlparse, quote, urlunparse
         parsed = urlparse(database_url)
 
+        # Display connection info
         print(f"  Host: {parsed.hostname}")
         print(f"  Port: {parsed.port or 5432}")
-        print(f"  Database: {parsed.path[1:]}")
+        print(f"  Database: {parsed.path[1:] if parsed.path else 'unknown'}")
         print(f"  Username: {parsed.username}")
 
-        # Test connection
-        conn = psycopg2.connect(database_url)
+        # Reconstruct URL with URL-encoded username and password
+        # Azure PostgreSQL usernames contain @ which must be encoded for psycopg2
+        if parsed.username and parsed.password:
+            # URL-encode the username and password
+            encoded_username = quote(parsed.username, safe='')
+            encoded_password = quote(parsed.password, safe='')
+
+            # Reconstruct the netloc with encoded credentials
+            netloc = f"{encoded_username}:{encoded_password}@{parsed.hostname}"
+            if parsed.port:
+                netloc += f":{parsed.port}"
+
+            # Reconstruct the full URL
+            encoded_url = urlunparse((
+                parsed.scheme,
+                netloc,
+                parsed.path,
+                parsed.params,
+                parsed.query,
+                parsed.fragment
+            ))
+
+            print("  Using URL-encoded credentials for psycopg2 compatibility")
+        else:
+            encoded_url = database_url
+
+        # Test connection - using URL-encoded version for psycopg2
+        conn = psycopg2.connect(encoded_url)
         cursor = conn.cursor()
 
         # Get PostgreSQL version
