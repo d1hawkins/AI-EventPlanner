@@ -51,16 +51,19 @@ def verify_database_connection() -> Tuple[bool, Optional[str]]:
         print("INFO: Converted postgres:// URL to postgresql:// for SQLAlchemy 2.0 compatibility")
 
     try:
-        # Parse the DATABASE_URL to extract connection parameters
-        from urllib.parse import urlparse
-        parsed = urlparse(database_url)
+        # Try to parse and display connection parameters (may fail with special characters in password)
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(database_url)
+            print(f"  Host: {parsed.hostname}")
+            print(f"  Port: {parsed.port or 5432}")
+            print(f"  Database: {parsed.path[1:] if parsed.path else 'unknown'}")
+            print(f"  Username: {parsed.username}")
+        except Exception as parse_err:
+            print(f"  (Could not parse URL details: {parse_err})")
+            print(f"  Attempting connection anyway...")
 
-        print(f"  Host: {parsed.hostname}")
-        print(f"  Port: {parsed.port or 5432}")
-        print(f"  Database: {parsed.path[1:]}")
-        print(f"  Username: {parsed.username}")
-
-        # Test connection
+        # Test connection - psycopg2 handles URL encoding correctly
         conn = psycopg2.connect(database_url)
         cursor = conn.cursor()
 

@@ -31,6 +31,12 @@ target_metadata = Base.metadata
 # Override the sqlalchemy.url with the DATABASE_URL from environment
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
+    # Convert postgres:// to postgresql:// for SQLAlchemy 2.0 compatibility
+    # SQLAlchemy 2.0+ requires 'postgresql://' as the dialect name
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+        print("INFO: Converted postgres:// URL to postgresql:// for SQLAlchemy 2.0 compatibility")
+
     config.set_main_option("sqlalchemy.url", database_url)
     # Mask the password in the URL for logging
     masked_url = database_url
