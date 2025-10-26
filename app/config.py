@@ -98,7 +98,8 @@ if not DATABASE_URL:
     )
 
 # Additional validation: Reject non-PostgreSQL databases
-if DATABASE_URL and not DATABASE_URL.startswith("postgresql"):
+# Accept both 'postgres://' and 'postgresql://' URL schemes (both are valid for PostgreSQL)
+if DATABASE_URL and not (DATABASE_URL.startswith("postgresql") or DATABASE_URL.startswith("postgres://")):
     env = os.getenv("ENVIRONMENT", "").lower()
     raise ValueError(
         f"Only PostgreSQL databases are supported. "
@@ -106,6 +107,12 @@ if DATABASE_URL and not DATABASE_URL.startswith("postgresql"):
         "Please configure a PostgreSQL DATABASE_URL. "
         "For local development, see docs/LOCAL_POSTGRES_SETUP.md"
     )
+
+# Convert postgres:// to postgresql:// for SQLAlchemy 2.0 compatibility
+# SQLAlchemy 2.0+ requires 'postgresql://' as the dialect name
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    print("INFO: Converted postgres:// URL to postgresql:// for SQLAlchemy 2.0 compatibility")
 
 # Server
 HOST: str = os.getenv("HOST", "0.0.0.0")
