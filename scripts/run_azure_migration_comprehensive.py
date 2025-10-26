@@ -43,6 +43,13 @@ def verify_database_connection() -> Tuple[bool, Optional[str]]:
     if not (database_url.startswith("postgresql") or database_url.startswith("postgres://")):
         return False, f"DATABASE_URL must be a PostgreSQL connection string. Got: {database_url[:20]}..."
 
+    # Convert postgres:// to postgresql:// for SQLAlchemy 2.0 compatibility
+    # SQLAlchemy 2.0+ requires 'postgresql://' as the dialect name
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+        os.environ["DATABASE_URL"] = database_url
+        print("INFO: Converted postgres:// URL to postgresql:// for SQLAlchemy 2.0 compatibility")
+
     try:
         # Parse the DATABASE_URL to extract connection parameters
         from urllib.parse import urlparse

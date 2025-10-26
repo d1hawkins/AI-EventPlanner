@@ -46,7 +46,13 @@ def create_db_engine(database_url: str):
             "Please configure a PostgreSQL DATABASE_URL. "
             "For local development, see docs/LOCAL_POSTGRES_SETUP.md"
         )
-    
+
+    # Convert postgres:// to postgresql:// for SQLAlchemy 2.0 compatibility
+    # SQLAlchemy 2.0+ requires 'postgresql://' as the dialect name
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+        print("INFO: Converted postgres:// URL to postgresql:// for SQLAlchemy 2.0 compatibility")
+
     try:
         # PostgreSQL-specific configuration
         env = os.getenv("ENVIRONMENT", "").lower() or "production"

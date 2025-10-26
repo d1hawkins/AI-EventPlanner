@@ -108,6 +108,12 @@ if DATABASE_URL and not (DATABASE_URL.startswith("postgresql") or DATABASE_URL.s
         "For local development, see docs/LOCAL_POSTGRES_SETUP.md"
     )
 
+# Convert postgres:// to postgresql:// for SQLAlchemy 2.0 compatibility
+# SQLAlchemy 2.0+ requires 'postgresql://' as the dialect name
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    print("INFO: Converted postgres:// URL to postgresql:// for SQLAlchemy 2.0 compatibility")
+
 # Server
 HOST: str = os.getenv("HOST", "0.0.0.0")
 PORT: int = int(os.getenv("PORT", "8000"))
