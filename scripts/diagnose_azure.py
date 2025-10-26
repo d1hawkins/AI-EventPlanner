@@ -117,7 +117,8 @@ def check_database_connection(app_settings: Dict[str, str]) -> bool:
         return True
     
     # Check if it's a valid PostgreSQL connection string
-    if not database_url.startswith("postgresql://"):
+    # Accept both 'postgres://' and 'postgresql://' URL schemes (both are valid for PostgreSQL)
+    if not (database_url.startswith("postgresql://") or database_url.startswith("postgres://")):
         print("DATABASE_URL is not a valid PostgreSQL connection string.")
         return False
     

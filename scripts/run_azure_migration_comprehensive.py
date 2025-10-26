@@ -39,7 +39,8 @@ def verify_database_connection() -> Tuple[bool, Optional[str]]:
     if not database_url:
         return False, "DATABASE_URL environment variable is not set"
 
-    if not database_url.startswith("postgresql"):
+    # Accept both 'postgres://' and 'postgresql://' URL schemes (both are valid for PostgreSQL)
+    if not (database_url.startswith("postgresql") or database_url.startswith("postgres://")):
         return False, f"DATABASE_URL must be a PostgreSQL connection string. Got: {database_url[:20]}..."
 
     try:
