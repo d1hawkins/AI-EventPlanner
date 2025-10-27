@@ -1,7 +1,7 @@
 """SaaS migration
 
 Revision ID: 20250322_saas
-Revises: 
+Revises: 20250320_initial
 Create Date: 2025-03-22 17:38:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '20250322_saas'
-down_revision = None
+down_revision = '20250320_initial'
 branch_labels = None
 depends_on = None
 

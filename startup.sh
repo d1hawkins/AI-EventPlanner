@@ -52,12 +52,24 @@ echo "TAVILY_API_KEY: $(if [ -n "$TAVILY_API_KEY" ]; then echo "***SET***"; else
 # Create directories if they don't exist
 mkdir -p /home/site/wwwroot/logs
 
-# Run database migrations if needed
-echo "Running database migrations..."
-python scripts/run_azure_migration_comprehensive.py --max-retries 3 --retry-delay 5 || {
-    echo "WARNING: Comprehensive migration failed, trying fallback migration..."
-    python -m scripts.migrate || echo "Migration failed, continuing with application start..."
-}
+# Check if DROP_AND_RELOAD flag is set
+if [ "$DROP_AND_RELOAD" = "true" ]; then
+    echo "⚠️  DROP_AND_RELOAD flag detected!"
+    echo "This will DROP ALL TABLES and reload the database!"
+    python scripts/drop_and_reload_db.py || {
+        echo "ERROR: Drop and reload failed!"
+        exit 1
+    }
+    # Unset the flag after running to prevent accidental re-runs
+    echo "✅ Drop and reload completed. Remember to UNSET DROP_AND_RELOAD in Azure settings!"
+else
+    # Run database migrations if needed
+    echo "Running database migrations..."
+    python scripts/run_azure_migration_comprehensive.py --max-retries 3 --retry-delay 5 || {
+        echo "WARNING: Comprehensive migration failed, trying fallback migration..."
+        python -m scripts.migrate || echo "Migration failed, continuing with application start..."
+    }
+fi
 
 # Start the application
 echo "Starting uvicorn server..."
