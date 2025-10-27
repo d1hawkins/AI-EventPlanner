@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from app.db.session import get_db
 from app.db.models_updated import Event
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, get_current_user_id
 from app.middleware.tenant import get_tenant_id, require_tenant
 from app.subscription.feature_control import get_feature_control, FeatureNotAvailableError
 from app.agents.agent_factory import get_agent_factory
@@ -215,7 +215,7 @@ async def get_agent_response(
     conversation_id: Optional[str] = None,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     Get a response from an agent with tenant context and comprehensive logging.
@@ -525,7 +525,7 @@ async def get_conversation_history(
     conversation_id: str,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     Get conversation history with tenant context and comprehensive logging.
@@ -664,7 +664,7 @@ async def list_conversations(
     offset: int = 0,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     List conversations with tenant context and comprehensive logging.
@@ -757,7 +757,7 @@ async def delete_conversation(
     conversation_id: str,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     Delete a conversation with tenant context and comprehensive logging.
@@ -860,7 +860,7 @@ async def delete_conversation(
 async def get_available_agents(
     request: Request,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     Get available agents for the current subscription tier.
@@ -946,7 +946,7 @@ async def send_message_to_agent(
     request: Request,
     message_request: AgentMessageRequest = Body(...),
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     Send a message to an agent and get a response.
@@ -975,7 +975,7 @@ async def get_agent_conversation(
     conversation_id: str,
     request: Request,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     Get conversation history for an agent.
@@ -1003,7 +1003,7 @@ async def list_agent_conversations(
     offset: int = 0,
     request: Request = None,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     List conversations for the current organization.
@@ -1032,7 +1032,7 @@ async def delete_agent_conversation(
     conversation_id: str,
     request: Request,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     Delete a conversation.
@@ -1061,7 +1061,7 @@ async def get_agent_analytics(
     end_date: str = None,
     agent_type: str = None,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     Get analytics data for agent usage.
@@ -1176,7 +1176,7 @@ async def attach_event_to_conversation(
     request: Request,
     attach_request: AttachEventRequest = Body(...),
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     Attach an event to a conversation.
@@ -1273,7 +1273,7 @@ async def submit_agent_feedback(
     request: Request,
     feedback_request: AgentFeedbackRequest = Body(...),
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     Submit feedback for an agent response.
@@ -1366,7 +1366,7 @@ async def get_conversation_memory_debug(
     conversation_id: str,
     request: Request,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user)
+    current_user_id: int = Depends(get_current_user_id)
 ) -> Dict[str, Any]:
     """
     Get conversation memory for debugging purposes.
