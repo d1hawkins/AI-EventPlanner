@@ -147,38 +147,34 @@
 
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Custom JS -->
+
+    <!-- Custom JS for step navigation -->
     <script>
         function nextStep(step) {
             // Hide all steps
             document.querySelectorAll('.signup-step').forEach(el => {
                 el.style.display = 'none';
             });
-            
+
             // Show the requested step
             document.getElementById('step' + step).style.display = 'block';
         }
-        
+
         function prevStep(step) {
             // Hide all steps
             document.querySelectorAll('.signup-step').forEach(el => {
                 el.style.display = 'none';
             });
-            
+
             // Show the requested step
             document.getElementById('step' + step).style.display = 'block';
         }
-        
-        document.getElementById('signupForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            // In a real application, this would submit the form data to the server
-            // For demo purposes, redirect to the dashboard
-            window.location.href = '/saas/dashboard.html';
-        });
     </script>
+
+    <!-- Authentication JS - handles form submission and registration -->
+    <script src="/saas/js/auth.js"></script>
 </body>
 </html>
