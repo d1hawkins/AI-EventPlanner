@@ -110,11 +110,48 @@ python scripts/verify_azure_db.py --verbose
 
 The application has the following migration files in `migrations/versions/`:
 
-1. **20250322_saas_migration.py** - Initial SaaS schema (organizations, subscriptions, etc.)
-2. **20250722_conversation_memory.py** - Conversation memory enhancements
-3. **20250727_tenant_conversations.py** - Tenant-aware conversation system
+1. **20250320_initial_schema.py** - Base schema (users, conversations, messages, events, agent_states)
+2. **20250322_saas_migration.py** - SaaS schema (organizations, subscriptions, plans)
+3. **20250722_conversation_memory.py** - Conversation memory enhancements
+4. **20250727_tenant_conversations.py** - Tenant-aware conversation system
 
-These migrations are applied in order using Alembic.
+These migrations are applied in order using Alembic's revision chain:
+```
+20250320_initial → 20250322_saas → 20250722_conversation_memory → 20250727_tenant_conversations
+```
+
+### Drop and Reload Script
+
+**File:** `scripts/drop_and_reload_db.py`
+
+This script provides a nuclear option to completely reset the database:
+- Drops ALL tables in the database (including alembic_version)
+- Runs all migrations from scratch
+- Verifies the final database state
+
+**⚠️ WARNING: This will DELETE ALL DATA in the database!**
+
+**Usage via Azure Environment Variable:**
+
+1. Go to Azure Portal → App Service → Configuration → Application Settings
+2. Add new setting: `DROP_AND_RELOAD` = `true`
+3. Save and restart the application
+4. **IMPORTANT**: After the app starts successfully, immediately REMOVE the `DROP_AND_RELOAD` setting to prevent accidental re-runs
+
+**Usage via Kudu Console:**
+
+```bash
+cd /home/site/wwwroot
+python scripts/drop_and_reload_db.py
+```
+
+The script includes a 5-second countdown before execution to prevent accidental runs.
+
+**When to use:**
+- Database is in an inconsistent state
+- Migration chain is broken
+- Need to start completely fresh
+- Tables exist but alembic_version is missing or corrupt
 
 ## Environment Variables
 
@@ -227,11 +264,13 @@ If you encounter issues:
 
 ## Migration History
 
-- **2025-03-22**: Initial SaaS migration (organizations, subscriptions)
+- **2025-03-20**: Initial schema migration (base tables)
+- **2025-03-22**: SaaS migration (organizations, subscriptions)
 - **2025-07-22**: Conversation memory enhancements
 - **2025-07-27**: Tenant-aware conversation system
 - **2025-10-25**: PostgreSQL-only migration (removed SQLite support)
+- **2025-10-27**: Fixed migration chain references and added drop/reload capability
 
 ---
 
-**Last Updated:** October 25, 2025
+**Last Updated:** October 27, 2025
