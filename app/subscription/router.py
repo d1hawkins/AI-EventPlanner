@@ -13,14 +13,15 @@ from app.db.models_saas import Organization, OrganizationUser, SubscriptionPlan,
 from app.auth.dependencies import get_current_user
 from app.middleware.tenant import get_tenant_id, require_tenant
 from app.subscription.schemas import (
-    OrganizationCreate, 
-    OrganizationResponse, 
+    OrganizationCreate,
+    OrganizationResponse,
     OrganizationUserCreate,
     OrganizationUserResponse,
     SubscriptionCreate,
     SubscriptionResponse,
     SubscriptionPlanResponse
 )
+from app.subscription.feature_control import get_feature_control
 
 router = APIRouter()
 
@@ -155,6 +156,54 @@ async def get_organization(
         )
     
     return OrganizationResponseWithFeatures.from_orm(organization)
+
+
+@router.get("/organizations/{organization_id}/usage-limits")
+async def get_organization_usage_limits(
+    organization_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get usage limits for an organization based on its subscription plan.
+
+    Args:
+        organization_id: Organization ID
+        db: Database session
+        current_user: Current authenticated user
+
+    Returns:
+        Dictionary with usage limits
+    """
+    # Check if user is a member of the organization
+    org_user = db.query(OrganizationUser).filter(
+        OrganizationUser.organization_id == organization_id,
+        OrganizationUser.user_id == current_user.id
+    ).first()
+
+    if not org_user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
+    # Get organization to verify it exists
+    organization = db.query(Organization).filter(Organization.id == organization_id).first()
+
+    if not organization:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
+        )
+
+    # Get feature control and usage limits
+    feature_control = get_feature_control(db, organization_id)
+    limits = feature_control.get_all_usage_limits()
+
+    # Add subscription tier information
+    limits["subscription_tier"] = feature_control.get_subscription_tier()
+
+    return limits
 
 
 @router.post("/organizations/{organization_id}/users", response_model=OrganizationUserResponse)

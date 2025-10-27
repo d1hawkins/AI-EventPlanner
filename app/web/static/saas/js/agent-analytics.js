@@ -537,57 +537,84 @@ document.addEventListener('DOMContentLoaded', function() {
      * @param {Object} data - Analytics data from the API
      */
     function updateUsageTrends(data) {
-        // These values would typically come from the subscription plan
-        // For now, we'll use placeholder values
-        const conversationsLimit = 50;
-        const messagesLimit = 500;
-        
-        // Get current month's usage
-        const currentDate = new Date();
-        const currentMonth = currentDate.getMonth();
-        const currentYear = currentDate.getFullYear();
-        
-        // Filter conversations for current month
-        let currentMonthConversations = 0;
-        let currentMonthMessages = 0;
-        
-        if (data.conversations_by_date) {
-            data.conversations_by_date.forEach(item => {
-                const date = new Date(item.date);
-                if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-                    currentMonthConversations += item.count;
-                }
-            });
-        }
-        
-        // Assume messages are proportional to conversations for this example
-        // In a real implementation, you would filter messages by date as well
-        if (data.total_conversations > 0 && data.messages_by_agent) {
-            let totalMessages = 0;
-            data.messages_by_agent.forEach(item => {
-                totalMessages += item.count;
-            });
-            
-            currentMonthMessages = Math.round((currentMonthConversations / data.total_conversations) * totalMessages);
-        }
-        
-        // Update usage displays
-        document.getElementById('conversationsQuota').textContent = `${currentMonthConversations}/${conversationsLimit}`;
-        document.getElementById('messagesQuota').textContent = `${currentMonthMessages}/${messagesLimit}`;
-        
-        // Update progress bars
-        const conversationsPercent = Math.min(Math.round((currentMonthConversations / conversationsLimit) * 100), 100);
-        const messagesPercent = Math.min(Math.round((currentMonthMessages / messagesLimit) * 100), 100);
-        
-        const conversationsProgress = document.getElementById('conversationsProgress');
-        conversationsProgress.style.width = `${conversationsPercent}%`;
-        conversationsProgress.setAttribute('aria-valuenow', conversationsPercent);
-        conversationsProgress.setAttribute('aria-label', `${conversationsPercent} percent of conversation quota used`);
-        
-        const messagesProgress = document.getElementById('messagesProgress');
-        messagesProgress.style.width = `${messagesPercent}%`;
-        messagesProgress.setAttribute('aria-valuenow', messagesPercent);
-        messagesProgress.setAttribute('aria-label', `${messagesPercent} percent of message quota used`);
+        // Fetch usage limits from the subscription API
+        const organizationId = localStorage.getItem('organizationId') || '1';
+
+        fetch(`/api/subscription/organizations/${organizationId}/usage-limits`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(limits => {
+            // Get limits from API response
+            const conversationsLimit = limits.max_conversations === -1 ? '∞' : limits.max_conversations;
+            const messagesLimit = limits.max_messages === -1 ? '∞' : limits.max_messages;
+
+            // Get current month's usage
+            const currentDate = new Date();
+            const currentMonth = currentDate.getMonth();
+            const currentYear = currentDate.getFullYear();
+
+            // Filter conversations for current month
+            let currentMonthConversations = 0;
+            let currentMonthMessages = 0;
+
+            if (data.conversations_by_date) {
+                data.conversations_by_date.forEach(item => {
+                    const date = new Date(item.date);
+                    if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+                        currentMonthConversations += item.count;
+                    }
+                });
+            }
+
+            // Assume messages are proportional to conversations for this example
+            // In a real implementation, you would filter messages by date as well
+            if (data.total_conversations > 0 && data.messages_by_agent) {
+                let totalMessages = 0;
+                data.messages_by_agent.forEach(item => {
+                    totalMessages += item.count;
+                });
+
+                currentMonthMessages = Math.round((currentMonthConversations / data.total_conversations) * totalMessages);
+            }
+
+            // Update usage displays
+            document.getElementById('conversationsQuota').textContent = `${currentMonthConversations}/${conversationsLimit}`;
+            document.getElementById('messagesQuota').textContent = `${currentMonthMessages}/${messagesLimit}`;
+
+            // Update progress bars (handle unlimited case)
+            const conversationsPercent = conversationsLimit === '∞'
+                ? 0
+                : Math.min(Math.round((currentMonthConversations / conversationsLimit) * 100), 100);
+
+            const messagesPercent = messagesLimit === '∞'
+                ? 0
+                : Math.min(Math.round((currentMonthMessages / messagesLimit) * 100), 100);
+
+            const conversationsProgress = document.getElementById('conversationsProgress');
+            conversationsProgress.style.width = `${conversationsPercent}%`;
+            conversationsProgress.setAttribute('aria-valuenow', conversationsPercent);
+            conversationsProgress.setAttribute('aria-label', `${conversationsPercent} percent of conversation quota used`);
+
+            const messagesProgress = document.getElementById('messagesProgress');
+            messagesProgress.style.width = `${messagesPercent}%`;
+            messagesProgress.setAttribute('aria-valuenow', messagesPercent);
+            messagesProgress.setAttribute('aria-label', `${messagesPercent} percent of message quota used`);
+        })
+        .catch(error => {
+            console.error('Error fetching usage limits:', error);
+            // Fallback to displaying current usage without limits
+            document.getElementById('conversationsQuota').textContent = 'N/A';
+            document.getElementById('messagesQuota').textContent = 'N/A';
+        });
     }
     
     /**
