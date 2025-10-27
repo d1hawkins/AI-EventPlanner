@@ -68,10 +68,10 @@ class TenantConversation(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     last_activity_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
-    # Relationships
-    organization = relationship("Organization", back_populates="tenant_conversations")
-    user = relationship("User", back_populates="tenant_conversations")
-    event = relationship("Event", back_populates="tenant_conversations")
+    # Relationships (one-way relationships to avoid circular dependency issues)
+    organization = relationship("Organization")
+    user = relationship("User")
+    event = relationship("Event")
     messages = relationship("TenantMessage", back_populates="conversation", cascade="all, delete-orphan")
     agent_states = relationship("TenantAgentState", back_populates="conversation", cascade="all, delete-orphan")
     conversation_context = relationship("ConversationContext", back_populates="conversation", uselist=False, cascade="all, delete-orphan")
@@ -293,30 +293,3 @@ class ConversationParticipant(Base):
     organization = relationship("Organization")
     conversation = relationship("TenantConversation")
     user = relationship("User")
-
-
-# Update existing models to include tenant conversation relationships
-def update_existing_models():
-    """
-    Function to add relationships to existing models.
-    This should be called after importing existing models.
-    """
-    try:
-        from app.db.models_saas import Organization
-        from app.db.models import User, Event
-        
-        # Add relationships to Organization
-        if not hasattr(Organization, 'tenant_conversations'):
-            Organization.tenant_conversations = relationship("TenantConversation", back_populates="organization")
-        
-        # Add relationships to User
-        if not hasattr(User, 'tenant_conversations'):
-            User.tenant_conversations = relationship("TenantConversation", back_populates="user")
-        
-        # Add relationships to Event
-        if not hasattr(Event, 'tenant_conversations'):
-            Event.tenant_conversations = relationship("TenantConversation", back_populates="event")
-            
-    except ImportError:
-        # Models not available yet, relationships will be added when models are imported
-        pass
