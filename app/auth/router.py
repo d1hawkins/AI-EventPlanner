@@ -14,8 +14,8 @@ from app.auth.dependencies import create_access_token, get_current_user
 
 router = APIRouter()
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing - use argon2 instead of bcrypt due to Azure bcrypt installation issues
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
