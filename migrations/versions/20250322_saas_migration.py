@@ -1,7 +1,7 @@
 """SaaS migration
 
 Revision ID: 20250322_saas
-Revises: 
+Revises: 20250320_initial
 Create Date: 2025-03-22 17:38:00.000000
 
 """

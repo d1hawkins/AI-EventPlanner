@@ -1,7 +1,7 @@
 """Add conversation memory table
 
 Revision ID: 20250722_conversation_memory
-Revises: 20250322_saas_migration
+Revises: 20250322_saas
 Create Date: 2025-07-22 00:33:00.000000
 
 """
