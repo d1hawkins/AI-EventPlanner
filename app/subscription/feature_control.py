@@ -45,6 +45,8 @@ class SubscriptionFeatureControl:
         "free": {
             "max_events": 5,
             "max_users": 2,
+            "max_conversations": 50,
+            "max_messages": 500,
             "advanced_recommendations": False,
             "custom_templates": False,
             "priority_support": False,
@@ -53,6 +55,8 @@ class SubscriptionFeatureControl:
         "professional": {
             "max_events": 20,
             "max_users": 10,
+            "max_conversations": 200,
+            "max_messages": 2000,
             "advanced_recommendations": True,
             "custom_templates": True,
             "priority_support": False,
@@ -61,6 +65,8 @@ class SubscriptionFeatureControl:
         "enterprise": {
             "max_events": -1,  # Unlimited
             "max_users": -1,   # Unlimited
+            "max_conversations": -1,  # Unlimited
+            "max_messages": -1,  # Unlimited
             "advanced_recommendations": True,
             "custom_templates": True,
             "priority_support": True,
@@ -266,11 +272,53 @@ class SubscriptionFeatureControl:
     def get_subscription_tier(self) -> str:
         """
         Get the subscription tier for the current organization.
-        
+
         Returns:
             The subscription tier (free, professional, or enterprise)
         """
         return self.plan_tier
+
+    def get_usage_limit(self, resource_type: str) -> int:
+        """
+        Get the usage limit for a specific resource type.
+
+        Args:
+            resource_type: The resource type (e.g., "events", "users", "conversations", "messages")
+
+        Returns:
+            The usage limit (-1 for unlimited, or a positive integer)
+        """
+        if not self.organization_id:
+            # Default to free tier limits if no organization context
+            return self.FEATURE_TIERS["free"].get(f"max_{resource_type}", 0)
+
+        # Check subscription status
+        if self.organization and self.organization.subscription_status != "active":
+            # Use free tier limits for inactive subscriptions
+            return self.FEATURE_TIERS["free"].get(f"max_{resource_type}", 0)
+
+        # Get the limit from the organization or plan tier
+        if resource_type == "users" and self.organization:
+            return self.organization.max_users
+        elif resource_type == "events" and self.organization:
+            return self.organization.max_events
+        else:
+            # Get from plan tier
+            return self.FEATURE_TIERS.get(self.plan_tier, {}).get(f"max_{resource_type}", 0)
+
+    def get_all_usage_limits(self) -> Dict[str, int]:
+        """
+        Get all usage limits for the current organization.
+
+        Returns:
+            Dictionary with all usage limits
+        """
+        return {
+            "max_events": self.get_usage_limit("events"),
+            "max_users": self.get_usage_limit("users"),
+            "max_conversations": self.get_usage_limit("conversations"),
+            "max_messages": self.get_usage_limit("messages")
+        }
 
 
 def get_feature_control(db: Session, organization_id: Optional[int] = None) -> SubscriptionFeatureControl:

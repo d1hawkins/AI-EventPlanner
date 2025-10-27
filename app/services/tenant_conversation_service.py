@@ -24,6 +24,8 @@ from app.db.models_saas import Organization
 from app.db.models_updated import Event
 from app.utils.conversation_memory import ConversationMemory
 from app.middleware.tenant import get_tenant_id, get_current_organization
+from app.utils.llm_factory import get_llm
+import re
 
 
 class TenantConversationService:
@@ -713,22 +715,215 @@ class TenantConversationService:
         return participant
     
     def _update_conversation_context(self, conversation_id: int, message: TenantMessage) -> None:
-        """Update conversation context based on a new message."""
-        # This is a placeholder for more sophisticated context analysis
-        # In a real implementation, you might use NLP to extract preferences,
-        # decisions, and other contextual information from the message content
-        
+        """Update conversation context based on a new message using NLP analysis."""
+
+        # Extract contextual information from the message
+        extracted_context = self._extract_context_from_message(message.content)
+
+        # Build context updates with extracted information
         context_updates = {
             "conversation_memory": {
                 "last_user_message": {
-                    "content": message.content[:200],  # First 200 chars
+                    "content": message.content[:200],  # First 200 chars for quick reference
                     "timestamp": message.timestamp.isoformat(),
                     "message_id": message.id
                 }
             }
         }
-        
+
+        # Add extracted preferences if found
+        if extracted_context.get("preferences"):
+            context_updates["user_preferences"] = extracted_context["preferences"]
+
+        # Add extracted decisions if found
+        if extracted_context.get("decisions"):
+            if "decisions" not in context_updates:
+                context_updates["decisions"] = []
+            context_updates["decisions"].extend(extracted_context["decisions"])
+
+        # Add extracted entities (dates, locations, people, etc.)
+        if extracted_context.get("entities"):
+            context_updates["entities"] = extracted_context["entities"]
+
+        # Add extracted requirements
+        if extracted_context.get("requirements"):
+            context_updates["requirements"] = extracted_context["requirements"]
+
+        # Add sentiment/tone analysis
+        if extracted_context.get("sentiment"):
+            context_updates["sentiment"] = extracted_context["sentiment"]
+
         self.update_conversation_context(conversation_id, context_updates)
+
+    def _extract_context_from_message(self, message_content: str) -> Dict[str, Any]:
+        """
+        Extract contextual information from a message using NLP.
+
+        This method uses LLM-based analysis to extract:
+        - User preferences (budget, venue type, food preferences, etc.)
+        - Decisions made
+        - Key entities (dates, locations, people)
+        - Requirements and constraints
+        - Sentiment/tone
+
+        Args:
+            message_content: The message text to analyze
+
+        Returns:
+            Dictionary containing extracted context information
+        """
+        if not message_content or len(message_content.strip()) < 10:
+            return {}
+
+        try:
+            # Use LLM to extract structured information from the message
+            llm = get_llm(temperature=0.1)  # Low temperature for consistent extraction
+
+            extraction_prompt = f"""Analyze the following message from a user planning an event and extract structured information.
+
+Message: "{message_content}"
+
+Extract and return a JSON object with the following structure:
+{{
+  "preferences": {{
+    "venue_type": "string or null (e.g., 'outdoor', 'ballroom', 'conference center')",
+    "location": "string or null",
+    "budget": "string or null (e.g., '$5000', '10000-15000')",
+    "date_preference": "string or null",
+    "food_preferences": "string or null",
+    "atmosphere": "string or null (e.g., 'formal', 'casual', 'professional')",
+    "other": {{}}
+  }},
+  "decisions": [
+    "list of concrete decisions made (e.g., 'decided on October 15th', 'chose Italian catering')"
+  ],
+  "entities": {{
+    "dates": ["list of mentioned dates"],
+    "locations": ["list of mentioned locations"],
+    "people": ["list of mentioned people/contacts"],
+    "vendors": ["list of mentioned vendors"]
+  }},
+  "requirements": [
+    "list of specific requirements or constraints (e.g., 'needs parking for 100 cars', 'must have AV equipment')"
+  ],
+  "sentiment": "positive|neutral|negative|mixed"
+}}
+
+Only include fields where you find relevant information. If a field has no information, use null or an empty list/object.
+Return ONLY the JSON object, no other text."""
+
+            # Get response from LLM
+            response = llm.invoke(extraction_prompt)
+            response_text = response.content.strip()
+
+            # Extract JSON from response (handle cases where LLM adds markdown formatting)
+            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            if json_match:
+                extracted_data = json.loads(json_match.group())
+
+                # Clean up null/empty values
+                cleaned_data = self._clean_extracted_data(extracted_data)
+                return cleaned_data
+            else:
+                # Fallback to basic extraction if LLM doesn't return valid JSON
+                return self._basic_context_extraction(message_content)
+
+        except Exception as e:
+            # If LLM extraction fails, fall back to basic pattern matching
+            print(f"Context extraction error: {e}")
+            return self._basic_context_extraction(message_content)
+
+    def _basic_context_extraction(self, message_content: str) -> Dict[str, Any]:
+        """
+        Fallback method for basic context extraction using pattern matching.
+
+        Args:
+            message_content: The message text to analyze
+
+        Returns:
+            Dictionary containing basic extracted context
+        """
+        context = {
+            "entities": {},
+            "requirements": []
+        }
+
+        # Extract dates using common patterns
+        date_patterns = [
+            r'\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?\s*,?\s*\d{4}\b',
+            r'\b\d{1,2}/\d{1,2}/\d{2,4}\b',
+            r'\b(?:next|this)\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b'
+        ]
+
+        dates = []
+        for pattern in date_patterns:
+            dates.extend(re.findall(pattern, message_content, re.IGNORECASE))
+
+        if dates:
+            context["entities"]["dates"] = dates
+
+        # Extract budget mentions
+        budget_pattern = r'\$\s*\d+(?:,\d{3})*(?:\.\d{2})?|\d+(?:,\d{3})*\s*dollars?'
+        budget_matches = re.findall(budget_pattern, message_content, re.IGNORECASE)
+
+        if budget_matches:
+            context["preferences"] = {"budget": ", ".join(budget_matches)}
+
+        # Extract attendee count
+        attendee_pattern = r'\b(\d+)\s+(?:people|attendees|guests|participants)\b'
+        attendee_matches = re.findall(attendee_pattern, message_content, re.IGNORECASE)
+
+        if attendee_matches:
+            if "requirements" not in context:
+                context["requirements"] = []
+            context["requirements"].append(f"Attendee count: {attendee_matches[0]}")
+
+        # Detect sentiment through keyword analysis
+        positive_keywords = ['excited', 'great', 'perfect', 'love', 'excellent', 'wonderful']
+        negative_keywords = ['concerned', 'worried', 'problem', 'issue', 'difficult', 'expensive']
+
+        message_lower = message_content.lower()
+        positive_count = sum(1 for word in positive_keywords if word in message_lower)
+        negative_count = sum(1 for word in negative_keywords if word in message_lower)
+
+        if positive_count > negative_count:
+            context["sentiment"] = "positive"
+        elif negative_count > positive_count:
+            context["sentiment"] = "negative"
+        else:
+            context["sentiment"] = "neutral"
+
+        return context
+
+    def _clean_extracted_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Remove null, empty, and meaningless values from extracted data.
+
+        Args:
+            data: Raw extracted data dictionary
+
+        Returns:
+            Cleaned data dictionary
+        """
+        cleaned = {}
+
+        for key, value in data.items():
+            if value is None:
+                continue
+            elif isinstance(value, dict):
+                cleaned_dict = self._clean_extracted_data(value)
+                if cleaned_dict:
+                    cleaned[key] = cleaned_dict
+            elif isinstance(value, list):
+                cleaned_list = [item for item in value if item]
+                if cleaned_list:
+                    cleaned[key] = cleaned_list
+            elif isinstance(value, str) and value.strip():
+                cleaned[key] = value.strip()
+            elif not isinstance(value, str):
+                cleaned[key] = value
+
+        return cleaned
 
 
 def get_tenant_conversation_service(
