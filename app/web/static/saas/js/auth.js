@@ -172,31 +172,62 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isMultiStep && currentStep.id === 'step3') {
                 // Multi-step form - final step
                 const termsCheck = document.getElementById('termsCheck').checked;
-                
+
                 if (!termsCheck) {
                     showToast('You must agree to the Terms of Service and Privacy Policy to continue.', 'error');
                     return;
                 }
-                
+
                 // Collect all form data
-                const formData = {
-                    fullName: document.getElementById('fullName').value,
-                    email: document.getElementById('email').value,
-                    password: document.getElementById('password').value,
-                    orgName: document.getElementById('orgName').value,
-                    orgSlug: document.getElementById('orgSlug').value,
-                    plan: document.querySelector('input[name="plan"]:checked').value,
-                    marketingConsent: document.getElementById('marketingCheck').checked
-                };
-                
-                console.log('Signup form submitted:', formData);
+                const fullName = document.getElementById('fullName').value;
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const orgName = document.getElementById('orgName').value;
+                const orgSlug = document.getElementById('orgSlug').value;
+                const plan = document.querySelector('input[name="plan"]:checked').value;
+                const marketingConsent = document.getElementById('marketingCheck').checked;
+
+                // Generate username from email (part before @)
+                const username = email.split('@')[0];
+
+                console.log('Signup form submitted:', { fullName, email, username, orgName, orgSlug, plan });
                 showLoading();
-                
-                // TODO: Implement full organization signup
-                setTimeout(function() {
+
+                // Register the user
+                fetch('/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        username: username,
+                        password: password,
+                        is_active: true
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.detail || 'Registration failed');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
                     hideLoading();
-                    window.location.href = '/saas/dashboard.html';
-                }, 1500);
+                    showToast('Registration successful! Please login.', 'success');
+
+                    // Redirect to login page
+                    setTimeout(() => {
+                        window.location.href = '/saas/login.html';
+                    }, 2000);
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Registration error:', error);
+                    showToast(error.message || 'Registration failed. Please try again.', 'error');
+                });
             } else {
                 // Simple registration form
                 const email = document.getElementById('email').value;
