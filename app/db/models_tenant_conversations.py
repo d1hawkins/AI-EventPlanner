@@ -136,8 +136,8 @@ class TenantMessage(Base):
     organization = relationship("Organization")
     conversation = relationship("TenantConversation", back_populates="messages")
     user = relationship("User")
-    parent_message = relationship("TenantMessage", remote_side=[id])
-    child_messages = relationship("TenantMessage", remote_side=[parent_message_id])
+    parent_message = relationship("TenantMessage", remote_side=[id], foreign_keys=[parent_message_id])
+    child_messages = relationship("TenantMessage", remote_side=[parent_message_id], overlaps="parent_message")
 
 
 class TenantAgentState(Base):
