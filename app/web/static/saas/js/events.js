@@ -258,22 +258,50 @@ function getRecurrenceEndDate(formData) {
  * Create a new event
  * @param {Object} eventData - Event data
  */
-function createEvent(eventData) {
-    // In a real application, this would make an API call to create the event
-    // For now, we'll just simulate creation
-    
-    console.log('Creating event:', eventData);
-    
-    // Simulate API call
-    setTimeout(function() {
-        // Redirect to events page
-        showAlert('Event created successfully', 'success');
-        
-        // In a real app, we would redirect after the API call succeeds
+async function createEvent(eventData) {
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        // Make API call to create event
+        const response = await fetch('/api/events', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(eventData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to create event: ${response.statusText}`);
+        }
+
+        const createdEvent = await response.json();
+
+        // Show success message
+        showAlert('Event created successfully!', 'success');
+
+        // Redirect to events page after a short delay
         setTimeout(function() {
             window.location.href = '/saas/events.html';
         }, 1500);
-    }, 1000);
+    } catch (error) {
+        console.error('Error creating event:', error);
+        showAlert('Failed to create event: ' + error.message, 'danger');
+    }
 }
 
 /**
