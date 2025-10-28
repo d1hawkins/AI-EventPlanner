@@ -667,18 +667,47 @@ function initializeDeleteEventButtons() {
  * Delete an event
  * @param {string} eventId - Event ID
  */
-function deleteEvent(eventId) {
-    // In a real application, this would make an API call to delete the event
-    // For now, we'll just simulate deletion
-    
-    // Remove the event from the table
-    const eventRow = document.querySelector(`tr[data-event-id="${eventId}"]`);
-    if (eventRow) {
-        eventRow.remove();
+async function deleteEvent(eventId) {
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        // Make API call to delete event
+        const response = await fetch(`/api/events/${eventId}`, {
+            method: 'DELETE',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to delete event: ${response.statusText}`);
+        }
+
+        // Remove the event from the table
+        const eventRow = document.querySelector(`tr[data-event-id="${eventId}"]`);
+        if (eventRow) {
+            eventRow.remove();
+        }
+
+        // Show success message
+        showAlert('Event deleted successfully', 'success');
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        showAlert('Failed to delete event: ' + error.message, 'danger');
     }
-    
-    // Show success message
-    showAlert('Event deleted successfully', 'success');
 }
 
 /**
