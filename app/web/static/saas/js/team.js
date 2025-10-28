@@ -570,25 +570,81 @@ function exportTeamList() {
 /**
  * Send invitations
  */
-function sendInvitations() {
-    // Get form values
-    const emails = document.getElementById('inviteEmails').value;
-    const role = document.getElementById('inviteRole').value;
-    const message = document.getElementById('inviteMessage').value;
-    const sendCopy = document.getElementById('sendCopy').checked;
-    
-    // In a real application, this would make an API call to send invitations
-    // For now, we'll just show a success message
-    
-    // Show success message
-    showAlert('Invitations sent successfully', 'success');
-    
-    // Reset form
-    document.getElementById('inviteForm').reset();
-    document.getElementById('inviteForm').classList.remove('was-validated');
-    
-    // Reload pending invitations
-    loadPendingInvitations();
+async function sendInvitations() {
+    try {
+        // Get form values
+        const emailsText = document.getElementById('inviteEmails').value;
+        const role = document.getElementById('inviteRole').value;
+        const message = document.getElementById('inviteMessage').value;
+        const sendCopy = document.getElementById('sendCopy').checked;
+
+        // Parse emails (one per line)
+        const emails = emailsText.split('\n')
+            .map(email => email.trim())
+            .filter(email => email.length > 0);
+
+        if (emails.length === 0) {
+            throw new Error('Please enter at least one email address');
+        }
+
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        if (!orgId) {
+            throw new Error('Organization ID not found');
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Send invitation for each email
+        const invitationPromises = emails.map(email =>
+            fetch(`/api/subscription/organizations/${orgId}/members/invite`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({
+                    email: email,
+                    role: role,
+                    message: message
+                })
+            })
+        );
+
+        const responses = await Promise.all(invitationPromises);
+
+        // Check for failures
+        const failures = [];
+        for (let i = 0; i < responses.length; i++) {
+            if (!responses[i].ok) {
+                failures.push(emails[i]);
+            }
+        }
+
+        if (failures.length > 0) {
+            throw new Error(`Failed to send invitations to: ${failures.join(', ')}`);
+        }
+
+        // Show success message
+        showAlert(`Successfully sent ${emails.length} invitation(s)!`, 'success');
+
+        // Reset form
+        document.getElementById('inviteForm').reset();
+        document.getElementById('inviteForm').classList.remove('was-validated');
+
+        // Reload pending invitations
+        loadPendingInvitations();
+    } catch (error) {
+        console.error('Error sending invitations:', error);
+        showAlert('Failed to send invitations: ' + error.message, 'danger');
+    }
 }
 
 /**
