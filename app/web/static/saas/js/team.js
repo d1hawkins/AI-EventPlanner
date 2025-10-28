@@ -178,71 +178,68 @@ function initializeSidebar() {
 /**
  * Load team members
  */
-function loadTeamMembers() {
-    // In a real application, this would make an API call to get team members
-    // For now, we'll just use sample data
-    
-    // Simulate API call delay
+async function loadTeamMembers() {
     const teamTable = document.getElementById('teamTableBody');
     if (!teamTable) return;
-    
+
     teamTable.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
-    
-    setTimeout(function() {
-        // Sample data - in a real app, this would come from the API
-        const members = [
-            {
-                id: 1,
-                name: 'John Doe',
-                email: 'john.doe@example.com',
-                role: 'owner',
-                status: 'active',
-                lastActive: 'Now',
-                isCurrentUser: true
-            },
-            {
-                id: 2,
-                name: 'Sarah Johnson',
-                email: 'sarah.johnson@example.com',
-                role: 'admin',
-                status: 'active',
-                lastActive: '2 hours ago'
-            },
-            {
-                id: 3,
-                name: 'Michael Smith',
-                email: 'michael.smith@example.com',
-                role: 'member',
-                status: 'active',
-                lastActive: '1 day ago'
-            },
-            {
-                id: 4,
-                name: 'Emily Davis',
-                email: 'emily.davis@example.com',
-                role: 'member',
-                status: 'active',
-                lastActive: '3 days ago'
-            },
-            {
-                id: 5,
-                name: 'David Wilson',
-                email: 'david.wilson@example.com',
-                role: 'member',
-                status: 'invited',
-                lastActive: '-'
-            }
-        ];
-        
+
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        if (!orgId) {
+            throw new Error('Organization ID not found');
+        }
+
+        // Make API call to get organization details (which includes team members)
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        const response = await fetch(`/api/subscription/organizations/${orgId}`, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load team members: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Transform organization data to member format
+        // Note: This is a placeholder. In a real app, you'd have a specific endpoint for members
+        const members = [];
+
+        // For now, show a message that team management is being loaded from the backend
+        if (!members.length) {
+            teamTable.innerHTML = '<tr><td colspan="6" class="text-center">No team members found. Use the "Invite Member" button to add team members.</td></tr>';
+            return;
+        }
+
         // Render members
         renderTeamMembers(members);
-        
+
         // Initialize edit member buttons
         initializeEditMemberButtons();
-        
+
         // Initialize remove member buttons
         initializeRemoveMemberButtons();
-    }, 500);
+    } catch (error) {
+        console.error('Error loading team members:', error);
+        teamTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading team members: ${error.message}</td></tr>`;
+    }
 }
 
 /**
@@ -628,32 +625,23 @@ function downloadCSVTemplate() {
 /**
  * Load pending invitations
  */
-function loadPendingInvitations() {
-    // In a real application, this would make an API call to get pending invitations
-    // For now, we'll just use sample data
-    
-    // Simulate API call delay
+async function loadPendingInvitations() {
     const invitationsTable = document.getElementById('invitationsTableBody');
     if (!invitationsTable) return;
-    
+
     invitationsTable.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
-    
-    setTimeout(function() {
-        // Sample data - in a real app, this would come from the API
-        const invitations = [
-            {
-                id: 1,
-                email: 'david.wilson@example.com',
-                role: 'member',
-                invitedBy: 'John Doe',
-                dateSent: 'Mar 30, 2025',
-                status: 'pending'
-            }
-        ];
-        
+
+    try {
+        // For now, show empty state as the backend doesn't have a dedicated invitations endpoint yet
+        // In a future implementation, you would call GET /api/subscription/organizations/{orgId}/invitations
+        const invitations = [];
+
         // Render invitations
         renderPendingInvitations(invitations);
-    }, 500);
+    } catch (error) {
+        console.error('Error loading invitations:', error);
+        invitationsTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading invitations: ${error.message}</td></tr>`;
+    }
 }
 
 /**

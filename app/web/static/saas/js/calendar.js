@@ -78,103 +78,8 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error fetching events:', error);
-            
-            // Use mock data when API is not available (for demo/development)
-            const mockEvents = [
-                {
-                    id: 1,
-                    title: 'Tech Conference 2025',
-                    start: '2025-04-15',
-                    end: '2025-04-17',
-                    allDay: true,
-                    location: 'San Francisco, CA',
-                    extendedProps: {
-                        description: 'Annual technology conference with industry leaders',
-                        attendee_count: 500,
-                        event_type: 'conference',
-                        status: 'planning'
-                    },
-                    backgroundColor: getEventColor('planning'),
-                    borderColor: getEventColor('planning')
-                },
-                {
-                    id: 2,
-                    title: 'Company Retreat',
-                    start: '2025-05-10',
-                    end: '2025-05-12',
-                    allDay: true,
-                    location: 'Lake Tahoe, CA',
-                    extendedProps: {
-                        description: 'Team building and strategy planning retreat',
-                        attendee_count: 50,
-                        event_type: 'social',
-                        status: 'confirmed'
-                    },
-                    backgroundColor: getEventColor('confirmed'),
-                    borderColor: getEventColor('confirmed')
-                },
-                {
-                    id: 3,
-                    title: 'Product Launch',
-                    start: '2025-06-05',
-                    end: '2025-06-05',
-                    allDay: true,
-                    location: 'New York, NY',
-                    extendedProps: {
-                        description: 'Launch event for our new product line',
-                        attendee_count: 200,
-                        event_type: 'marketing',
-                        status: 'draft'
-                    },
-                    backgroundColor: getEventColor('draft'),
-                    borderColor: getEventColor('draft')
-                },
-                {
-                    id: 4,
-                    title: 'Annual Gala',
-                    start: '2025-07-20',
-                    end: '2025-07-20',
-                    allDay: true,
-                    location: 'Chicago, IL',
-                    extendedProps: {
-                        description: 'Annual fundraising gala with key stakeholders',
-                        attendee_count: 300,
-                        event_type: 'social',
-                        status: 'confirmed'
-                    },
-                    backgroundColor: getEventColor('confirmed'),
-                    borderColor: getEventColor('confirmed')
-                },
-                {
-                    id: 5,
-                    title: 'Team Building Workshop',
-                    start: '2025-08-15',
-                    end: '2025-08-16',
-                    allDay: true,
-                    location: 'Austin, TX',
-                    extendedProps: {
-                        description: 'Workshop focused on team collaboration and skills development',
-                        attendee_count: 25,
-                        event_type: 'workshop',
-                        status: 'planning'
-                    },
-                    backgroundColor: getEventColor('planning'),
-                    borderColor: getEventColor('planning')
-                }
-            ];
-            
-            // Filter mock events based on the date range
-            const startDate = new Date(info.startStr);
-            const endDate = new Date(info.endStr);
-            
-            const filteredEvents = mockEvents.filter(event => {
-                const eventStart = new Date(event.start);
-                const eventEnd = event.end ? new Date(event.end) : eventStart;
-                
-                return eventEnd >= startDate && eventStart <= endDate;
-            });
-            
-            successCallback(filteredEvents);
+            failureCallback(error);
+            showAlert('Failed to load calendar events: ' + error.message, 'danger');
         });
     }
     
@@ -484,61 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error exporting calendar:', error);
-                
-                // For demo/development, create a mock ICS file
-                const mockIcsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//AI Event Planner//NONSGML v1.0//EN
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-X-WR-CALNAME:AI Event Planner Calendar
-X-WR-TIMEZONE:America/New_York
-BEGIN:VEVENT
-UID:event-1@aieventplanner.com
-SUMMARY:Tech Conference 2025
-DESCRIPTION:Annual technology conference with industry leaders
-LOCATION:San Francisco, CA
-DTSTART:20250415T000000Z
-DTEND:20250417T235959Z
-STATUS:TENTATIVE
-CATEGORIES:conference
-END:VEVENT
-BEGIN:VEVENT
-UID:event-2@aieventplanner.com
-SUMMARY:Company Retreat
-DESCRIPTION:Team building and strategy planning retreat
-LOCATION:Lake Tahoe, CA
-DTSTART:20250510T000000Z
-DTEND:20250512T235959Z
-STATUS:CONFIRMED
-CATEGORIES:social
-END:VEVENT
-BEGIN:VEVENT
-UID:event-3@aieventplanner.com
-SUMMARY:Product Launch
-DESCRIPTION:Launch event for our new product line
-LOCATION:New York, NY
-DTSTART:20250605T000000Z
-DTEND:20250605T235959Z
-STATUS:TENTATIVE
-CATEGORIES:marketing
-END:VEVENT
-END:VCALENDAR`;
-                
-                const blob = new Blob([mockIcsContent], { type: 'text/calendar' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = 'calendar.ics';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                
-                showAlert('Calendar exported successfully (demo mode)', 'success');
-                
-                // Uncomment the following line in production:
-                // showAlert('Failed to export calendar', 'danger');
+                showAlert('Failed to export calendar: ' + error.message, 'danger');
             });
         });
     }

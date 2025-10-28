@@ -271,17 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error creating template:', error);
-            
-            // For demo purposes, simulate success
-            // Close modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('createTemplateModal'));
-            modal.hide();
-            
-            // Show success message
-            showAlert('Template created successfully (demo mode)', 'success');
-            
-            // In a real application, we would show an error message
-            // showAlert('Failed to create template: ' + error.message, 'danger');
+            showAlert('Failed to create template: ' + error.message, 'danger');
         });
     }
     
@@ -328,17 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     console.error('Error importing template:', error);
-                    
-                    // For demo purposes, simulate success
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('importTemplateModal'));
-                    modal.hide();
-                    
-                    // Show success message
-                    showAlert('Template imported successfully (demo mode)', 'success');
-                    
-                    // In a real application, we would show an error message
-                    // showAlert('Failed to import template: ' + error.message, 'danger');
+                    showAlert('Failed to import template: ' + error.message, 'danger');
                 });
             } catch (error) {
                 console.error('Error parsing template file:', error);
@@ -453,26 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error deleting template:', error);
-            
-            // For demo purposes, simulate success
-            // Close modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteTemplateModal'));
-            modal.hide();
-            
-            // Show success message
-            showAlert('Template deleted successfully (demo mode)', 'success');
-            
-            // Remove template card from UI
-            const templateCard = document.querySelector(`.template-card[data-template-id="${templateId}"]`);
-            if (templateCard) {
-                const col = templateCard.closest('.col-md-4');
-                if (col) {
-                    col.remove();
-                }
-            }
-            
-            // In a real application, we would show an error message
-            // showAlert('Failed to delete template: ' + error.message, 'danger');
+            showAlert('Failed to delete template: ' + error.message, 'danger');
         });
     }
     

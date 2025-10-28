@@ -67,12 +67,16 @@ document.addEventListener('DOMContentLoaded', function() {
      * Set up authentication
      */
     function setupAuth() {
-        // Use existing auth setup from agent-ui.js
+        // Check if user is authenticated
         if (!localStorage.getItem('authToken')) {
-            localStorage.setItem('authToken', 'mock-auth-token');
+            // Redirect to login page if not authenticated
+            showError('You must be logged in to use the chat feature.');
+            window.location.href = '/auth/login';
+            return;
         }
         if (!localStorage.getItem('organizationId')) {
-            localStorage.setItem('organizationId', '1');
+            showError('Organization context is required.');
+            return;
         }
     }
     
