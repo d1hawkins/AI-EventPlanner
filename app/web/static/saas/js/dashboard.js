@@ -102,19 +102,60 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Demo data for charts (if needed)
-    // This is just placeholder code for demonstration purposes
+    // Load real chart data from analytics API
     if (typeof Chart !== 'undefined') {
-        // Example line chart
+        loadDashboardCharts();
+    }
+});
+
+/**
+ * Load dashboard charts with real data from API
+ */
+async function loadDashboardCharts() {
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            console.error('Not authenticated');
+            return;
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        // Fetch analytics data from API
+        const response = await fetch('/api/agents/analytics', {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load analytics data');
+        }
+
+        const data = await response.json();
+
+        // Create line chart with conversations by date
         const lineCtx = document.getElementById('eventsLineChart');
-        if (lineCtx) {
+        if (lineCtx && data.conversations_by_date) {
+            const labels = data.conversations_by_date.map(item => item.date);
+            const values = data.conversations_by_date.map(item => item.count);
+
             new Chart(lineCtx, {
                 type: 'line',
                 data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    labels: labels,
                     datasets: [{
                         label: 'Events',
-                        data: [2, 3, 1, 5, 4, 7],
+                        data: values,
                         backgroundColor: 'rgba(78, 115, 223, 0.05)',
                         borderColor: 'rgba(78, 115, 223, 1)',
                         pointBackgroundColor: 'rgba(78, 115, 223, 1)',
@@ -134,18 +175,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
-        // Example pie chart
+
+        // Create pie chart with conversations by agent
         const pieCtx = document.getElementById('eventTypesPieChart');
-        if (pieCtx) {
+        if (pieCtx && data.conversations_by_agent) {
+            const labels = data.conversations_by_agent.map(item => item.agent_type);
+            const values = data.conversations_by_agent.map(item => item.count);
+
             new Chart(pieCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Corporate', 'Social', 'Conference', 'Other'],
+                    labels: labels,
                     datasets: [{
-                        data: [40, 20, 30, 10],
-                        backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e'],
-                        hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf', '#dda20a'],
+                        data: values,
+                        backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796', '#5a5c69'],
+                        hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf', '#dda20a', '#c0392b', '#636466', '#3a3b45'],
                         hoverBorderColor: 'rgba(234, 236, 244, 1)',
                     }]
                 },
@@ -160,5 +204,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
+    } catch (error) {
+        console.error('Error loading dashboard charts:', error);
+        // Show error message to user
+        const lineCtx = document.getElementById('eventsLineChart');
+        if (lineCtx) {
+            const parent = lineCtx.parentElement;
+            parent.innerHTML = '<div class="text-center text-danger p-3">Failed to load chart data</div>';
+        }
     }
-});
+}

@@ -411,75 +411,42 @@ function applyFilters() {
  * @param {string} dateRange - Date range filter
  * @param {string} type - Event type filter
  */
-function loadEvents(status = '', dateRange = '', type = '') {
-    // In a real application, this would make an API call to get events
-    // For now, we'll just use sample data
-    
-    // Simulate API call delay
+async function loadEvents(status = '', dateRange = '', type = '') {
     const eventsTable = document.getElementById('eventsTableBody');
     eventsTable.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
-    
-    setTimeout(function() {
-        // Sample data - in a real app, this would come from the API
-        const events = [
-            {
-                id: 1,
-                title: 'Tech Conference 2025',
-                start_date: '2025-04-15',
-                end_date: '2025-04-17',
-                location: 'San Francisco, CA',
-                attendee_count: 500,
-                status: 'planning'
-            },
-            {
-                id: 2,
-                title: 'Company Retreat',
-                start_date: '2025-05-10',
-                end_date: '2025-05-12',
-                location: 'Lake Tahoe, CA',
-                attendee_count: 50,
-                status: 'confirmed'
-            },
-            {
-                id: 3,
-                title: 'Product Launch',
-                start_date: '2025-06-05',
-                end_date: '2025-06-05',
-                location: 'New York, NY',
-                attendee_count: 200,
-                status: 'draft'
-            },
-            {
-                id: 4,
-                title: 'Annual Gala',
-                start_date: '2025-07-20',
-                end_date: '2025-07-20',
-                location: 'Chicago, IL',
-                attendee_count: 300,
-                status: 'confirmed'
-            },
-            {
-                id: 5,
-                title: 'Team Building Workshop',
-                start_date: '2025-08-15',
-                end_date: '2025-08-16',
-                location: 'Austin, TX',
-                attendee_count: 25,
-                status: 'planning'
-            },
-            {
-                id: 6,
-                title: 'Weekly Team Meeting',
-                start_date: '2025-04-01',
-                end_date: '2025-04-01',
-                location: 'Conference Room A',
-                attendee_count: 15,
-                status: 'confirmed',
-                is_recurring: true,
-                recurrence_rule: 'FREQ=WEEKLY;INTERVAL=1;BYDAY=TU'
-            }
-        ];
-        
+
+    try {
+        // Get auth token
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        // Get organization ID from header
+        const orgId = document.querySelector('meta[name="organization-id"]')?.content;
+
+        // Make API call to get events
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        const response = await fetch('/api/events', {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load events: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        let events = data.events || [];
+
         // Apply filters
         let filteredEvents = events;
         
@@ -488,35 +455,18 @@ function loadEvents(status = '', dateRange = '', type = '') {
         }
         
         if (type) {
-            // In a real app, events would have a type property
-            // For now, we'll just simulate this filter
-            if (type === 'conference') {
-                filteredEvents = filteredEvents.filter(event => 
-                    event.title.toLowerCase().includes('conference') || 
-                    event.title.toLowerCase().includes('summit')
-                );
-            } else if (type === 'meeting') {
-                filteredEvents = filteredEvents.filter(event => 
-                    event.title.toLowerCase().includes('meeting')
-                );
-            } else if (type === 'workshop') {
-                filteredEvents = filteredEvents.filter(event => 
-                    event.title.toLowerCase().includes('workshop')
-                );
-            } else if (type === 'social') {
-                filteredEvents = filteredEvents.filter(event => 
-                    event.title.toLowerCase().includes('gala') || 
-                    event.title.toLowerCase().includes('party') ||
-                    event.title.toLowerCase().includes('retreat')
-                );
-            }
+            // Filter by event_type if available
+            filteredEvents = filteredEvents.filter(event => {
+                if (!event.event_type) return false;
+                return event.event_type === type;
+            });
         }
-        
+
         if (dateRange) {
             const now = new Date();
             const thisMonth = now.getMonth();
             const thisYear = now.getFullYear();
-            
+
             if (dateRange === 'upcoming') {
                 filteredEvents = filteredEvents.filter(event => {
                     const eventDate = new Date(event.start_date);
@@ -530,7 +480,7 @@ function loadEvents(status = '', dateRange = '', type = '') {
             } else if (dateRange === 'thisMonth') {
                 filteredEvents = filteredEvents.filter(event => {
                     const eventDate = new Date(event.start_date);
-                    return eventDate.getMonth() === thisMonth && 
+                    return eventDate.getMonth() === thisMonth &&
                            eventDate.getFullYear() === thisYear;
                 });
             } else if (dateRange === 'nextMonth') {
@@ -538,7 +488,7 @@ function loadEvents(status = '', dateRange = '', type = '') {
                     const eventDate = new Date(event.start_date);
                     const nextMonth = (thisMonth + 1) % 12;
                     const yearOfNextMonth = thisMonth === 11 ? thisYear + 1 : thisYear;
-                    return eventDate.getMonth() === nextMonth && 
+                    return eventDate.getMonth() === nextMonth &&
                            eventDate.getFullYear() === yearOfNextMonth;
                 });
             } else if (dateRange === 'thisYear') {
@@ -548,13 +498,16 @@ function loadEvents(status = '', dateRange = '', type = '') {
                 });
             }
         }
-        
+
         // Render events
         renderEvents(filteredEvents);
-        
+
         // Initialize delete event buttons
         initializeDeleteEventButtons();
-    }, 500);
+    } catch (error) {
+        console.error('Error loading events:', error);
+        eventsTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading events: ${error.message}</td></tr>`;
+    }
 }
 
 /**
@@ -765,58 +718,7 @@ function exportEvents() {
         })
         .catch(error => {
             console.error('Error exporting calendar:', error);
-            
-            // For demo/development, create a mock ICS file
-            const mockIcsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//AI Event Planner//NONSGML v1.0//EN
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-X-WR-CALNAME:AI Event Planner Calendar
-X-WR-TIMEZONE:America/New_York
-BEGIN:VEVENT
-UID:event-1@aieventplanner.com
-SUMMARY:Tech Conference 2025
-DESCRIPTION:Annual technology conference with industry leaders
-LOCATION:San Francisco, CA
-DTSTART:20250415T000000Z
-DTEND:20250417T235959Z
-STATUS:TENTATIVE
-CATEGORIES:conference
-END:VEVENT
-BEGIN:VEVENT
-UID:event-2@aieventplanner.com
-SUMMARY:Company Retreat
-DESCRIPTION:Team building and strategy planning retreat
-LOCATION:Lake Tahoe, CA
-DTSTART:20250510T000000Z
-DTEND:20250512T235959Z
-STATUS:CONFIRMED
-CATEGORIES:social
-END:VEVENT
-BEGIN:VEVENT
-UID:event-3@aieventplanner.com
-SUMMARY:Product Launch
-DESCRIPTION:Launch event for our new product line
-LOCATION:New York, NY
-DTSTART:20250605T000000Z
-DTEND:20250605T235959Z
-STATUS:TENTATIVE
-CATEGORIES:marketing
-END:VEVENT
-END:VCALENDAR`;
-            
-            const blob = new Blob([mockIcsContent], { type: 'text/calendar' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = 'calendar.ics';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            
-            showAlert('Calendar exported successfully (demo mode)', 'success');
+            showAlert('Failed to export calendar: ' + error.message, 'danger');
         })
         .finally(() => {
             // Clean up
