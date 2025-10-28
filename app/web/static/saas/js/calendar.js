@@ -175,14 +175,8 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error updating event dates:', error);
-            
-            // For demo/development, show success message even when API fails
-            // In a real application, this would show an error and revert the change
-            showAlert('Event dates updated successfully (demo mode)', 'success');
-            
-            // Uncomment the following lines in production:
-            // showAlert('Failed to update event dates', 'danger');
-            // event.revert();
+            showAlert('Failed to update event dates: ' + error.message, 'danger');
+            info.revert();
         });
     }
     
@@ -310,24 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error creating event:', error);
-                
-                // For demo/development, show success message even when API fails
-                // In a real application, this would show an error
-                
-                // Close the modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('newEventModal'));
-                modal.hide();
-                
-                // Reset the form
-                newEventForm.reset();
-                
-                // Refresh the calendar to show mock data
-                calendar.refetchEvents();
-                
-                showAlert('Event created successfully (demo mode)', 'success');
-                
-                // Uncomment the following line in production:
-                // showAlert('Failed to create event', 'danger');
+                showAlert('Failed to create event: ' + error.message, 'danger');
             });
         });
     }
