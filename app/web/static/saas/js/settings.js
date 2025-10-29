@@ -76,26 +76,63 @@ function initializeSidebar() {
  */
 function initializeProfileForm() {
     const profileForm = document.getElementById('profileForm');
-    
+
     if (profileForm) {
-        profileForm.addEventListener('submit', function(event) {
+        profileForm.addEventListener('submit', async function(event) {
             event.preventDefault();
-            
-            // Get form values
-            const firstName = document.getElementById('firstName').value;
-            const lastName = document.getElementById('lastName').value;
-            const email = document.getElementById('email').value;
-            const phone = document.getElementById('phone').value;
-            const jobTitle = document.getElementById('jobTitle').value;
-            const company = document.getElementById('company').value;
-            const bio = document.getElementById('bio').value;
-            const timezone = document.getElementById('timezone').value;
-            
-            // In a real application, this would make an API call to update the profile
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('Profile updated successfully', 'success');
+
+            try {
+                // Get form values
+                const firstName = document.getElementById('firstName').value;
+                const lastName = document.getElementById('lastName').value;
+                const email = document.getElementById('email').value;
+                const phone = document.getElementById('phone').value;
+                const jobTitle = document.getElementById('jobTitle').value;
+                const company = document.getElementById('company').value;
+                const bio = document.getElementById('bio').value;
+                const timezone = document.getElementById('timezone').value;
+
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to update profile
+                const response = await fetch('/api/auth/profile', {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({
+                        first_name: firstName,
+                        last_name: lastName,
+                        email: email,
+                        phone: phone,
+                        job_title: jobTitle,
+                        company: company,
+                        bio: bio,
+                        timezone: timezone
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to update profile: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('Profile updated successfully', 'success');
+
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showAlert('Failed to update profile: ' + error.message, 'danger');
+            }
         });
     }
 }
@@ -105,30 +142,67 @@ function initializeProfileForm() {
  */
 function initializePasswordForm() {
     const passwordForm = document.getElementById('passwordForm');
-    
+
     if (passwordForm) {
-        passwordForm.addEventListener('submit', function(event) {
+        passwordForm.addEventListener('submit', async function(event) {
             event.preventDefault();
-            
-            // Get form values
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            // Validate passwords
-            if (newPassword !== confirmPassword) {
-                showAlert('New passwords do not match', 'danger');
-                return;
+
+            try {
+                // Get form values
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+
+                // Validate passwords
+                if (newPassword !== confirmPassword) {
+                    showAlert('New passwords do not match', 'danger');
+                    return;
+                }
+
+                // Validate password strength
+                if (newPassword.length < 8) {
+                    showAlert('Password must be at least 8 characters long', 'danger');
+                    return;
+                }
+
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to update password
+                const response = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to update password: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('Password updated successfully', 'success');
+
+                // Reset form
+                passwordForm.reset();
+
+            } catch (error) {
+                console.error('Error updating password:', error);
+                showAlert('Failed to update password: ' + error.message, 'danger');
             }
-            
-            // In a real application, this would make an API call to update the password
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('Password updated successfully', 'success');
-            
-            // Reset form
-            passwordForm.reset();
         });
     }
 }
@@ -227,26 +301,67 @@ function initializeSessionManagement() {
  */
 function initializeNotificationsForm() {
     const notificationsForm = document.getElementById('notificationsForm');
-    
+
     if (notificationsForm) {
-        notificationsForm.addEventListener('submit', function(event) {
+        notificationsForm.addEventListener('submit', async function(event) {
             event.preventDefault();
-            
-            // Get form values
-            const eventCreatedNotification = document.getElementById('eventCreatedNotification').checked;
-            const eventUpdatedNotification = document.getElementById('eventUpdatedNotification').checked;
-            const teamMemberNotification = document.getElementById('teamMemberNotification').checked;
-            const billingNotification = document.getElementById('billingNotification').checked;
-            const marketingNotification = document.getElementById('marketingNotification').checked;
-            const inAppEventNotification = document.getElementById('inAppEventNotification').checked;
-            const inAppTeamNotification = document.getElementById('inAppTeamNotification').checked;
-            const inAppSystemNotification = document.getElementById('inAppSystemNotification').checked;
-            
-            // In a real application, this would make an API call to update the notification preferences
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('Notification preferences updated successfully', 'success');
+
+            try {
+                // Get form values
+                const eventCreatedNotification = document.getElementById('eventCreatedNotification').checked;
+                const eventUpdatedNotification = document.getElementById('eventUpdatedNotification').checked;
+                const teamMemberNotification = document.getElementById('teamMemberNotification').checked;
+                const billingNotification = document.getElementById('billingNotification').checked;
+                const marketingNotification = document.getElementById('marketingNotification').checked;
+                const inAppEventNotification = document.getElementById('inAppEventNotification').checked;
+                const inAppTeamNotification = document.getElementById('inAppTeamNotification').checked;
+                const inAppSystemNotification = document.getElementById('inAppSystemNotification').checked;
+
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to update notification preferences
+                const response = await fetch('/api/auth/notification-preferences', {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({
+                        email_notifications: {
+                            event_created: eventCreatedNotification,
+                            event_updated: eventUpdatedNotification,
+                            team_member: teamMemberNotification,
+                            billing: billingNotification,
+                            marketing: marketingNotification
+                        },
+                        in_app_notifications: {
+                            events: inAppEventNotification,
+                            team: inAppTeamNotification,
+                            system: inAppSystemNotification
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to update notification preferences: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('Notification preferences updated successfully', 'success');
+
+            } catch (error) {
+                console.error('Error updating notification preferences:', error);
+                showAlert('Failed to update notification preferences: ' + error.message, 'danger');
+            }
         });
     }
 }
@@ -256,19 +371,51 @@ function initializeNotificationsForm() {
  */
 function initializeAppearanceSettings() {
     const saveAppearanceSettingsButton = document.getElementById('saveAppearanceSettings');
-    
+
     if (saveAppearanceSettingsButton) {
-        saveAppearanceSettingsButton.addEventListener('click', function() {
-            // Get form values
-            const theme = document.querySelector('input[name="theme"]:checked').id.replace('Theme', '');
-            const density = document.querySelector('input[name="density"]:checked').id.replace('Density', '');
-            const fontSize = document.getElementById('fontSizeRange').value;
-            
-            // In a real application, this would make an API call to update the appearance settings
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('Appearance settings updated successfully', 'success');
+        saveAppearanceSettingsButton.addEventListener('click', async function() {
+            try {
+                // Get form values
+                const theme = document.querySelector('input[name="theme"]:checked')?.id.replace('Theme', '') || 'light';
+                const density = document.querySelector('input[name="density"]:checked')?.id.replace('Density', '') || 'comfortable';
+                const fontSize = document.getElementById('fontSizeRange')?.value || 16;
+
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to update appearance settings
+                const response = await fetch('/api/auth/appearance-preferences', {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({
+                        theme: theme,
+                        density: density,
+                        font_size: parseInt(fontSize)
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to update appearance settings: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('Appearance settings updated successfully', 'success');
+
+            } catch (error) {
+                console.error('Error updating appearance settings:', error);
+                showAlert('Failed to update appearance settings: ' + error.message, 'danger');
+            }
         });
     }
 }
