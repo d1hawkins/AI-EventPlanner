@@ -108,6 +108,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize notifications
     initializeNotifications();
 
+    // Load and populate user profile
+    loadUserProfile();
+
+    // Initialize logout functionality
+    initializeLogout();
+
     // Load real chart data from analytics API
     if (typeof Chart !== 'undefined') {
         loadDashboardCharts();
@@ -597,6 +603,133 @@ async function markNotificationsAsRead() {
     } catch (error) {
         console.error('Error marking notifications as read:', error);
         // Silently fail
+    }
+}
+
+/**
+ * Load user profile information
+ */
+async function loadUserProfile() {
+    try {
+        // Get auth token
+        const token = localStorage.getItem('authToken');
+
+        if (!token) {
+            return; // Silently fail if not authenticated
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        // Fetch user profile from API
+        const response = await fetch('/api/auth/profile', {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load user profile');
+        }
+
+        const user = await response.json();
+
+        // Update user name in dropdown
+        const userName = document.querySelector('#userDropdown .text-gray-600');
+        if (userName && user.first_name && user.last_name) {
+            userName.textContent = `${user.first_name} ${user.last_name}`;
+        } else if (userName && user.email) {
+            userName.textContent = user.email;
+        }
+
+        // Update profile image if available
+        const profileImg = document.querySelector('#userDropdown .img-profile');
+        if (profileImg && user.profile_image_url) {
+            profileImg.src = user.profile_image_url;
+        }
+
+        // Update profile links
+        const profileLink = document.querySelector('.dropdown-menu .dropdown-item[href="#"]:first-child');
+        if (profileLink) {
+            profileLink.href = '/saas/settings.html#profile';
+        }
+
+        const settingsLink = document.querySelectorAll('.dropdown-menu .dropdown-item[href="#"]')[1];
+        if (settingsLink) {
+            settingsLink.href = '/saas/settings.html';
+        }
+
+        const activityLink = document.querySelectorAll('.dropdown-menu .dropdown-item[href="#"]')[2];
+        if (activityLink) {
+            activityLink.href = '/saas/settings.html#security';
+        }
+
+    } catch (error) {
+        console.error('Error loading user profile:', error);
+        // Silently fail - keep default values
+    }
+}
+
+/**
+ * Initialize logout functionality
+ */
+function initializeLogout() {
+    // Handle logout button click
+    const logoutButtons = document.querySelectorAll('[data-bs-target="#logoutModal"]');
+
+    logoutButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            // The modal will be shown by Bootstrap
+        });
+    });
+
+    // Handle logout confirmation
+    const confirmLogoutBtn = document.getElementById('confirmLogout');
+    if (confirmLogoutBtn) {
+        confirmLogoutBtn.addEventListener('click', performLogout);
+    }
+}
+
+/**
+ * Perform logout
+ */
+async function performLogout() {
+    try {
+        // Get auth token
+        const token = localStorage.getItem('authToken');
+
+        if (token) {
+            // Call logout API endpoint
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: headers
+            });
+        }
+
+        // Clear local storage
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('organizationId');
+        localStorage.removeItem('userId');
+
+        // Redirect to login page
+        window.location.href = '/saas/login.html';
+
+    } catch (error) {
+        console.error('Error during logout:', error);
+
+        // Still clear local storage and redirect even if API call fails
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('organizationId');
+        localStorage.removeItem('userId');
+        window.location.href = '/saas/login.html';
     }
 }
 
