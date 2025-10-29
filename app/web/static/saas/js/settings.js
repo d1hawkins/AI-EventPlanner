@@ -214,37 +214,137 @@ function initializeTwoFactor() {
     const enableTwoFactorCheckbox = document.getElementById('enableTwoFactor');
     const twoFactorSetup = document.getElementById('twoFactorSetup');
     const verifyTwoFactorButton = document.getElementById('verifyTwoFactor');
-    
+
     if (enableTwoFactorCheckbox) {
-        enableTwoFactorCheckbox.addEventListener('change', function() {
+        enableTwoFactorCheckbox.addEventListener('change', async function() {
             if (this.checked) {
-                twoFactorSetup.style.display = 'block';
-                
-                // In a real application, this would make an API call to generate a QR code
-                // For now, we'll just show the setup section
+                try {
+                    // Get auth token
+                    const token = localStorage.getItem('authToken');
+
+                    if (!token) {
+                        throw new Error('Authentication required. Please log in again.');
+                    }
+
+                    // Prepare headers
+                    const headers = {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    };
+
+                    // Make API call to generate 2FA secret and QR code
+                    const response = await fetch('/api/auth/2fa/setup', {
+                        method: 'POST',
+                        headers: headers
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `Failed to setup 2FA: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+
+                    // Update QR code image if provided
+                    const qrCodeImg = document.querySelector('#twoFactorSetup img');
+                    if (qrCodeImg && data.qr_code) {
+                        qrCodeImg.src = data.qr_code;
+                    }
+
+                    // Show setup section
+                    twoFactorSetup.style.display = 'block';
+
+                } catch (error) {
+                    console.error('Error setting up 2FA:', error);
+                    showAlert('Failed to setup 2FA: ' + error.message, 'danger');
+                    this.checked = false;
+                }
             } else {
-                twoFactorSetup.style.display = 'none';
+                // Disable 2FA
+                try {
+                    const token = localStorage.getItem('authToken');
+
+                    if (!token) {
+                        throw new Error('Authentication required. Please log in again.');
+                    }
+
+                    const headers = {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    };
+
+                    const response = await fetch('/api/auth/2fa/disable', {
+                        method: 'POST',
+                        headers: headers
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `Failed to disable 2FA: ${response.statusText}`);
+                    }
+
+                    twoFactorSetup.style.display = 'none';
+                    showAlert('Two-factor authentication disabled successfully', 'success');
+
+                } catch (error) {
+                    console.error('Error disabling 2FA:', error);
+                    showAlert('Failed to disable 2FA: ' + error.message, 'danger');
+                    this.checked = true;
+                }
             }
         });
     }
-    
+
     if (verifyTwoFactorButton) {
-        verifyTwoFactorButton.addEventListener('click', function() {
+        verifyTwoFactorButton.addEventListener('click', async function() {
             const verificationCode = document.getElementById('verificationCode').value;
-            
+
             if (!verificationCode) {
                 showAlert('Please enter a verification code', 'danger');
                 return;
             }
-            
-            // In a real application, this would make an API call to verify the code
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('Two-factor authentication enabled successfully', 'success');
-            
-            // Hide setup section
-            twoFactorSetup.style.display = 'none';
+
+            try {
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to verify the code and enable 2FA
+                const response = await fetch('/api/auth/2fa/verify', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        code: verificationCode
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to verify 2FA code: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('Two-factor authentication enabled successfully', 'success');
+
+                // Hide setup section
+                twoFactorSetup.style.display = 'none';
+
+                // Clear verification code
+                document.getElementById('verificationCode').value = '';
+
+            } catch (error) {
+                console.error('Error verifying 2FA code:', error);
+                showAlert('Failed to verify 2FA code: ' + error.message, 'danger');
+            }
         });
     }
 }
