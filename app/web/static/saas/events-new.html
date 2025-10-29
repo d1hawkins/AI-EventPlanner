@@ -735,44 +735,71 @@
         }
         
         // Function to apply the selected template to the form
-        function applyTemplate() {
+        async function applyTemplate() {
             const templateSelect = document.getElementById('eventTemplate');
             const selectedOption = templateSelect.options[templateSelect.selectedIndex];
-            
+
             if (selectedOption.value === '') {
                 return; // No template selected
             }
-            
+
             try {
-                const template = JSON.parse(selectedOption.dataset.template);
-                
-                // Apply template data to the form
-                document.getElementById('eventTitle').value = template.name || '';
-                document.getElementById('eventType').value = template.event_type || '';
-                document.getElementById('eventDescription').value = template.description || '';
-                
-                // Set default dates (today and today + template duration)
-                const today = new Date();
-                const endDate = new Date();
-                endDate.setDate(today.getDate() + (template.duration_days || 1));
-                
-                document.getElementById('eventStartDate').value = today.toISOString().split('T')[0];
-                document.getElementById('eventEndDate').value = endDate.toISOString().split('T')[0];
-                
-                // Apply template items if available
-                if (template.template_data && template.template_data.items) {
-                    // Here you would process template items and apply them to the form
-                    // For example, you might create tasks, set budget items, etc.
-                    console.log('Template items:', template.template_data.items);
+                const templateId = selectedOption.value;
+
+                // Fetch full template details from API
+                const response = await fetch(`/api/templates/${templateId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                        'X-Tenant-ID': localStorage.getItem('organizationId') || '1'
+                    }
+                });
+
+                if (!response.ok) {
+                    // Fallback to local template data if API call fails
+                    const template = JSON.parse(selectedOption.dataset.template);
+                    applyTemplateData(template);
+                    return;
                 }
-                
-                // Show success message
-                alert(`Template "${template.name}" has been applied to the form.`);
-                
+
+                const template = await response.json();
+                applyTemplateData(template);
+
             } catch (error) {
                 console.error('Error applying template:', error);
-                alert('Failed to apply template. Please try again.');
+                showAlert('Failed to apply template: ' + error.message, 'danger');
             }
+        }
+
+        // Helper function to apply template data to the form
+        function applyTemplateData(template) {
+            // Apply basic template data to the form
+            if (template.name) {
+                document.getElementById('eventTitle').value = template.name;
+            }
+            if (template.event_type) {
+                document.getElementById('eventType').value = template.event_type;
+            }
+            if (template.description) {
+                document.getElementById('eventDescription').value = template.description;
+            }
+
+            // Set default dates (today and today + template duration)
+            const today = new Date();
+            const endDate = new Date();
+            endDate.setDate(today.getDate() + (template.duration_days || 1));
+
+            document.getElementById('eventStartDate').value = today.toISOString().split('T')[0];
+            document.getElementById('eventEndDate').value = endDate.toISOString().split('T')[0];
+
+            // Apply template items if available
+            if (template.template_data && template.template_data.items) {
+                console.log('Template items:', template.template_data.items);
+                // Note: Template items (tasks, budget items, etc.) would typically be
+                // applied after the event is created, not during form population
+            }
+
+            // Show success message
+            showAlert(`Template "${template.name}" has been applied to the form.`, 'success');
         }
         
         document.addEventListener('DOMContentLoaded', function() {
