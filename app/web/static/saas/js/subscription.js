@@ -94,12 +94,44 @@ function initializeBillingCycle() {
  * Update billing cycle request
  * @param {string} billingCycle - Billing cycle (annual or monthly)
  */
-function updateBillingCycleRequest(billingCycle) {
-    // In a real application, this would make an API call to update the billing cycle
-    // For now, we'll just show a success message
-    
-    // Show success message
-    showAlert(`Billing cycle updated to ${billingCycle}`, 'success');
+async function updateBillingCycleRequest(billingCycle) {
+    try {
+        // Get auth token and org ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            throw new Error('Authentication required. Please log in again.');
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Make API call to update billing cycle
+        const response = await fetch(`/api/subscription/organizations/${orgId}/billing-cycle`, {
+            method: 'PATCH',
+            headers: headers,
+            body: JSON.stringify({
+                billing_cycle: billingCycle
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to update billing cycle: ${response.statusText}`);
+        }
+
+        // Show success message
+        showAlert(`Billing cycle updated to ${billingCycle}`, 'success');
+
+    } catch (error) {
+        console.error('Error updating billing cycle:', error);
+        showAlert('Failed to update billing cycle: ' + error.message, 'danger');
+    }
 }
 
 /**
@@ -127,12 +159,46 @@ function initializeBillingContact() {
  * @param {string} name - Billing name
  * @param {boolean} sendInvoices - Send invoices to billing email
  */
-function updateBillingContactRequest(email, name, sendInvoices) {
-    // In a real application, this would make an API call to update the billing contact
-    // For now, we'll just show a success message
-    
-    // Show success message
-    showAlert('Billing contact updated successfully', 'success');
+async function updateBillingContactRequest(email, name, sendInvoices) {
+    try {
+        // Get auth token and org ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            throw new Error('Authentication required. Please log in again.');
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Make API call to update billing contact
+        const response = await fetch(`/api/subscription/organizations/${orgId}/billing-contact`, {
+            method: 'PATCH',
+            headers: headers,
+            body: JSON.stringify({
+                billing_email: email,
+                billing_name: name,
+                send_invoices: sendInvoices
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to update billing contact: ${response.statusText}`);
+        }
+
+        // Show success message
+        showAlert('Billing contact updated successfully', 'success');
+
+    } catch (error) {
+        console.error('Error updating billing contact:', error);
+        showAlert('Failed to update billing contact: ' + error.message, 'danger');
+    }
 }
 
 /**
@@ -181,25 +247,67 @@ function initializePaymentMethod() {
  * Update payment method request
  * @param {Object} paymentData - Payment data
  */
-function updatePaymentMethodRequest(paymentData) {
-    // In a real application, this would make an API call to update the payment method
-    // For now, we'll just show a success message
-    
-    // Show success message
-    showAlert('Payment method updated successfully', 'success');
-    
-    // Update payment method display
-    const paymentMethodElement = document.querySelector('.card-body .h5.mb-0.font-weight-bold.text-gray-800');
-    if (paymentMethodElement) {
-        // Format the card number to show only the last 4 digits
-        const lastFourDigits = paymentData.cardNumber.slice(-4);
-        paymentMethodElement.textContent = `•••• •••• •••• ${lastFourDigits}`;
-    }
-    
-    // Update expiry date
-    const expiryDateElement = document.querySelector('.card-body .small.text-muted');
-    if (expiryDateElement) {
-        expiryDateElement.textContent = `Visa - Expires ${paymentData.expiryDate}`;
+async function updatePaymentMethodRequest(paymentData) {
+    try {
+        // Get auth token and org ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            throw new Error('Authentication required. Please log in again.');
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Make API call to update payment method via Stripe
+        const response = await fetch(`/api/subscription/organizations/${orgId}/payment-method`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+                card_number: paymentData.cardNumber,
+                exp_month: paymentData.expiryDate.split('/')[0],
+                exp_year: paymentData.expiryDate.split('/')[1],
+                cvc: paymentData.cvv,
+                name: paymentData.cardName,
+                address_line1: paymentData.billingAddress,
+                address_city: paymentData.city,
+                address_zip: paymentData.zipCode,
+                address_country: paymentData.country
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to update payment method: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        // Show success message
+        showAlert('Payment method updated successfully', 'success');
+
+        // Update payment method display
+        const paymentMethodElement = document.querySelector('.card-body .h5.mb-0.font-weight-bold.text-gray-800');
+        if (paymentMethodElement) {
+            // Format the card number to show only the last 4 digits
+            const lastFourDigits = paymentData.cardNumber.slice(-4);
+            paymentMethodElement.textContent = `•••• •••• •••• ${lastFourDigits}`;
+        }
+
+        // Update expiry date
+        const expiryDateElement = document.querySelector('.card-body .small.text-muted');
+        if (expiryDateElement) {
+            expiryDateElement.textContent = `Visa - Expires ${paymentData.expiryDate}`;
+        }
+
+    } catch (error) {
+        console.error('Error updating payment method:', error);
+        showAlert('Failed to update payment method: ' + error.message, 'danger');
     }
 }
 
@@ -258,14 +366,49 @@ function initializePlanChangeModal() {
  * Change plan request
  * @param {string} plan - Plan name
  */
-function changePlanRequest(plan) {
-    // In a real application, this would make an API call to change the plan
-    // For now, we'll just show a success message
-    
-    if (plan === 'starter') {
-        showAlert('Your plan will be downgraded to Starter at the end of your current billing period', 'success');
-    } else if (plan === 'enterprise') {
-        showAlert('Your plan has been upgraded to Enterprise', 'success');
+async function changePlanRequest(plan) {
+    try {
+        // Get auth token and org ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            throw new Error('Authentication required. Please log in again.');
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Make API call to change plan
+        const response = await fetch(`/api/subscription/organizations/${orgId}/plan`, {
+            method: 'PATCH',
+            headers: headers,
+            body: JSON.stringify({
+                plan_tier: plan
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to change plan: ${response.statusText}`);
+        }
+
+        // Show appropriate success message
+        if (plan === 'starter') {
+            showAlert('Your plan will be downgraded to Starter at the end of your current billing period', 'success');
+        } else if (plan === 'enterprise') {
+            showAlert('Your plan has been upgraded to Enterprise', 'success');
+        } else {
+            showAlert(`Plan changed to ${plan} successfully`, 'success');
+        }
+
+    } catch (error) {
+        console.error('Error changing plan:', error);
+        showAlert('Failed to change plan: ' + error.message, 'danger');
     }
 }
 
@@ -369,12 +512,48 @@ function initializeCancellation() {
  * @param {string} reason - Cancellation reason
  * @param {string} otherReason - Other reason (if reason is 'other')
  */
-function cancelSubscriptionRequest(reason, otherReason) {
-    // In a real application, this would make an API call to cancel the subscription
-    // For now, we'll just show a success message
-    
-    // Show success message
-    showAlert('Your subscription has been cancelled and will end on January 1, 2026', 'success');
+async function cancelSubscriptionRequest(reason, otherReason) {
+    try {
+        // Get auth token and org ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            throw new Error('Authentication required. Please log in again.');
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Make API call to cancel subscription
+        const response = await fetch(`/api/subscription/organizations/${orgId}/cancel`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+                cancellation_reason: reason,
+                other_reason: otherReason
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to cancel subscription: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        // Show success message with cancellation date from API if available
+        const cancellationDate = result.cancellation_date || 'the end of your current billing period';
+        showAlert(`Your subscription has been cancelled and will end on ${cancellationDate}`, 'success');
+
+    } catch (error) {
+        console.error('Error cancelling subscription:', error);
+        showAlert('Failed to cancel subscription: ' + error.message, 'danger');
+    }
 }
 
 /**
