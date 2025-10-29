@@ -628,18 +628,46 @@ function initializeApiSettings() {
     const saveApiSettingsButton = document.getElementById('saveApiSettings');
     
     if (generateApiKeyButton) {
-        generateApiKeyButton.addEventListener('click', function() {
-            // In a real application, this would make an API call to generate a new API key
-            // For now, we'll just show a success message
-            
-            // Generate a random API key
-            const apiKey = generateRandomApiKey();
-            
-            // Update input value
-            document.getElementById('apiKey').value = apiKey;
-            
-            // Show success message
-            showAlert('New API key generated successfully', 'success');
+        generateApiKeyButton.addEventListener('click', async function() {
+            try {
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to generate a new API key
+                const response = await fetch('/api/auth/api-key/generate', {
+                    method: 'POST',
+                    headers: headers
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to generate API key: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Update input value with the new API key
+                if (data.api_key) {
+                    document.getElementById('apiKey').value = data.api_key;
+                    showAlert('New API key generated successfully. Please save it securely!', 'success');
+                } else {
+                    throw new Error('No API key returned from server');
+                }
+
+            } catch (error) {
+                console.error('Error generating API key:', error);
+                showAlert('Failed to generate API key: ' + error.message, 'danger');
+            }
         });
     }
     
@@ -677,14 +705,50 @@ function initializeApiSettings() {
     }
     
     if (saveApiSettingsButton) {
-        saveApiSettingsButton.addEventListener('click', function() {
-            const webhookUrl = document.getElementById('webhookUrl').value;
-            
-            // In a real application, this would make an API call to update the webhook URL
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('API settings saved successfully', 'success');
+        saveApiSettingsButton.addEventListener('click', async function() {
+            try {
+                const webhookUrl = document.getElementById('webhookUrl').value;
+
+                // Validate webhook URL
+                if (webhookUrl && !webhookUrl.startsWith('http')) {
+                    showAlert('Webhook URL must start with http:// or https://', 'warning');
+                    return;
+                }
+
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to update the webhook URL
+                const response = await fetch('/api/auth/webhook-settings', {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({
+                        webhook_url: webhookUrl
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to save webhook settings: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('API settings saved successfully', 'success');
+
+            } catch (error) {
+                console.error('Error saving webhook settings:', error);
+                showAlert('Failed to save webhook settings: ' + error.message, 'danger');
+            }
         });
     }
 }
