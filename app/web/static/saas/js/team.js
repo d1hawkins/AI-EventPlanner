@@ -547,20 +547,50 @@ function initializeRemoveMemberButtons() {
  * Remove a member
  * @param {string} memberId - Member ID
  */
-function removeMember(memberId) {
-    // In a real application, this would make an API call to remove the member
-    // For now, we'll just remove the row from the table
-    
-    const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
-    if (row) {
-        row.remove();
+async function removeMember(memberId) {
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            showAlert('Authentication required. Please log in again.', 'danger');
+            return;
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'X-Organization-ID': orgId
+        };
+
+        // Make API call to remove member
+        const response = await fetch(`/api/subscription/organizations/${orgId}/members/${memberId}`, {
+            method: 'DELETE',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to remove member: ${response.statusText}`);
+        }
+
+        // Remove the row from the table
+        const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
+        if (row) {
+            row.remove();
+        }
+
+        // Show success message
+        showAlert('Team member removed successfully', 'success');
+
+        // Update team size
+        updateTeamSize();
+
+    } catch (error) {
+        console.error('Error removing team member:', error);
+        showAlert('Failed to remove team member: ' + error.message, 'danger');
     }
-    
-    // Show success message
-    showAlert('Team member removed successfully', 'success');
-    
-    // Update team size
-    updateTeamSize();
 }
 
 /**
