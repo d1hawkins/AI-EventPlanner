@@ -102,11 +102,280 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Initialize search functionality
+    initializeSearch();
+
     // Load real chart data from analytics API
     if (typeof Chart !== 'undefined') {
         loadDashboardCharts();
     }
 });
+
+/**
+ * Initialize search functionality
+ */
+function initializeSearch() {
+    // Desktop search
+    const searchButton = document.getElementById('search-button');
+    const searchInput = document.querySelector('.navbar-search input[type="text"]');
+    const searchForm = document.querySelector('.navbar-search');
+
+    // Mobile search
+    const mobileSearchButton = document.getElementById('mobile-search-button');
+    const mobileSearchInput = document.querySelector('.dropdown-menu .navbar-search input[type="text"]');
+    const mobileSearchForm = document.querySelector('.dropdown-menu .navbar-search');
+
+    // Handle desktop search
+    if (searchButton && searchInput) {
+        searchButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            performSearch(searchInput.value);
+        });
+
+        if (searchForm) {
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                performSearch(searchInput.value);
+            });
+        }
+
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearch(this.value);
+            }
+        });
+    }
+
+    // Handle mobile search
+    if (mobileSearchButton && mobileSearchInput) {
+        mobileSearchButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            performSearch(mobileSearchInput.value);
+        });
+
+        if (mobileSearchForm) {
+            mobileSearchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                performSearch(mobileSearchInput.value);
+            });
+        }
+
+        mobileSearchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearch(this.value);
+            }
+        });
+    }
+}
+
+/**
+ * Perform search across the application
+ * @param {string} query - Search query
+ */
+async function performSearch(query) {
+    if (!query || query.trim() === '') {
+        showAlert('Please enter a search term', 'warning');
+        return;
+    }
+
+    try {
+        // Get auth token
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Authentication required. Please log in again.');
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        // Make API call to search endpoint
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Search failed: ${response.statusText}`);
+        }
+
+        const results = await response.json();
+
+        // Display search results
+        displaySearchResults(query, results);
+
+    } catch (error) {
+        console.error('Error performing search:', error);
+        showAlert('Search failed: ' + error.message, 'danger');
+    }
+}
+
+/**
+ * Display search results in a modal
+ * @param {string} query - Search query
+ * @param {Object} results - Search results
+ */
+function displaySearchResults(query, results) {
+    // Create or get search results modal
+    let modal = document.getElementById('searchResultsModal');
+
+    if (!modal) {
+        // Create modal if it doesn't exist
+        modal = document.createElement('div');
+        modal.id = 'searchResultsModal';
+        modal.className = 'modal fade';
+        modal.setAttribute('tabindex', '-1');
+        modal.setAttribute('aria-labelledby', 'searchResultsModalLabel');
+        modal.setAttribute('aria-hidden', 'true');
+
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="searchResultsModalLabel">Search Results</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="searchResultsBody">
+                        <!-- Results will be inserted here -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+    }
+
+    // Build results HTML
+    const resultsBody = document.getElementById('searchResultsBody');
+    let resultsHTML = `<h6 class="mb-3">Results for "${query}"</h6>`;
+
+    const totalResults = (results.events?.length || 0) +
+                        (results.templates?.length || 0) +
+                        (results.team_members?.length || 0) +
+                        (results.conversations?.length || 0);
+
+    if (totalResults === 0) {
+        resultsHTML += '<p class="text-muted">No results found.</p>';
+    } else {
+        // Events results
+        if (results.events && results.events.length > 0) {
+            resultsHTML += '<h6 class="mt-3 mb-2">Events</h6><ul class="list-group mb-3">';
+            results.events.forEach(event => {
+                resultsHTML += `
+                    <li class="list-group-item">
+                        <a href="/saas/events.html?id=${event.id}" class="text-decoration-none">
+                            <strong>${event.title}</strong>
+                        </a>
+                        <p class="mb-0 small text-muted">${event.description || 'No description'}</p>
+                        <small class="text-muted">${event.start_date || ''} - ${event.event_type || ''}</small>
+                    </li>
+                `;
+            });
+            resultsHTML += '</ul>';
+        }
+
+        // Templates results
+        if (results.templates && results.templates.length > 0) {
+            resultsHTML += '<h6 class="mt-3 mb-2">Templates</h6><ul class="list-group mb-3">';
+            results.templates.forEach(template => {
+                resultsHTML += `
+                    <li class="list-group-item">
+                        <a href="/saas/templates.html?id=${template.id}" class="text-decoration-none">
+                            <strong>${template.name}</strong>
+                        </a>
+                        <p class="mb-0 small text-muted">${template.description || 'No description'}</p>
+                    </li>
+                `;
+            });
+            resultsHTML += '</ul>';
+        }
+
+        // Team members results
+        if (results.team_members && results.team_members.length > 0) {
+            resultsHTML += '<h6 class="mt-3 mb-2">Team Members</h6><ul class="list-group mb-3">';
+            results.team_members.forEach(member => {
+                resultsHTML += `
+                    <li class="list-group-item">
+                        <strong>${member.name || member.email}</strong>
+                        <p class="mb-0 small text-muted">${member.email} - ${member.role}</p>
+                    </li>
+                `;
+            });
+            resultsHTML += '</ul>';
+        }
+
+        // Conversations results
+        if (results.conversations && results.conversations.length > 0) {
+            resultsHTML += '<h6 class="mt-3 mb-2">Conversations</h6><ul class="list-group mb-3">';
+            results.conversations.forEach(conversation => {
+                resultsHTML += `
+                    <li class="list-group-item">
+                        <a href="/saas/clean-chat.html?id=${conversation.id}" class="text-decoration-none">
+                            <strong>Conversation ${conversation.id}</strong>
+                        </a>
+                        <p class="mb-0 small text-muted">${conversation.created_at || ''}</p>
+                    </li>
+                `;
+            });
+            resultsHTML += '</ul>';
+        }
+    }
+
+    resultsBody.innerHTML = resultsHTML;
+
+    // Show the modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+}
+
+/**
+ * Show an alert message
+ * @param {string} message - Alert message
+ * @param {string} type - Alert type (success, info, warning, danger)
+ */
+function showAlert(message, type = 'info') {
+    // Check if showAlert is already defined globally
+    if (window.showAlert && typeof window.showAlert === 'function') {
+        window.showAlert(message, type);
+        return;
+    }
+
+    // Create alert element
+    const alertElement = document.createElement('div');
+    alertElement.className = `alert alert-${type} alert-dismissible fade show`;
+    alertElement.setAttribute('role', 'alert');
+
+    alertElement.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+
+    // Add alert to the page
+    const mainContent = document.getElementById('main-content') || document.querySelector('.dashboard-content');
+    if (mainContent) {
+        mainContent.insertBefore(alertElement, mainContent.firstChild);
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(function() {
+            const bsAlert = new bootstrap.Alert(alertElement);
+            bsAlert.close();
+        }, 5000);
+    }
+}
 
 /**
  * Load dashboard charts with real data from API
