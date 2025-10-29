@@ -258,22 +258,50 @@ function getRecurrenceEndDate(formData) {
  * Create a new event
  * @param {Object} eventData - Event data
  */
-function createEvent(eventData) {
-    // In a real application, this would make an API call to create the event
-    // For now, we'll just simulate creation
-    
-    console.log('Creating event:', eventData);
-    
-    // Simulate API call
-    setTimeout(function() {
-        // Redirect to events page
-        showAlert('Event created successfully', 'success');
-        
-        // In a real app, we would redirect after the API call succeeds
+async function createEvent(eventData) {
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        // Make API call to create event
+        const response = await fetch('/api/events', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(eventData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to create event: ${response.statusText}`);
+        }
+
+        const createdEvent = await response.json();
+
+        // Show success message
+        showAlert('Event created successfully!', 'success');
+
+        // Redirect to events page after a short delay
         setTimeout(function() {
             window.location.href = '/saas/events.html';
         }, 1500);
-    }, 1000);
+    } catch (error) {
+        console.error('Error creating event:', error);
+        showAlert('Failed to create event: ' + error.message, 'danger');
+    }
 }
 
 /**
@@ -339,9 +367,11 @@ function initializeEventsPage() {
         });
     }
     
-    // Initialize delete event functionality
+    // Initialize event action button functionality
     initializeDeleteEventButtons();
-    
+    initializeViewEventButtons();
+    initializeEditEventButtons();
+
     // Load events data
     loadEvents();
 }
@@ -502,8 +532,10 @@ async function loadEvents(status = '', dateRange = '', type = '') {
         // Render events
         renderEvents(filteredEvents);
 
-        // Initialize delete event buttons
+        // Initialize event action buttons
         initializeDeleteEventButtons();
+        initializeViewEventButtons();
+        initializeEditEventButtons();
     } catch (error) {
         console.error('Error loading events:', error);
         eventsTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading events: ${error.message}</td></tr>`;
@@ -545,10 +577,10 @@ function renderEvents(events) {
                 <td><span class="badge ${statusBadgeClass}">${capitalizeFirstLetter(event.status)}</span></td>
                 <td>
                     <div class="btn-group" role="group" aria-label="Event actions">
-                        <a href="#" class="btn btn-primary btn-sm view-event" aria-label="View ${event.title}">
+                        <a href="#" class="btn btn-primary btn-sm view-event" aria-label="View ${event.title}" data-event-id="${event.id}">
                             <i class="bi bi-eye" aria-hidden="true"></i>
                         </a>
-                        <a href="#" class="btn btn-info btn-sm edit-event" aria-label="Edit ${event.title}">
+                        <a href="#" class="btn btn-info btn-sm edit-event" aria-label="Edit ${event.title}" data-event-id="${event.id}">
                             <i class="bi bi-pencil" aria-hidden="true"></i>
                         </a>
                         <a href="#" class="btn btn-danger btn-sm delete-event" aria-label="Delete ${event.title}" data-event-id="${event.id}" data-event-title="${event.title}">
@@ -707,6 +739,132 @@ async function deleteEvent(eventId) {
     } catch (error) {
         console.error('Error deleting event:', error);
         showAlert('Failed to delete event: ' + error.message, 'danger');
+    }
+}
+
+/**
+ * Initialize view event buttons
+ */
+function initializeViewEventButtons() {
+    const viewButtons = document.querySelectorAll('.view-event');
+
+    viewButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+
+            const eventId = this.getAttribute('data-event-id');
+            viewEvent(eventId);
+        });
+    });
+}
+
+/**
+ * View event details
+ * @param {string} eventId - Event ID
+ */
+async function viewEvent(eventId) {
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        // Fetch event details from API
+        const response = await fetch(`/api/events/${eventId}`, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load event: ${response.statusText}`);
+        }
+
+        const event = await response.json();
+
+        // Populate the modal with event data
+        document.getElementById('eventTitle').textContent = event.title || 'Untitled Event';
+        document.getElementById('eventDate').textContent = formatDateRange(event.start_date, event.end_date);
+        document.getElementById('eventLocation').textContent = event.location || 'No location specified';
+        document.getElementById('eventAttendees').textContent = event.attendee_count || 0;
+        document.getElementById('eventType').textContent = event.event_type || 'Not specified';
+        document.getElementById('eventStatus').innerHTML = `<span class="badge ${getStatusBadgeClass(event.status)}">${capitalizeFirstLetter(event.status || 'draft')}</span>`;
+        document.getElementById('eventDescription').textContent = event.description || 'No description available';
+
+        // Set event ID on action buttons
+        document.getElementById('editEventBtn').setAttribute('data-event-id', eventId);
+        document.getElementById('deleteEventBtn').setAttribute('data-event-id', eventId);
+
+        // Show the modal
+        const eventDetailsModal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
+        eventDetailsModal.show();
+    } catch (error) {
+        console.error('Error viewing event:', error);
+        showAlert('Failed to load event details: ' + error.message, 'danger');
+    }
+}
+
+/**
+ * Initialize edit event buttons
+ */
+function initializeEditEventButtons() {
+    const editButtons = document.querySelectorAll('.edit-event');
+
+    editButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+
+            const eventId = this.getAttribute('data-event-id');
+            window.location.href = `/saas/events-new.html?id=${eventId}`;
+        });
+    });
+
+    // Also handle the edit button in the event details modal
+    const modalEditBtn = document.getElementById('editEventBtn');
+    if (modalEditBtn) {
+        modalEditBtn.addEventListener('click', function() {
+            const eventId = this.getAttribute('data-event-id');
+            if (eventId) {
+                window.location.href = `/saas/events-new.html?id=${eventId}`;
+            }
+        });
+    }
+
+    // Handle delete button in modal
+    const modalDeleteBtn = document.getElementById('deleteEventBtn');
+    if (modalDeleteBtn) {
+        modalDeleteBtn.addEventListener('click', function() {
+            const eventId = this.getAttribute('data-event-id');
+            if (eventId) {
+                // Close the details modal first
+                const detailsModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));
+                if (detailsModal) {
+                    detailsModal.hide();
+                }
+
+                // Find the event title for the delete confirmation
+                const eventTitle = document.getElementById('eventTitle').textContent;
+
+                // Set up delete confirmation modal
+                document.getElementById('deleteEventName').textContent = eventTitle;
+                document.getElementById('confirmDeleteEvent').setAttribute('data-event-id', eventId);
+
+                // Show delete confirmation modal
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteEventModal'));
+                deleteModal.show();
+            }
+        });
     }
 }
 
