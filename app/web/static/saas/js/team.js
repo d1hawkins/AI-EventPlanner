@@ -405,39 +405,81 @@ function openEditMemberModal(memberId) {
 /**
  * Save member changes
  */
-function saveMemberChanges() {
-    // Get form values
-    const memberId = document.getElementById('editMemberId').value;
-    const name = document.getElementById('editMemberName').value;
-    const email = document.getElementById('editMemberEmail').value;
-    const role = document.getElementById('editMemberRole').value;
-    
-    // In a real application, this would make an API call to update the member
-    // For now, we'll just update the table
-    
-    const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
-    if (!row) return;
-    
-    // Update row data
-    row.setAttribute('data-member-role', role);
-    
-    // Update name
-    row.querySelector('td:first-child div div:first-child').textContent = name;
-    
-    // Update email
-    row.querySelector('td:nth-child(2)').textContent = email;
-    
-    // Update role
-    const roleBadge = row.querySelector('td:nth-child(3) span');
-    roleBadge.className = `badge ${getRoleBadgeClass(role)}`;
-    roleBadge.textContent = capitalizeFirstLetter(role);
-    
-    // Close modal
-    const editModal = bootstrap.Modal.getInstance(document.getElementById('editMemberModal'));
-    editModal.hide();
-    
-    // Show success message
-    showAlert('Team member updated successfully', 'success');
+async function saveMemberChanges() {
+    try {
+        // Get form values
+        const memberId = document.getElementById('editMemberId').value;
+        const name = document.getElementById('editMemberName').value;
+        const email = document.getElementById('editMemberEmail').value;
+        const role = document.getElementById('editMemberRole').value;
+
+        // Validate input
+        if (!name || !email || !role) {
+            showAlert('All fields are required', 'warning');
+            return;
+        }
+
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            showAlert('Authentication required. Please log in again.', 'danger');
+            return;
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Make API call to update member
+        const response = await fetch(`/api/subscription/organizations/${orgId}/members/${memberId}`, {
+            method: 'PATCH',
+            headers: headers,
+            body: JSON.stringify({
+                name: name,
+                email: email,
+                role: role
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to update member: ${response.statusText}`);
+        }
+
+        // Update the table row with new data
+        const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
+        if (row) {
+            // Update row data
+            row.setAttribute('data-member-role', role);
+
+            // Update name
+            row.querySelector('td:first-child div div:first-child').textContent = name;
+
+            // Update email
+            row.querySelector('td:nth-child(2)').textContent = email;
+
+            // Update role
+            const roleBadge = row.querySelector('td:nth-child(3) span');
+            roleBadge.className = `badge ${getRoleBadgeClass(role)}`;
+            roleBadge.textContent = capitalizeFirstLetter(role);
+        }
+
+        // Close modal
+        const editModal = bootstrap.Modal.getInstance(document.getElementById('editMemberModal'));
+        editModal.hide();
+
+        // Show success message
+        showAlert('Team member updated successfully', 'success');
+
+    } catch (error) {
+        console.error('Error updating team member:', error);
+        showAlert('Failed to update team member: ' + error.message, 'danger');
+    }
 }
 
 /**
