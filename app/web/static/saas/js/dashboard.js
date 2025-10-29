@@ -105,6 +105,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize search functionality
     initializeSearch();
 
+    // Initialize notifications
+    initializeNotifications();
+
     // Load real chart data from analytics API
     if (typeof Chart !== 'undefined') {
         loadDashboardCharts();
@@ -374,6 +377,226 @@ function showAlert(message, type = 'info') {
             const bsAlert = new bootstrap.Alert(alertElement);
             bsAlert.close();
         }, 5000);
+    }
+}
+
+/**
+ * Initialize notifications
+ */
+function initializeNotifications() {
+    // Load notifications on page load
+    loadNotifications();
+
+    // Refresh notifications every 60 seconds
+    setInterval(loadNotifications, 60000);
+
+    // Handle notification dropdown click to mark as read
+    const alertsDropdown = document.getElementById('alertsDropdown');
+    if (alertsDropdown) {
+        alertsDropdown.addEventListener('click', function() {
+            // Mark notifications as read when dropdown is opened
+            setTimeout(markNotificationsAsRead, 500);
+        });
+    }
+}
+
+/**
+ * Load notifications from API
+ */
+async function loadNotifications() {
+    try {
+        // Get auth token
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            return; // Silently fail if not authenticated
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        // Fetch notifications from API
+        const response = await fetch('/api/notifications', {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load notifications');
+        }
+
+        const data = await response.json();
+        const notifications = data.notifications || [];
+
+        // Update notification badge
+        updateNotificationBadge(notifications);
+
+        // Update notification dropdown
+        updateNotificationDropdown(notifications);
+
+    } catch (error) {
+        console.error('Error loading notifications:', error);
+        // Silently fail - don't show error to user for background updates
+    }
+}
+
+/**
+ * Update notification badge count
+ * @param {Array} notifications - Array of notifications
+ */
+function updateNotificationBadge(notifications) {
+    const badge = document.querySelector('#alertsDropdown .badge-counter');
+    if (!badge) return;
+
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+
+    if (unreadCount === 0) {
+        badge.style.display = 'none';
+    } else {
+        badge.style.display = 'inline-block';
+        badge.textContent = unreadCount > 9 ? '9+' : unreadCount.toString();
+    }
+}
+
+/**
+ * Update notification dropdown content
+ * @param {Array} notifications - Array of notifications
+ */
+function updateNotificationDropdown(notifications) {
+    const dropdownMenu = document.querySelector('#alertsDropdown + .dropdown-menu');
+    if (!dropdownMenu) return;
+
+    // Keep the header
+    const header = dropdownMenu.querySelector('.dropdown-header');
+
+    // Clear existing notifications (keep header and "Show All" link)
+    const items = dropdownMenu.querySelectorAll('.dropdown-item:not(.text-center)');
+    items.forEach(item => item.remove());
+
+    if (notifications.length === 0) {
+        // Show empty state
+        const emptyItem = document.createElement('div');
+        emptyItem.className = 'dropdown-item text-center text-muted';
+        emptyItem.textContent = 'No notifications';
+        dropdownMenu.insertBefore(emptyItem, dropdownMenu.querySelector('.text-center'));
+        return;
+    }
+
+    // Add notifications (show last 5)
+    const recentNotifications = notifications.slice(0, 5);
+
+    recentNotifications.forEach(notification => {
+        const item = document.createElement('a');
+        item.className = 'dropdown-item d-flex align-items-center';
+        item.href = notification.link || '#';
+
+        // Determine icon and color based on notification type
+        let icon = 'bi-info-circle';
+        let color = 'bg-primary';
+
+        if (notification.type === 'event') {
+            icon = 'bi-calendar';
+            color = 'bg-primary';
+        } else if (notification.type === 'team') {
+            icon = 'bi-people';
+            color = 'bg-success';
+        } else if (notification.type === 'billing') {
+            icon = 'bi-credit-card';
+            color = 'bg-warning';
+        } else if (notification.type === 'system') {
+            icon = 'bi-exclamation-triangle';
+            color = 'bg-danger';
+        }
+
+        item.innerHTML = `
+            <div class="mr-3">
+                <div class="icon-circle ${color}">
+                    <i class="${icon} text-white"></i>
+                </div>
+            </div>
+            <div>
+                <div class="small text-gray-500">${formatNotificationDate(notification.created_at)}</div>
+                <span class="${notification.is_read ? '' : 'font-weight-bold'}">${notification.message}</span>
+            </div>
+        `;
+
+        dropdownMenu.insertBefore(item, dropdownMenu.querySelector('.text-center'));
+    });
+}
+
+/**
+ * Format notification date for display
+ * @param {string} dateString - ISO date string
+ * @returns {string} Formatted date
+ */
+function formatNotificationDate(dateString) {
+    if (!dateString) return '';
+
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/**
+ * Mark all notifications as read
+ */
+async function markNotificationsAsRead() {
+    try {
+        // Get auth token
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            return;
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        // Mark notifications as read
+        const response = await fetch('/api/notifications/mark-read', {
+            method: 'POST',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to mark notifications as read');
+        }
+
+        // Update badge to 0
+        const badge = document.querySelector('#alertsDropdown .badge-counter');
+        if (badge) {
+            badge.style.display = 'none';
+        }
+
+    } catch (error) {
+        console.error('Error marking notifications as read:', error);
+        // Silently fail
     }
 }
 
