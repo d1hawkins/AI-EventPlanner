@@ -960,72 +960,151 @@
             
             // Generate suggestions button
             const generateSuggestionsButton = document.getElementById('generateSuggestionsButton');
-            generateSuggestionsButton.addEventListener('click', function() {
+            let aiSuggestions = null; // Store AI suggestions for later use
+
+            generateSuggestionsButton.addEventListener('click', async function() {
                 const prompt = document.getElementById('aiAssistPrompt').value;
                 const responseElement = document.getElementById('aiAssistResponse');
-                
+
                 if (!prompt) {
                     responseElement.innerHTML = '<p class="text-danger">Please provide a description of your event.</p>';
                     return;
                 }
-                
-                // Show loading state
-                responseElement.innerHTML = '<p class="text-muted">Generating suggestions...</p>';
-                
-                // Simulate AI response (in a real app, this would call an API)
-                setTimeout(() => {
-                    // Example response
-                    responseElement.innerHTML = `
-                        <h6>Event Suggestions</h6>
-                        <p>Based on your description, here are my suggestions:</p>
-                        <ul>
-                            <li><strong>Title:</strong> Tech Conference 2025</li>
-                            <li><strong>Type:</strong> Conference</li>
-                            <li><strong>Date:</strong> October 15-17, 2025</li>
-                            <li><strong>Location:</strong> San Francisco, CA</li>
-                            <li><strong>Venue:</strong> Moscone Center</li>
-                            <li><strong>Attendees:</strong> 200</li>
-                            <li><strong>Budget:</strong> $50,000</li>
-                        </ul>
-                        <p>Would you like me to fill out the form with these details?</p>
-                    `;
-                    
+
+                try {
+                    // Show loading state
+                    responseElement.innerHTML = '<div class="text-center"><span class="spinner-border spinner-border-sm me-2"></span>Generating suggestions...</div>';
+
+                    // Get auth token
+                    const token = localStorage.getItem('authToken');
+                    const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+                    if (!token) {
+                        throw new Error('Authentication required. Please log in again.');
+                    }
+
+                    // Prepare headers
+                    const headers = {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    };
+
+                    if (orgId) {
+                        headers['X-Organization-ID'] = orgId;
+                    }
+
+                    // Call AI assist API
+                    const response = await fetch('/api/agents/event-suggest', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({ prompt: prompt })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `Failed to generate suggestions: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    aiSuggestions = data;
+
+                    // Display the suggestions
+                    let suggestionsHtml = '<h6>Event Suggestions</h6><p>Based on your description, here are my suggestions:</p><ul>';
+
+                    if (data.title) suggestionsHtml += `<li><strong>Title:</strong> ${data.title}</li>`;
+                    if (data.type) suggestionsHtml += `<li><strong>Type:</strong> ${data.type}</li>`;
+                    if (data.start_date || data.end_date) {
+                        suggestionsHtml += `<li><strong>Date:</strong> ${data.start_date || 'TBD'} to ${data.end_date || 'TBD'}</li>`;
+                    }
+                    if (data.location || data.venue) {
+                        suggestionsHtml += `<li><strong>Location:</strong> ${data.venue || ''} ${data.location || ''}</li>`;
+                    }
+                    if (data.attendee_count) suggestionsHtml += `<li><strong>Attendees:</strong> ${data.attendee_count}</li>`;
+                    if (data.budget) suggestionsHtml += `<li><strong>Budget:</strong> $${data.budget.toLocaleString()}</li>`;
+                    if (data.description) suggestionsHtml += `<li><strong>Description:</strong> ${data.description}</li>`;
+
+                    suggestionsHtml += '</ul><p>Would you like me to fill out the form with these details?</p>';
+
+                    responseElement.innerHTML = suggestionsHtml;
+
                     // Enable apply button
                     document.getElementById('applyToFormButton').disabled = false;
-                }, 1500);
+
+                } catch (error) {
+                    console.error('Error generating AI suggestions:', error);
+                    responseElement.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+                    document.getElementById('applyToFormButton').disabled = true;
+                    aiSuggestions = null;
+                }
             });
             
             // Apply to form button
             const applyToFormButton = document.getElementById('applyToFormButton');
             applyToFormButton.addEventListener('click', function() {
-                // Simulate filling the form (in a real app, this would use the actual AI suggestions)
-                document.getElementById('eventTitle').value = 'Tech Conference 2025';
-                document.getElementById('eventType').value = 'conference';
-                document.getElementById('eventDescription').value = 'A technology conference featuring the latest innovations and industry trends.';
-                
-                document.getElementById('eventStartDate').value = '2025-10-15';
-                document.getElementById('eventEndDate').value = '2025-10-17';
-                
-                document.getElementById('eventLocationType').value = 'physical';
-                document.getElementById('eventVenue').value = 'Moscone Center';
-                document.getElementById('eventAddress').value = '747 Howard St';
-                document.getElementById('eventCity').value = 'San Francisco';
-                document.getElementById('eventState').value = 'CA';
-                document.getElementById('eventZip').value = '94103';
-                document.getElementById('eventCountry').value = 'USA';
-                
-                document.getElementById('eventAttendeeCount').value = '200';
-                document.getElementById('eventBudget').value = '50000';
-                
+                if (!aiSuggestions) {
+                    alert('No AI suggestions available. Please generate suggestions first.');
+                    return;
+                }
+
+                // Fill the form with AI suggestions
+                if (aiSuggestions.title) {
+                    document.getElementById('eventTitle').value = aiSuggestions.title;
+                }
+                if (aiSuggestions.type) {
+                    document.getElementById('eventType').value = aiSuggestions.type;
+                }
+                if (aiSuggestions.description) {
+                    document.getElementById('eventDescription').value = aiSuggestions.description;
+                }
+
+                if (aiSuggestions.start_date) {
+                    document.getElementById('eventStartDate').value = aiSuggestions.start_date;
+                }
+                if (aiSuggestions.end_date) {
+                    document.getElementById('eventEndDate').value = aiSuggestions.end_date;
+                }
+
+                if (aiSuggestions.location_type) {
+                    document.getElementById('eventLocationType').value = aiSuggestions.location_type;
+                }
+                if (aiSuggestions.venue) {
+                    document.getElementById('eventVenue').value = aiSuggestions.venue;
+                }
+                if (aiSuggestions.address) {
+                    document.getElementById('eventAddress').value = aiSuggestions.address;
+                }
+                if (aiSuggestions.city) {
+                    document.getElementById('eventCity').value = aiSuggestions.city;
+                }
+                if (aiSuggestions.state) {
+                    document.getElementById('eventState').value = aiSuggestions.state;
+                }
+                if (aiSuggestions.zip) {
+                    document.getElementById('eventZip').value = aiSuggestions.zip;
+                }
+                if (aiSuggestions.country) {
+                    document.getElementById('eventCountry').value = aiSuggestions.country;
+                }
+                if (aiSuggestions.online_url) {
+                    document.getElementById('eventOnlineUrl').value = aiSuggestions.online_url;
+                }
+
+                if (aiSuggestions.attendee_count) {
+                    document.getElementById('eventAttendeeCount').value = aiSuggestions.attendee_count;
+                }
+                if (aiSuggestions.budget) {
+                    document.getElementById('eventBudget').value = aiSuggestions.budget;
+                }
+
                 // Update dependent fields
                 updateLocationFields();
-                
+
                 // Close the modal
                 const aiAssistModal = bootstrap.Modal.getInstance(document.getElementById('aiAssistModal'));
                 aiAssistModal.hide();
-                
+
                 // Show success message
-                alert('Form has been filled with AI suggestions!');
+                showAlert('Form has been filled with AI suggestions!', 'success');
             });
         });
     </script>
