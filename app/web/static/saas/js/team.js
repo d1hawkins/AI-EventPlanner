@@ -405,39 +405,81 @@ function openEditMemberModal(memberId) {
 /**
  * Save member changes
  */
-function saveMemberChanges() {
-    // Get form values
-    const memberId = document.getElementById('editMemberId').value;
-    const name = document.getElementById('editMemberName').value;
-    const email = document.getElementById('editMemberEmail').value;
-    const role = document.getElementById('editMemberRole').value;
-    
-    // In a real application, this would make an API call to update the member
-    // For now, we'll just update the table
-    
-    const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
-    if (!row) return;
-    
-    // Update row data
-    row.setAttribute('data-member-role', role);
-    
-    // Update name
-    row.querySelector('td:first-child div div:first-child').textContent = name;
-    
-    // Update email
-    row.querySelector('td:nth-child(2)').textContent = email;
-    
-    // Update role
-    const roleBadge = row.querySelector('td:nth-child(3) span');
-    roleBadge.className = `badge ${getRoleBadgeClass(role)}`;
-    roleBadge.textContent = capitalizeFirstLetter(role);
-    
-    // Close modal
-    const editModal = bootstrap.Modal.getInstance(document.getElementById('editMemberModal'));
-    editModal.hide();
-    
-    // Show success message
-    showAlert('Team member updated successfully', 'success');
+async function saveMemberChanges() {
+    try {
+        // Get form values
+        const memberId = document.getElementById('editMemberId').value;
+        const name = document.getElementById('editMemberName').value;
+        const email = document.getElementById('editMemberEmail').value;
+        const role = document.getElementById('editMemberRole').value;
+
+        // Validate input
+        if (!name || !email || !role) {
+            showAlert('All fields are required', 'warning');
+            return;
+        }
+
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            showAlert('Authentication required. Please log in again.', 'danger');
+            return;
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Make API call to update member
+        const response = await fetch(`/api/subscription/organizations/${orgId}/members/${memberId}`, {
+            method: 'PATCH',
+            headers: headers,
+            body: JSON.stringify({
+                name: name,
+                email: email,
+                role: role
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to update member: ${response.statusText}`);
+        }
+
+        // Update the table row with new data
+        const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
+        if (row) {
+            // Update row data
+            row.setAttribute('data-member-role', role);
+
+            // Update name
+            row.querySelector('td:first-child div div:first-child').textContent = name;
+
+            // Update email
+            row.querySelector('td:nth-child(2)').textContent = email;
+
+            // Update role
+            const roleBadge = row.querySelector('td:nth-child(3) span');
+            roleBadge.className = `badge ${getRoleBadgeClass(role)}`;
+            roleBadge.textContent = capitalizeFirstLetter(role);
+        }
+
+        // Close modal
+        const editModal = bootstrap.Modal.getInstance(document.getElementById('editMemberModal'));
+        editModal.hide();
+
+        // Show success message
+        showAlert('Team member updated successfully', 'success');
+
+    } catch (error) {
+        console.error('Error updating team member:', error);
+        showAlert('Failed to update team member: ' + error.message, 'danger');
+    }
 }
 
 /**
@@ -505,20 +547,50 @@ function initializeRemoveMemberButtons() {
  * Remove a member
  * @param {string} memberId - Member ID
  */
-function removeMember(memberId) {
-    // In a real application, this would make an API call to remove the member
-    // For now, we'll just remove the row from the table
-    
-    const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
-    if (row) {
-        row.remove();
+async function removeMember(memberId) {
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            showAlert('Authentication required. Please log in again.', 'danger');
+            return;
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'X-Organization-ID': orgId
+        };
+
+        // Make API call to remove member
+        const response = await fetch(`/api/subscription/organizations/${orgId}/members/${memberId}`, {
+            method: 'DELETE',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to remove member: ${response.statusText}`);
+        }
+
+        // Remove the row from the table
+        const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
+        if (row) {
+            row.remove();
+        }
+
+        // Show success message
+        showAlert('Team member removed successfully', 'success');
+
+        // Update team size
+        updateTeamSize();
+
+    } catch (error) {
+        console.error('Error removing team member:', error);
+        showAlert('Failed to remove team member: ' + error.message, 'danger');
     }
-    
-    // Show success message
-    showAlert('Team member removed successfully', 'success');
-    
-    // Update team size
-    updateTeamSize();
 }
 
 /**
@@ -561,10 +633,58 @@ function updateTeamSize() {
  * Export team list
  */
 function exportTeamList() {
-    // In a real application, this would generate a CSV or Excel file
-    // For now, we'll just show a message
-    
-    showAlert('Team list exported successfully', 'success');
+    try {
+        // Get all team member rows from the table
+        const rows = document.querySelectorAll('#teamTableBody tr');
+
+        if (rows.length === 0) {
+            showAlert('No team members to export', 'warning');
+            return;
+        }
+
+        // Create CSV content with headers
+        let csvContent = 'Name,Email,Role,Status\n';
+
+        // Add each team member to CSV
+        rows.forEach(row => {
+            const name = row.querySelector('td:first-child div div:first-child')?.textContent.trim() || '';
+            const email = row.querySelector('td:nth-child(2)')?.textContent.trim() || '';
+            const role = row.querySelector('td:nth-child(3) span')?.textContent.trim() || '';
+            const status = row.querySelector('td:nth-child(4) span')?.textContent.trim() || '';
+
+            // Escape commas and quotes in data
+            const escapeCsv = (str) => {
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            };
+
+            csvContent += `${escapeCsv(name)},${escapeCsv(email)},${escapeCsv(role)},${escapeCsv(status)}\n`;
+        });
+
+        // Create a blob from the CSV content
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+        // Create a link element and trigger download
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().slice(0, 10);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `team_members_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        showAlert('Team list exported successfully', 'success');
+    } catch (error) {
+        console.error('Error exporting team list:', error);
+        showAlert('Failed to export team list: ' + error.message, 'danger');
+    }
 }
 
 /**
@@ -650,32 +770,159 @@ async function sendInvitations() {
 /**
  * Import team members
  */
-function importTeamMembers() {
-    // Get form values
-    const csvFile = document.getElementById('csvFile').files[0];
-    
-    // In a real application, this would parse the CSV file and make an API call
-    // For now, we'll just show a success message
-    
-    // Show success message
-    showAlert('Team members imported successfully', 'success');
-    
-    // Reset form
-    document.getElementById('bulkImportForm').reset();
-    document.getElementById('bulkImportForm').classList.remove('was-validated');
-    
-    // Reload pending invitations
-    loadPendingInvitations();
+async function importTeamMembers() {
+    try {
+        // Get form values
+        const csvFile = document.getElementById('csvFile').files[0];
+
+        if (!csvFile) {
+            throw new Error('Please select a CSV file');
+        }
+
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            showAlert('Authentication required. Please log in again.', 'danger');
+            return;
+        }
+
+        // Read the CSV file
+        const text = await csvFile.text();
+        const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+        if (lines.length < 2) {
+            throw new Error('CSV file must contain headers and at least one data row');
+        }
+
+        // Parse CSV headers
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const emailIndex = headers.indexOf('email');
+        const nameIndex = headers.indexOf('name');
+        const roleIndex = headers.indexOf('role');
+
+        if (emailIndex === -1) {
+            throw new Error('CSV file must contain an "email" column');
+        }
+
+        // Parse CSV data rows
+        const members = [];
+        const errors = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim());
+
+            if (values.length === 0 || values[0] === '') {
+                continue; // Skip empty lines
+            }
+
+            const email = values[emailIndex] || '';
+            const name = nameIndex !== -1 ? values[nameIndex] : '';
+            const role = roleIndex !== -1 ? values[roleIndex] : 'member';
+
+            if (!email) {
+                errors.push(`Row ${i + 1}: Missing email address`);
+                continue;
+            }
+
+            members.push({ email, name, role });
+        }
+
+        if (members.length === 0) {
+            throw new Error('No valid members found in CSV file. ' + (errors.length > 0 ? errors.join('; ') : ''));
+        }
+
+        // Prepare headers for API calls
+        const apiHeaders = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Send invitations for each member
+        const invitationPromises = members.map(member =>
+            fetch(`/api/subscription/organizations/${orgId}/members/invite`, {
+                method: 'POST',
+                headers: apiHeaders,
+                body: JSON.stringify({
+                    email: member.email,
+                    role: member.role,
+                    message: `You have been invited to join our team${member.name ? ' as ' + member.name : ''}`
+                })
+            })
+        );
+
+        const responses = await Promise.all(invitationPromises);
+
+        // Check for failures
+        const failures = [];
+        for (let i = 0; i < responses.length; i++) {
+            if (!responses[i].ok) {
+                failures.push(members[i].email);
+            }
+        }
+
+        // Show appropriate message
+        if (failures.length === 0) {
+            showAlert(`Successfully sent ${members.length} invitation(s)!`, 'success');
+        } else if (failures.length < members.length) {
+            showAlert(`Sent ${members.length - failures.length} invitation(s). Failed: ${failures.join(', ')}`, 'warning');
+        } else {
+            throw new Error(`Failed to send invitations to: ${failures.join(', ')}`);
+        }
+
+        // Reset form
+        document.getElementById('bulkImportForm').reset();
+        document.getElementById('bulkImportForm').classList.remove('was-validated');
+
+        // Close modal
+        const importModal = bootstrap.Modal.getInstance(document.getElementById('bulkImportModal'));
+        if (importModal) {
+            importModal.hide();
+        }
+
+        // Reload pending invitations
+        loadPendingInvitations();
+
+    } catch (error) {
+        console.error('Error importing team members:', error);
+        showAlert('Failed to import team members: ' + error.message, 'danger');
+    }
 }
 
 /**
  * Download CSV template
  */
 function downloadCSVTemplate() {
-    // In a real application, this would generate a CSV file
-    // For now, we'll just show a message
-    
-    showAlert('CSV template downloaded', 'info');
+    try {
+        // Create CSV content with headers
+        const csvContent = 'email,name,role\n' +
+                          'john@example.com,John Smith,member\n' +
+                          'jane@example.com,Jane Doe,admin\n' +
+                          'bob@example.com,Bob Johnson,member\n';
+
+        // Create a blob from the CSV content
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+        // Create a link element and trigger download
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'team_invite_template.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        showAlert('CSV template downloaded successfully', 'success');
+    } catch (error) {
+        console.error('Error downloading CSV template:', error);
+        showAlert('Failed to download CSV template: ' + error.message, 'danger');
+    }
 }
 
 /**
