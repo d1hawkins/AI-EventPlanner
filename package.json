@@ -4,11 +4,32 @@
   "description": "An AI-powered event planning system using LangGraph",
   "main": "index.js",
   "scripts": {
-    "start": "echo 'This is a Python project. Use poetry run uvicorn app.main:app --reload to start'"
+    "start": "echo 'This is a Python project. Use poetry run uvicorn app.main:app --reload to start'",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {},
-  "devDependencies": {},
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "app/web/static/saas/js/**/*.js",
+      "!app/web/static/saas/js/**/*.min.js"
+    ],
+    "coverageDirectory": "coverage",
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ]
   }
 }
