@@ -994,47 +994,85 @@ function selectAgent(agentType) {
     /**
      * Export chat history
      */
-    function exportChatHistory() {
-        // Get all messages
-        const messages = [];
-        
-        document.querySelectorAll('.chat-message').forEach(messageElement => {
-            const isUser = messageElement.classList.contains('user-message');
-            const isSystem = messageElement.classList.contains('system-message');
-            
-            const contentElement = messageElement.querySelector('.message-content p');
-            if (!contentElement) return;
-            
-            const content = contentElement.textContent;
-            
-            if (isUser) {
-                messages.push(`User: ${content}`);
-            } else if (isSystem) {
-                messages.push(`System: ${content}`);
-            } else {
-                messages.push(`Agent: ${content}`);
+    async function exportChatHistory() {
+        try {
+            // Check if there's an active conversation
+            if (!agentService.currentConversationId) {
+                showError('No active conversation to export.');
+                return;
             }
-        });
-        
-        if (messages.length === 0) {
-            showError('No messages to export.');
-            return;
+
+            // Get auth token
+            const token = localStorage.getItem('authToken');
+            const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+            if (!token) {
+                throw new Error('Authentication required. Please log in again.');
+            }
+
+            // Prepare headers
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+
+            if (orgId) {
+                headers['X-Organization-ID'] = orgId;
+            }
+
+            // Fetch conversation export from API (default format: JSON)
+            const response = await fetch(`/api/agents/conversations/${agentService.currentConversationId}/export?format=json`, {
+                method: 'GET',
+                headers: headers
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Failed to export conversation: ${response.statusText}`);
+            }
+
+            // Get conversation data
+            const conversationData = await response.json();
+
+            // Format as readable text for download
+            let fileContent = `Conversation Export\n`;
+            fileContent += `Date: ${new Date().toLocaleString()}\n`;
+            fileContent += `Conversation ID: ${agentService.currentConversationId}\n`;
+            fileContent += `Agent: ${conversationData.agent_name || 'AI Assistant'}\n`;
+            fileContent += `\n${'='.repeat(80)}\n\n`;
+
+            // Add all messages
+            if (conversationData.messages && conversationData.messages.length > 0) {
+                conversationData.messages.forEach(message => {
+                    const role = message.role === 'user' ? 'User' : message.role === 'assistant' ? 'Agent' : 'System';
+                    const timestamp = message.timestamp ? new Date(message.timestamp).toLocaleString() : '';
+                    fileContent += `[${timestamp}] ${role}:\n${message.content}\n\n`;
+                });
+            } else {
+                fileContent += 'No messages in conversation.\n';
+            }
+
+            // Create download link
+            const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `conversation-${agentService.currentConversationId}-${new Date().toISOString().slice(0, 10)}.txt`;
+            a.style.visibility = 'hidden';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Clean up
+            URL.revokeObjectURL(url);
+
+            showSuccess('Conversation exported successfully');
+
+        } catch (error) {
+            console.error('Error exporting conversation:', error);
+            showError('Failed to export conversation: ' + error.message);
         }
-        
-        // Create file content
-        const fileContent = messages.join('\n\n');
-        
-        // Create download link
-        const blob = new Blob([fileContent], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `chat-export-${new Date().toISOString().slice(0, 10)}.txt`;
-        a.click();
-        
-        // Clean up
-        URL.revokeObjectURL(url);
     }
     
     /**
