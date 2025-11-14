@@ -9,6 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.auth.router import router as auth_router
 from app.web.router import router as web_router
+from app.web.router_additional import router as additional_router
 from app.subscription.router import router as subscription_router
 from app.agents.api_router import router as agent_router
 from app.middleware.tenant import tenant_middleware
@@ -134,6 +135,7 @@ app.mount("/saas", StaticFiles(directory="app/web/static/saas"), name="saas_stat
 # Include routers
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
 app.include_router(web_router, prefix="/api", tags=["api"])
+app.include_router(additional_router, prefix="/api", tags=["additional"])
 app.include_router(subscription_router, prefix="/subscription", tags=["subscription"])
 app.include_router(agent_router, prefix="/api", tags=["agents"])
 
