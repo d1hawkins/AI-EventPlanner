@@ -160,7 +160,7 @@ export const ChatScreen = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-screen bg-white dark:bg-dark-bg-primary transition-colors">
       {/* Header */}
       <ChatHeader onMenuClick={() => setIsMenuOpen(true)} />
 
@@ -211,14 +211,14 @@ export const ChatScreen = () => {
         {/* Typing Indicator */}
         {isTyping && (
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <span className="text-blue-600 text-sm">AI</span>
+            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center transition-colors">
+              <span className="text-blue-600 dark:text-blue-400 text-sm">AI</span>
             </div>
-            <div className="bg-blue-50 rounded-2xl px-4 py-3">
+            <div className="bg-blue-50 dark:bg-dark-bg-tertiary rounded-2xl px-4 py-3 transition-colors">
               <div className="flex gap-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="w-2 h-2 bg-gray-400 dark:bg-dark-text-tertiary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-gray-400 dark:bg-dark-text-tertiary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-gray-400 dark:bg-dark-text-tertiary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
