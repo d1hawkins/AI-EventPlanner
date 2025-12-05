@@ -5,6 +5,7 @@ import { Profile } from './pages/Profile';
 import { EventsPage } from './pages/EventsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TeamPage } from './pages/TeamPage';
+import { SubscriptionPage } from './pages/SubscriptionPage';
 import { useAuth } from './hooks/useAuth';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './hooks/useToast';
@@ -134,6 +135,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <TeamPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subscription"
+              element={
+                <ProtectedRoute>
+                  <SubscriptionPage />
                 </ProtectedRoute>
               }
             />
