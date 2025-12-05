@@ -1,5 +1,6 @@
 import { BrowserRouter } from 'react-router-dom';
 import { ChatScreen } from './pages/ChatScreen';
+import { ThemeProvider } from './context/ThemeContext';
 
 /**
  * Chat-Focused App - Inspired by Gemini Canvas
@@ -14,13 +15,16 @@ import { ChatScreen } from './pages/ChatScreen';
  * - Contextual action chips
  * - Minimal UI chrome
  * - Everything driven by conversation
+ * - Dark/Light mode support
  */
 
 function App() {
   return (
-    <BrowserRouter>
-      <ChatScreen />
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <ChatScreen />
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 
