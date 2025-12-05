@@ -38,6 +38,9 @@ ENV/
 # Logs
 *.log
 
+# Node.js
+node_modules/
+
 # OS specific
 .DS_Store
 Thumbs.db
@@ -66,3 +69,7 @@ azure-credentials.json
 !.env.saas.template
 !.env.backup.template
 env-files.zip
+
+# Temporary files
+temp.pdf
+*.tmp
