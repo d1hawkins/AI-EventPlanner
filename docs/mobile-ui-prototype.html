@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Event Planner - Mobile UI Prototype</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+            color: #2E3440;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #4E73DF;
+        }
+
+        .intro {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .screens-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(375px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .phone-frame {
+            background: #1a1a1a;
+            border-radius: 36px;
+            padding: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            margin: 0 auto;
+            max-width: 375px;
+        }
+
+        .phone-screen {
+            background: white;
+            border-radius: 24px;
+            overflow: hidden;
+            height: 667px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen-label {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: 600;
+            color: #4E73DF;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 24px;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 12px;
+            color: #2E3440;
+        }
+
+        /* Header Styles */
+        .header {
+            background: white;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h2 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            background: #F8F9FC;
+            padding: 16px;
+        }
+
+        /* Landing Screen */
+        .landing-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin-bottom: 24px;
+        }
+
+        .landing-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .landing-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 48px;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+            padding: 16px 48px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            margin-top: 16px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        /* Dashboard */
+        .greeting {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .greeting-sub {
+            color: #858796;
+            margin-bottom: 24px;
+        }
+
+        .btn-new-event {
+            background: #4E73DF;
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(78, 115, 223, 0.3);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .event-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .event-card:active {
+            transform: scale(0.98);
+        }
+
+        .event-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .event-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .event-date {
+            font-size: 14px;
+            color: #858796;
+            margin-bottom: 12px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #E3E6F0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #1CC88A;
+            border-radius: 3px;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: #858796;
+        }
+
+        /* Chat Interface */
+        .chat-header {
+            background: white;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+        }
+
+        .back-btn {
+            font-size: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+
+        .chat-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            display: flex;
+            gap: 8px;
+            max-width: 80%;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #4E73DF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .message-bubble {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        .message.ai .message-bubble {
+            background: #F0F2F5;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.user .message-bubble {
+            background: #4E73DF;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #858796;
+            margin-top: 4px;
+        }
+
+        .quick-replies {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .quick-reply-btn {
+            background: white;
+            border: 2px solid #4E73DF;
+            color: #4E73DF;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .chat-input-area {
+            background: white;
+            padding: 12px 16px;
+            border-top: 1px solid #E3E6F0;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: #F8F9FC;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            background: #4E73DF;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        /* Event Detail */
+        .event-hero {
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .event-hero-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .event-hero-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .event-hero-date {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .detail-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .detail-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #E3E6F0;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-icon {
+            font-size: 20px;
+        }
+
+        .detail-label {
+            font-size: 14px;
+            color: #858796;
+        }
+
+        .detail-value {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .budget-bar {
+            height: 8px;
+            background: #E3E6F0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .budget-fill {
+            height: 100%;
+            background: #1CC88A;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #858796;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .task-checkbox.checked {
+            background: #1CC88A;
+            border-color: #1CC88A;
+            color: white;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #858796;
+            cursor: pointer;
+            padding: 8px 16px;
+        }
+
+        .nav-item.active {
+            color: #4E73DF;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* FAB */
+        .fab {
+            position: absolute;
+            bottom: 80px;
+            right: 16px;
+            width: 56px;
+            height: 56px;
+            background: #4E73DF;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(78, 115, 223, 0.4);
+            cursor: pointer;
+        }
+
+        .calendar-grid {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            text-align: center;
+        }
+
+        .calendar-day {
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .calendar-day.header {
+            color: #858796;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .calendar-day.today {
+            background: #4E73DF;
+            color: white;
+            font-weight: 600;
+        }
+
+        .calendar-day.event {
+            background: #FEF3E2;
+            color: #F6C23E;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 AI Event Planner - Mobile UI/UX Prototype</h1>
+
+        <div class="intro">
+            <h2 style="margin-bottom: 16px;">Interactive Mobile Design</h2>
+            <p style="margin-bottom: 12px;">This prototype showcases the mobile-first design for the AI Event Planner client interface. The design emphasizes:</p>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>Simplicity</strong> - Clean, uncluttered interfaces with clear hierarchy</li>
+                <li><strong>Conversational AI</strong> - Chat-first interaction for natural event planning</li>
+                <li><strong>Mobile-Optimized</strong> - Touch-friendly, thumb-accessible navigation</li>
+                <li><strong>Visual Clarity</strong> - High contrast, readable text, clear CTAs</li>
+            </ul>
+        </div>
+
+        <div class="screens-grid">
+            <!-- Landing Screen -->
+            <div>
+                <div class="phone-frame">
+                    <div class="phone-screen">
+                        <div class="status-bar">
+                            <span>9:41</span>
+                            <span>📶 📶 🔋</span>
+                        </div>
+                        <div class="landing-content">
+                            <div class="logo">🎉</div>
+                            <div class="landing-title">AI Event Planner</div>
+                            <div class="landing-subtitle">Plan perfect events with AI assistance</div>
+                            <button class="btn-primary">Get Started</button>
+                            <div class="btn-secondary">Already have an account? Sign In</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">Landing Screen</div>
+            </div>
+
+            <!-- Dashboard -->
+            <div>
+                <div class="phone-frame">
+                    <div class="phone-screen">
+                        <div class="status-bar">
+                            <span>9:41</span>
+                            <span>📶 📶 🔋</span>
+                        </div>
+                        <div class="header">
+                            <h2>AI Event Planner</h2>
+                            <div>🔔</div>
+                        </div>
+                        <div class="content">
+                            <div class="greeting">Hi Sarah! 👋</div>
+                            <div class="greeting-sub">Ready to plan?</div>
+
+                            <div class="btn-new-event">+ New Event</div>
+
+                            <div class="section-title">Your Events</div>
+
+                            <div class="event-card">
+                                <div class="event-icon">🎉</div>
+                                <div class="event-name">Summer Party</div>
+                                <div class="event-date">Jun 15, 2024</div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 60%"></div>
+                                </div>
+                                <div class="progress-text">●●●○○ 60% done</div>
+                            </div>
+
+                            <div class="event-card">
+                                <div class="event-icon">💼</div>
+                                <div class="event-name">Sales Kickoff</div>
+                                <div class="event-date">Jul 1, 2024</div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 20%"></div>
+                                </div>
+                                <div class="progress-text">●○○○○ 20% done</div>
+                            </div>
+
+                            <div class="event-card">
+                                <div class="event-icon">💒</div>
+                                <div class="event-name">Wedding</div>
+                                <div class="event-date">Aug 20, 2024</div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 100%"></div>
+                                </div>
+                                <div class="progress-text">●●●●● Completed</div>
+                            </div>
+                        </div>
+                        <div class="bottom-nav">
+                            <div class="nav-item active">
+                                <div class="nav-icon">🏠</div>
+                                <div class="nav-label">Home</div>
+                            </div>
+                            <div class="nav-item">
+                                <div class="nav-icon">📅</div>
+                                <div class="nav-label">Calendar</div>
+                            </div>
+                            <div class="nav-item">
+                                <div class="nav-icon">💬</div>
+                                <div class="nav-label">Chat</div>
+                            </div>
+                            <div class="nav-item">
+                                <div class="nav-icon">👤</div>
+                                <div class="nav-label">Profile</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">Dashboard / Home</div>
+            </div>
+
+            <!-- Chat Interface -->
+            <div>
+                <div class="phone-frame">
+                    <div class="phone-screen">
+                        <div class="status-bar">
+                            <span>9:41</span>
+                            <span>📶 📶 🔋</span>
+                        </div>
+                        <div class="chat-header">
+                            <div class="back-btn">←</div>
+                            <div>
+                                <div style="font-weight: 600;">AI Assistant</div>
+                                <div style="font-size: 12px; color: #858796;">Online</div>
+                            </div>
+                        </div>
+                        <div class="chat-content">
+                            <div class="message ai">
+                                <div class="message-avatar">🤖</div>
+                                <div>
+                                    <div class="message-bubble">
+                                        Hi! I'm your event planning AI. What would you like to plan today?
+                                    </div>
+                                    <div class="message-time">10:30 AM</div>
+                                </div>
+                            </div>
+
+                            <div class="message user">
+                                <div class="message-avatar">👤</div>
+                                <div>
+                                    <div class="message-bubble">
+                                        I need help planning a summer party
+                                    </div>
+                                    <div class="message-time" style="text-align: right;">10:31 AM</div>
+                                </div>
+                            </div>
+
+                            <div class="message ai">
+                                <div class="message-avatar">🤖</div>
+                                <div style="flex: 1;">
+                                    <div class="message-bubble">
+                                        Great! Let's plan an amazing summer party 🎉<br><br>
+                                        I'll need a few details to get started:
+                                    </div>
+                                    <div class="quick-replies">
+                                        <button class="quick-reply-btn">📅 When is the party?</button>
+                                        <button class="quick-reply-btn">👥 How many guests?</button>
+                                        <button class="quick-reply-btn">💰 What's your budget?</button>
+                                    </div>
+                                    <div class="message-time">10:31 AM</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-input-area">
+                            <input type="text" class="chat-input" placeholder="Type a message...">
+                            <button class="send-btn">➤</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">Chat Interface</div>
+            </div>
+
+            <!-- Event Detail -->
+            <div>
+                <div class="phone-frame">
+                    <div class="phone-screen">
+                        <div class="status-bar">
+                            <span>9:41</span>
+                            <span>📶 📶 🔋</span>
+                        </div>
+                        <div class="header">
+                            <div class="back-btn">←</div>
+                            <h2>Event Details</h2>
+                            <div>⋯</div>
+                        </div>
+                        <div class="content" style="padding: 0;">
+                            <div class="event-hero">
+                                <div class="event-hero-icon">🎉</div>
+                                <div class="event-hero-title">Summer BBQ Party</div>
+                                <div class="event-hero-date">June 15, 2024 • 50 guests</div>
+                                <div style="margin-top: 16px;">
+                                    <div class="progress-bar" style="background: rgba(255,255,255,0.3);">
+                                        <div class="progress-fill" style="width: 60%; background: white;"></div>
+                                    </div>
+                                    <div style="margin-top: 8px; font-size: 14px;">60% Complete</div>
+                                </div>
+                            </div>
+
+                            <div style="padding: 16px;">
+                                <button class="btn-new-event">💬 Chat with AI Assistant</button>
+
+                                <div class="section-title">Overview</div>
+
+                                <div class="detail-card">
+                                    <div class="detail-row">
+                                        <div class="detail-icon">📍</div>
+                                        <div style="flex: 1;">
+                                            <div class="detail-label">Location</div>
+                                            <div class="detail-value">Sunset Beach Park</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="detail-row">
+                                        <div class="detail-icon">💰</div>
+                                        <div style="flex: 1;">
+                                            <div class="detail-label">Budget</div>
+                                            <div class="detail-value">$2,500 / $3,000</div>
+                                            <div class="budget-bar">
+                                                <div class="budget-fill" style="width: 83%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="section-title">Tasks (8/12)</div>
+
+                                <div class="detail-card">
+                                    <div class="task-item">
+                                        <div class="task-checkbox checked">✓</div>
+                                        <div>Book venue</div>
+                                    </div>
+                                    <div class="task-item">
+                                        <div class="task-checkbox checked">✓</div>
+                                        <div>Order catering</div>
+                                    </div>
+                                    <div class="task-item">
+                                        <div class="task-checkbox"></div>
+                                        <div>Send invitations</div>
+                                    </div>
+                                    <div class="task-item">
+                                        <div class="task-checkbox"></div>
+                                        <div>Arrange music</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="fab">💬</div>
+                    </div>
+                </div>
+                <div class="screen-label">Event Detail View</div>
+            </div>
+
+            <!-- Calendar View -->
+            <div>
+                <div class="phone-frame">
+                    <div class="phone-screen">
+                        <div class="status-bar">
+                            <span>9:41</span>
+                            <span>📶 📶 🔋</span>
+                        </div>
+                        <div class="header">
+                            <h2>Calendar</h2>
+                            <div>➕</div>
+                        </div>
+                        <div class="content">
+                            <div class="calendar-grid">
+                                <div class="calendar-header">
+                                    <div style="cursor: pointer;">←</div>
+                                    <div style="font-weight: 600;">June 2024</div>
+                                    <div style="cursor: pointer;">→</div>
+                                </div>
+
+                                <div class="calendar-days">
+                                    <div class="calendar-day header">S</div>
+                                    <div class="calendar-day header">M</div>
+                                    <div class="calendar-day header">T</div>
+                                    <div class="calendar-day header">W</div>
+                                    <div class="calendar-day header">T</div>
+                                    <div class="calendar-day header">F</div>
+                                    <div class="calendar-day header">S</div>
+
+                                    <div class="calendar-day"></div>
+                                    <div class="calendar-day"></div>
+                                    <div class="calendar-day"></div>
+                                    <div class="calendar-day"></div>
+                                    <div class="calendar-day"></div>
+                                    <div class="calendar-day">1</div>
+                                    <div class="calendar-day">2</div>
+
+                                    <div class="calendar-day">3</div>
+                                    <div class="calendar-day today">4</div>
+                                    <div class="calendar-day">5</div>
+                                    <div class="calendar-day">6</div>
+                                    <div class="calendar-day">7</div>
+                                    <div class="calendar-day">8</div>
+                                    <div class="calendar-day">9</div>
+
+                                    <div class="calendar-day">10</div>
+                                    <div class="calendar-day">11</div>
+                                    <div class="calendar-day">12</div>
+                                    <div class="calendar-day">13</div>
+                                    <div class="calendar-day">14</div>
+                                    <div class="calendar-day event">15</div>
+                                    <div class="calendar-day">16</div>
+
+                                    <div class="calendar-day">17</div>
+                                    <div class="calendar-day">18</div>
+                                    <div class="calendar-day">19</div>
+                                    <div class="calendar-day">20</div>
+                                    <div class="calendar-day">21</div>
+                                    <div class="calendar-day">22</div>
+                                    <div class="calendar-day">23</div>
+
+                                    <div class="calendar-day">24</div>
+                                    <div class="calendar-day">25</div>
+                                    <div class="calendar-day">26</div>
+                                    <div class="calendar-day">27</div>
+                                    <div class="calendar-day">28</div>
+                                    <div class="calendar-day">29</div>
+                                    <div class="calendar-day">30</div>
+                                </div>
+                            </div>
+
+                            <div class="section-title">Upcoming Events</div>
+
+                            <div class="event-card">
+                                <div class="event-icon">🎉</div>
+                                <div class="event-name">Summer Party</div>
+                                <div class="event-date">Jun 15 • Sunset Beach Park</div>
+                            </div>
+
+                            <div class="event-card">
+                                <div class="event-icon">💼</div>
+                                <div class="event-name">Sales Kickoff</div>
+                                <div class="event-date">Jul 1 • Convention Center</div>
+                            </div>
+                        </div>
+                        <div class="bottom-nav">
+                            <div class="nav-item">
+                                <div class="nav-icon">🏠</div>
+                                <div class="nav-label">Home</div>
+                            </div>
+                            <div class="nav-item active">
+                                <div class="nav-icon">📅</div>
+                                <div class="nav-label">Calendar</div>
+                            </div>
+                            <div class="nav-item">
+                                <div class="nav-icon">💬</div>
+                                <div class="nav-label">Chat</div>
+                            </div>
+                            <div class="nav-item">
+                                <div class="nav-icon">👤</div>
+                                <div class="nav-label">Profile</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-label">Calendar View</div>
+            </div>
+        </div>
+
+        <div class="intro" style="margin-top: 40px;">
+            <h2 style="margin-bottom: 16px;">Design Features</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+                <div>
+                    <h3 style="margin-bottom: 8px; color: #4E73DF;">📱 Mobile-First</h3>
+                    <p style="font-size: 14px; line-height: 1.6;">Designed specifically for mobile devices with touch-optimized interactions, large tap targets, and thumb-friendly navigation.</p>
+                </div>
+                <div>
+                    <h3 style="margin-bottom: 8px; color: #4E73DF;">💬 Conversational</h3>
+                    <p style="font-size: 14px; line-height: 1.6;">Chat-based interface allows natural language interaction with AI, making event planning feel like talking to a friend.</p>
+                </div>
+                <div>
+                    <h3 style="margin-bottom: 8px; color: #4E73DF;">🎨 Clean Design</h3>
+                    <p style="font-size: 14px; line-height: 1.6;">Minimal, uncluttered interface with clear hierarchy, ample white space, and focus on essential information.</p>
+                </div>
+                <div>
+                    <h3 style="margin-bottom: 8px; color: #4E73DF;">⚡ Quick Actions</h3>
+                    <p style="font-size: 14px; line-height: 1.6;">Quick reply buttons, floating action button, and bottom navigation provide instant access to common tasks.</p>
+                </div>
+                <div>
+                    <h3 style="margin-bottom: 8px; color: #4E73DF;">📊 Progress Tracking</h3>
+                    <p style="font-size: 14px; line-height: 1.6;">Visual progress bars and completion percentages help users track event planning status at a glance.</p>
+                </div>
+                <div>
+                    <h3 style="margin-bottom: 8px; color: #4E73DF;">♿ Accessible</h3>
+                    <p style="font-size: 14px; line-height: 1.6;">High contrast text, ARIA labels, keyboard navigation support, and semantic HTML ensure accessibility for all users.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="intro" style="margin-top: 24px;">
+            <h2 style="margin-bottom: 16px;">Next Steps</h2>
+            <ol style="margin-left: 20px; line-height: 2;">
+                <li><strong>Review Design</strong> - Gather feedback from stakeholders and potential users</li>
+                <li><strong>Create Prototype</strong> - Build interactive Figma/Adobe XD prototype for user testing</li>
+                <li><strong>User Testing</strong> - Test with 5-10 target users to validate design decisions</li>
+                <li><strong>Implement</strong> - Build the interface using React/Vue.js with Tailwind CSS</li>
+                <li><strong>Iterate</strong> - Refine based on user feedback and analytics</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>
