@@ -10,7 +10,14 @@ import dashboardService from '../services/dashboardService';
 import { mockDashboardStats, mockActivity, mockEvents } from '../test/mockData';
 
 // Mock the dashboard service
-vi.mock('../services/dashboardService');
+vi.mock('../services/dashboardService', () => ({
+  default: {
+    getStats: vi.fn(),
+    getRecentActivity: vi.fn(),
+    getUpcomingEvents: vi.fn(),
+    getTasksSummary: vi.fn(),
+  },
+}));
 
 describe('useDashboard', () => {
   beforeEach(() => {

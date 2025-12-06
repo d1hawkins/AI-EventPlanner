@@ -1,32 +1,47 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import axios from 'axios';
-import apiClient, { getErrorMessage, isErrorType } from './client';
 
-// Mock axios
-vi.mock('axios');
+// Mock axios before importing client
+vi.mock('axios', () => {
+  const mockAxiosInstance = {
+    interceptors: {
+      request: { use: vi.fn() },
+      response: { use: vi.fn() },
+    },
+    defaults: { headers: { common: {} } },
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  };
+
+  return {
+    default: {
+      create: vi.fn(() => mockAxiosInstance),
+    },
+  };
+});
+
+// Import after mock is set up
+const { getErrorMessage, isErrorType } = await import('./client');
 
 describe('API Client', () => {
-  beforeEach(() => {
+  let axios;
+
+  beforeEach(async () => {
+    // Import axios after mock is set up
+    axios = (await import('axios')).default;
+
     // Clear all mocks before each test
     vi.clearAllMocks();
     localStorage.clear();
-
-    // Mock axios.create to return a mock axios instance
-    axios.create.mockReturnValue({
-      interceptors: {
-        request: { use: vi.fn() },
-        response: { use: vi.fn() },
-      },
-      defaults: { headers: { common: {} } },
-    });
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('Configuration', () => {
-    it('should create axios instance with correct baseURL from env', () => {
+    it('should create axios instance with correct baseURL from env', async () => {
       expect(axios.create).toHaveBeenCalled();
       const createConfig = axios.create.mock.calls[0][0];
 

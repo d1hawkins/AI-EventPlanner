@@ -5,7 +5,19 @@ import teamsService from '../services/teamsService';
 import { mockTeamMembers, mockTeamMember, mockActivity, mockInvite } from '../test/mockData';
 
 // Mock the teams service
-vi.mock('../services/teamsService');
+vi.mock('../services/teamsService', () => ({
+  default: {
+    getMembers: vi.fn(),
+    inviteMember: vi.fn(),
+    updateRole: vi.fn(),
+    removeMember: vi.fn(),
+    getActivity: vi.fn(),
+    getPendingInvites: vi.fn(),
+    cancelInvite: vi.fn(),
+    acceptInvite: vi.fn(),
+    rejectInvite: vi.fn(),
+  },
+}));
 
 describe('useTeam', () => {
   const mockOrgId = 'org-123';

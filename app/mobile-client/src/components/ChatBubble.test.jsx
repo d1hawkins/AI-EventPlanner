@@ -232,7 +232,10 @@ describe('ChatBubble Component', () => {
       const message = 'Line 1\nLine 2';
       render(<ChatBubble message={message} isAI={true} />);
 
-      expect(screen.getByText(message)).toBeInTheDocument();
+      // Check using a custom matcher since newlines don't create visual breaks
+      expect(screen.getByText((content, element) => {
+        return element.tagName.toLowerCase() === 'p' && element.textContent === message;
+      })).toBeInTheDocument();
     });
   });
 

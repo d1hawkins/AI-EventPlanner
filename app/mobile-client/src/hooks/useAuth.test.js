@@ -4,7 +4,17 @@ import { useAuth } from './useAuth';
 import apiClient from '../api/client';
 
 // Mock the API client
-vi.mock('../api/client');
+vi.mock('../api/client', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    defaults: { headers: { common: {} } },
+  },
+  getErrorMessage: vi.fn((error) => error?.response?.data?.message || error?.response?.data?.detail || error?.message || 'An unexpected error occurred'),
+  isErrorType: vi.fn((error, status) => error?.response?.status === status),
+}));
 
 describe('useAuth', () => {
   beforeEach(() => {

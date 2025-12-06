@@ -11,11 +11,39 @@ import eventsService from '../services/eventsService';
 import { mockEvents, mockEvent, mockTasks, mockGuests, mockBudget } from '../test/mockData';
 
 // Mock the events service
-vi.mock('../services/eventsService');
+vi.mock('../services/eventsService', () => ({
+  default: {
+    getAll: vi.fn(),
+    getById: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    getTasks: vi.fn(),
+    createTask: vi.fn(),
+    updateTask: vi.fn(),
+    deleteTask: vi.fn(),
+    toggleTaskComplete: vi.fn(),
+    getGuests: vi.fn(),
+    addGuest: vi.fn(),
+    updateGuest: vi.fn(),
+    removeGuest: vi.fn(),
+    getBudget: vi.fn(),
+    updateBudget: vi.fn(),
+    getExpenses: vi.fn(),
+    addExpense: vi.fn(),
+    updateExpense: vi.fn(),
+    deleteExpense: vi.fn(),
+  },
+}));
 
 describe('useEvents', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Clear only call history, preserving mock implementations
+    eventsService.getAll.mockClear();
+    eventsService.getById.mockClear();
+    eventsService.create.mockClear();
+    eventsService.update.mockClear();
+    eventsService.delete.mockClear();
   });
 
   describe('Initial State', () => {

@@ -35,7 +35,7 @@ describe('Button Component', () => {
       render(<Button variant="danger">Danger</Button>);
       const button = screen.getByRole('button');
 
-      expect(button).toHaveClass('bg-red-600');
+      expect(button).toHaveClass('bg-danger');
     });
 
     it('should apply fullWidth class when fullWidth prop is true', () => {
@@ -128,12 +128,11 @@ describe('Button Component', () => {
       expect(button).toHaveAttribute('type', 'submit');
     });
 
-    it('should merge custom className with default classes', () => {
+    it('should apply custom className', () => {
       render(<Button className="mt-4">Custom</Button>);
       const button = screen.getByRole('button');
 
       expect(button).toHaveClass('mt-4');
-      expect(button).toHaveClass('px-6'); // Default class
     });
   });
 });

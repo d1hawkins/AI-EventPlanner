@@ -6,10 +6,10 @@ import { BrowserRouter } from 'react-router-dom';
 
 // Mock lucide-react icons
 vi.mock('lucide-react', () => ({
-  Home: ({ size }) => <span data-testid="home-icon" data-size={size}>Home</span>,
-  Calendar: ({ size }) => <span data-testid="calendar-icon" data-size={size}>Calendar</span>,
-  MessageCircle: ({ size }) => <span data-testid="message-icon" data-size={size}>Message</span>,
-  User: ({ size }) => <span data-testid="user-icon" data-size={size}>User</span>,
+  Home: ({ size }) => <span data-testid="home-icon" data-size={size} aria-hidden="true" />,
+  Calendar: ({ size }) => <span data-testid="calendar-icon" data-size={size} aria-hidden="true" />,
+  MessageCircle: ({ size }) => <span data-testid="message-icon" data-size={size} aria-hidden="true" />,
+  User: ({ size }) => <span data-testid="user-icon" data-size={size} aria-hidden="true" />,
 }));
 
 const renderWithRouter = (initialPath = '/') => {
@@ -326,8 +326,10 @@ describe('BottomNav Component', () => {
       const user = userEvent.setup();
       renderWithRouter('/');
 
-      const homeButton = screen.getByText('Home');
+      const homeButton = screen.getByText('Home').closest('button');
       homeButton.focus();
+
+      expect(document.activeElement).toBe(homeButton);
 
       await user.keyboard('{Tab}');
       expect(document.activeElement).toBe(screen.getByText('Calendar').closest('button'));

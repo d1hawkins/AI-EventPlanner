@@ -17,7 +17,21 @@ import {
 } from '../test/mockData';
 
 // Mock the subscription service
-vi.mock('../services/subscriptionService');
+vi.mock('../services/subscriptionService', () => ({
+  default: {
+    getStatus: vi.fn(),
+    getCurrentPlan: vi.fn(),
+    upgrade: vi.fn(),
+    downgrade: vi.fn(),
+    cancel: vi.fn(),
+    getUsageLimits: vi.fn(),
+    getBillingHistory: vi.fn(),
+    getAvailablePlans: vi.fn(),
+    getUsageStats: vi.fn(),
+    updatePaymentMethod: vi.fn(),
+    processPayment: vi.fn(),
+  },
+}));
 
 describe('useSubscription', () => {
   beforeEach(() => {

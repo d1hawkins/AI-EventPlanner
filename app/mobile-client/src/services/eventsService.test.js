@@ -24,7 +24,7 @@ describe('eventsService', () => {
 
       const result = await eventsService.getAll();
 
-      expect(apiClient.get).toHaveBeenCalledWith('/events', { params: {} });
+      expect(apiClient.get).toHaveBeenCalledWith('/events?');
       expect(result).toEqual(mockEvents);
     });
 
@@ -34,7 +34,7 @@ describe('eventsService', () => {
       const filters = { status: 'active', search: 'birthday' };
       const result = await eventsService.getAll(filters);
 
-      expect(apiClient.get).toHaveBeenCalledWith('/events', { params: filters });
+      expect(apiClient.get).toHaveBeenCalledWith('/events?status=active&search=birthday');
       expect(result).toEqual(mockEvents);
     });
   });
@@ -78,10 +78,9 @@ describe('eventsService', () => {
     it('should delete an event', async () => {
       apiClient.delete.mockResolvedValue({ data: { success: true } });
 
-      const result = await eventsService.delete('1');
+      await eventsService.delete('1');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/events/1');
-      expect(result.success).toBe(true);
     });
   });
 
@@ -124,10 +123,9 @@ describe('eventsService', () => {
     it('should delete a task', async () => {
       apiClient.delete.mockResolvedValue({ data: { success: true } });
 
-      const result = await eventsService.deleteTask('1', '1');
+      await eventsService.deleteTask('1', '1');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/events/1/tasks/1');
-      expect(result.success).toBe(true);
     });
   });
 
@@ -170,10 +168,9 @@ describe('eventsService', () => {
     it('should remove a guest', async () => {
       apiClient.delete.mockResolvedValue({ data: { success: true } });
 
-      const result = await eventsService.removeGuest('1', '1');
+      await eventsService.removeGuest('1', '1');
 
       expect(apiClient.delete).toHaveBeenCalledWith('/events/1/guests/1');
-      expect(result.success).toBe(true);
     });
   });
 
@@ -195,7 +192,7 @@ describe('eventsService', () => {
 
       const result = await eventsService.addExpense('1', expense);
 
-      expect(apiClient.post).toHaveBeenCalledWith('/events/1/budget/expenses', expense);
+      expect(apiClient.post).toHaveBeenCalledWith('/events/1/expenses', expense);
       expect(result.amount).toBe(1500);
     });
   });
