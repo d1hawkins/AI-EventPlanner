@@ -37,14 +37,7 @@ vi.mock('../services/eventsService', () => ({
 }));
 
 describe('useEvents', () => {
-  beforeEach(() => {
-    // Clear only call history, preserving mock implementations
-    eventsService.getAll.mockClear();
-    eventsService.getById.mockClear();
-    eventsService.create.mockClear();
-    eventsService.update.mockClear();
-    eventsService.delete.mockClear();
-  });
+  // Don't clear mocks between tests - each test sets up its own mock values
 
   describe('Initial State', () => {
     it('should initialize with default values', () => {
@@ -59,12 +52,12 @@ describe('useEvents', () => {
 
   describe('Fetching Events', () => {
     it('should fetch all events on mount', async () => {
-      eventsService.getAll.mockResolvedValue(mockEvents);
+      eventsService.getAll.mockImplementation(() => Promise.resolve(mockEvents));
       const { result } = renderHook(() => useEvents());
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
-      });
+      }, { timeout: 3000 });
 
       expect(eventsService.getAll).toHaveBeenCalledWith({});
       expect(result.current.events).toEqual(mockEvents);

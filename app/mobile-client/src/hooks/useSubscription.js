@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import subscriptionService from '../services/subscriptionService';
 import { getErrorMessage } from '../api/client';
 
@@ -135,18 +135,21 @@ export const useBillingHistory = (filters = {}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Stabilize filters object to prevent infinite loops
+  const stableFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+
   const fetchHistory = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await subscriptionService.getBillingHistory(filters);
+      const data = await subscriptionService.getBillingHistory(stableFilters);
       setHistory(data);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [stableFilters]);
 
   useEffect(() => {
     fetchHistory();
