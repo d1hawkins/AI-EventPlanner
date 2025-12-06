@@ -9,10 +9,18 @@ import axios from 'axios';
  * - Centralized error handling
  * - Request/response logging (dev mode)
  * - Token refresh handling
+ * - Environment-based API URL configuration
  */
 
+// Get API base URL from environment variable
+// In development, can use local proxy or point to Azure
+// In production, points to Azure backend
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+console.log('🔗 API Base URL:', API_BASE_URL);
+
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
