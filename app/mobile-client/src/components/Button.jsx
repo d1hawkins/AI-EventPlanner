@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { ButtonSpinner } from './common/LoadingSpinner';
 
 export const Button = ({
   children,
@@ -8,16 +9,17 @@ export const Button = ({
   icon,
   onClick,
   disabled = false,
+  loading = false,
   ...props
 }) => {
   const baseClasses = 'font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2';
 
   const variantClasses = {
-    primary: 'bg-primary text-white shadow-md hover:bg-primary-dark active:scale-95',
-    secondary: 'bg-white text-primary border-2 border-primary hover:bg-gray-50 active:scale-95',
+    primary: 'bg-primary dark:bg-primary-light text-white shadow-md hover:bg-primary-dark dark:hover:bg-primary active:scale-95 transition-colors',
+    secondary: 'bg-white dark:bg-dark-bg-secondary text-primary dark:text-primary-light border-2 border-primary dark:border-primary-light hover:bg-gray-50 dark:hover:bg-dark-bg-tertiary active:scale-95 transition-colors',
     success: 'bg-success text-white shadow-md hover:bg-success-dark active:scale-95',
     danger: 'bg-danger text-white shadow-md hover:bg-danger-dark active:scale-95',
-    ghost: 'bg-transparent text-primary hover:bg-gray-100 active:scale-95',
+    ghost: 'bg-transparent text-primary dark:text-primary-light hover:bg-gray-100 dark:hover:bg-dark-bg-tertiary active:scale-95 transition-colors',
   };
 
   const sizeClasses = {
@@ -27,19 +29,23 @@ export const Button = ({
   };
 
   const widthClass = fullWidth ? 'w-full' : '';
-  const disabledClass = disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
+  const disabledClass = (disabled || loading) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';
 
   const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${disabledClass}`;
 
   return (
     <motion.button
-      whileTap={!disabled ? { scale: 0.95 } : {}}
+      whileTap={!disabled && !loading ? { scale: 0.95 } : {}}
       className={classes}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || loading}
       {...props}
     >
-      {icon && <span>{icon}</span>}
+      {loading ? (
+        <ButtonSpinner size="sm" />
+      ) : (
+        icon && <span>{icon}</span>
+      )}
       {children}
     </motion.button>
   );
