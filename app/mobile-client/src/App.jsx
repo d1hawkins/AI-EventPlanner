@@ -81,7 +81,23 @@ function App() {
       <ToastProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Landing />} />
+            {/* Default route - Chat-focused UI */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Chat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat"
+              element={
+                <ProtectedRoute>
+                  <Chat />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/home"
               element={
@@ -95,14 +111,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Calendar />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/chat"
-              element={
-                <ProtectedRoute>
-                  <Chat />
                 </ProtectedRoute>
               }
             />
@@ -170,7 +178,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="*" element={<Navigate to="/home" replace />} />
+            {/* Catch-all redirects to chat */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
       </ToastProvider>
