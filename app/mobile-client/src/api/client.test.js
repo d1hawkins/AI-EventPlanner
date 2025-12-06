@@ -26,37 +26,39 @@ const { getErrorMessage, isErrorType } = await import('./client');
 
 describe('API Client', () => {
   let axios;
+  let createCallConfig;
 
   beforeEach(async () => {
     // Import axios after mock is set up
     axios = (await import('axios')).default;
 
-    // Clear all mocks before each test
-    vi.clearAllMocks();
+    // Save the axios.create config before clearing mocks
+    if (axios.create.mock.calls.length > 0) {
+      createCallConfig = axios.create.mock.calls[0][0];
+    }
+
+    // Clear localStorage but not axios.create mock
     localStorage.clear();
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    // Don't clear axios.create since we need it for config tests
   });
 
   describe('Configuration', () => {
     it('should create axios instance with correct baseURL from env', async () => {
       expect(axios.create).toHaveBeenCalled();
-      const createConfig = axios.create.mock.calls[0][0];
 
       // Should use env variable or fallback to /api
-      expect(createConfig.baseURL).toBeDefined();
+      expect(createCallConfig.baseURL).toBeDefined();
     });
 
     it('should set timeout to 30 seconds', () => {
-      const createConfig = axios.create.mock.calls[0][0];
-      expect(createConfig.timeout).toBe(30000);
+      expect(createCallConfig.timeout).toBe(30000);
     });
 
     it('should set Content-Type header', () => {
-      const createConfig = axios.create.mock.calls[0][0];
-      expect(createConfig.headers['Content-Type']).toBe('application/json');
+      expect(createCallConfig.headers['Content-Type']).toBe('application/json');
     });
   });
 

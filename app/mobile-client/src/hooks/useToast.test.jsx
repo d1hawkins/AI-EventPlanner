@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { renderHook, act } from '@testing-library/react';
 import { ToastProvider, useToast } from './useToast';
@@ -200,19 +200,18 @@ describe('ToastProvider', () => {
         </ToastProvider>
       );
 
-      act(() => {
-        screen.getByText('Show Toast').click();
+      const button = screen.getByText('Show Toast');
+      await act(async () => {
+        button.click();
       });
 
       expect(screen.getByText('Auto dismiss')).toBeInTheDocument();
 
-      act(() => {
+      await act(async () => {
         vi.advanceTimersByTime(3000);
       });
 
-      await waitFor(() => {
-        expect(screen.queryByText('Auto dismiss')).not.toBeInTheDocument();
-      });
+      expect(screen.queryByText('Auto dismiss')).not.toBeInTheDocument();
     });
 
     it('should auto dismiss toast after custom duration', async () => {
@@ -231,25 +230,24 @@ describe('ToastProvider', () => {
         </ToastProvider>
       );
 
-      act(() => {
-        screen.getByText('Show Toast').click();
+      const button = screen.getByText('Show Toast');
+      await act(async () => {
+        button.click();
       });
 
       expect(screen.getByText('Custom duration')).toBeInTheDocument();
 
-      act(() => {
+      await act(async () => {
         vi.advanceTimersByTime(3000);
       });
 
       expect(screen.getByText('Custom duration')).toBeInTheDocument();
 
-      act(() => {
+      await act(async () => {
         vi.advanceTimersByTime(2000);
       });
 
-      await waitFor(() => {
-        expect(screen.queryByText('Custom duration')).not.toBeInTheDocument();
-      });
+      expect(screen.queryByText('Custom duration')).not.toBeInTheDocument();
     });
 
     it('should not auto dismiss if duration is 0', () => {
@@ -299,36 +297,35 @@ describe('ToastProvider', () => {
         </ToastProvider>
       );
 
-      act(() => {
-        screen.getByText('Show Toast').click();
+      const showButton = screen.getByText('Show Toast');
+      await act(async () => {
+        showButton.click();
       });
 
       expect(screen.getByText('Dismissible')).toBeInTheDocument();
 
       const dismissButton = screen.getByLabelText('Dismiss');
-      act(() => {
+      await act(async () => {
         dismissButton.click();
       });
 
-      await waitFor(() => {
-        expect(screen.queryByText('Dismissible')).not.toBeInTheDocument();
-      });
+      expect(screen.queryByText('Dismissible')).not.toBeInTheDocument();
     });
 
     it('should dismiss specific toast by ID', async () => {
+      let capturedId;
       const TestComponent = () => {
         const toast = useToast();
-        let toastId;
         return (
           <div>
             <button
               onClick={() => {
-                toastId = toast.success('Specific toast', 0);
+                capturedId = toast.success('Specific toast', 0);
               }}
             >
               Show Toast
             </button>
-            <button onClick={() => toast.dismiss(toastId)}>
+            <button onClick={() => toast.dismiss(capturedId)}>
               Dismiss
             </button>
           </div>
@@ -341,19 +338,19 @@ describe('ToastProvider', () => {
         </ToastProvider>
       );
 
-      act(() => {
-        screen.getByText('Show Toast').click();
+      const showButton = screen.getByText('Show Toast');
+      await act(async () => {
+        showButton.click();
       });
 
       expect(screen.getByText('Specific toast')).toBeInTheDocument();
 
-      act(() => {
-        screen.getByText('Dismiss').click();
+      const dismissButton = screen.getByText('Dismiss');
+      await act(async () => {
+        dismissButton.click();
       });
 
-      await waitFor(() => {
-        expect(screen.queryByText('Specific toast')).not.toBeInTheDocument();
-      });
+      expect(screen.queryByText('Specific toast')).not.toBeInTheDocument();
     });
   });
 
