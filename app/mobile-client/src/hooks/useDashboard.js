@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import dashboardService from '../services/dashboardService';
 import { getErrorMessage } from '../api/client';
 
@@ -105,18 +105,21 @@ export const useRecentActivity = (filters = {}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Stabilize filters object to prevent infinite loops
+  const stableFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+
   const fetchActivity = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await dashboardService.getRecentActivity(filters);
+      const data = await dashboardService.getRecentActivity(stableFilters);
       setActivity(data);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [stableFilters]);
 
   useEffect(() => {
     fetchActivity();
@@ -142,18 +145,21 @@ export const useUpcomingEvents = (filters = {}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Stabilize filters object to prevent infinite loops
+  const stableFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await dashboardService.getUpcomingEvents(filters);
+      const data = await dashboardService.getUpcomingEvents(stableFilters);
       setEvents(data);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [stableFilters]);
 
   useEffect(() => {
     fetchEvents();

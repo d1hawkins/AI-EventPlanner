@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import teamsService from '../services/teamsService';
 import { getErrorMessage } from '../api/client';
 
@@ -93,18 +93,21 @@ export const useTeamActivity = (orgId = null, filters = {}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Stabilize filters object to prevent infinite loops
+  const stableFilters = useMemo(() => filters, [JSON.stringify(filters)]);
+
   const fetchActivity = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await teamsService.getActivity(orgId, filters);
+      const data = await teamsService.getActivity(orgId, stableFilters);
       setActivity(data);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [orgId, filters]);
+  }, [orgId, stableFilters]);
 
   useEffect(() => {
     fetchActivity();
