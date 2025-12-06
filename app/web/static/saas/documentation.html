@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Event Planner SaaS - Documentation">
+    <title>Documentation - AI Event Planner SaaS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/saas/css/styles.css">
+    <style>
+        .doc-card {
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .doc-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        .category-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .article-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            padding: 0.75rem 1rem;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .article-link:hover {
+            background-color: #f8f9fa;
+            border-left-color: #4e73df;
+            color: #4e73df;
+        }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <a href="#main-content" class="visually-hidden-focusable skip-link">Skip to main content</a>
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <aside class="sidebar" role="navigation" aria-label="Main Navigation">
+            <div class="sidebar-brand d-flex align-items-center justify-content-center">
+                <div class="sidebar-brand-text">AI Event Planner</div>
+            </div>
+
+            <hr class="sidebar-divider">
+
+            <div class="sidebar-heading" id="main-nav-heading">
+                Main
+            </div>
+
+            <ul class="nav flex-column" aria-labelledby="main-nav-heading">
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/dashboard.html" aria-label="Dashboard">
+                        <i class="bi bi-speedometer2" aria-hidden="true"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/events.html" aria-label="Events">
+                        <i class="bi bi-calendar-event" aria-hidden="true"></i>
+                        Events
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/templates.html" aria-label="Templates">
+                        <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                        Templates
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/agents.html" aria-label="AI Agents">
+                        <i class="bi bi-robot" aria-hidden="true"></i>
+                        AI Agents
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/team.html" aria-label="Team">
+                        <i class="bi bi-people" aria-hidden="true"></i>
+                        Team
+                    </a>
+                </li>
+            </ul>
+
+            <hr class="sidebar-divider">
+
+            <div class="sidebar-heading" id="management-nav-heading">
+                Management
+            </div>
+
+            <ul class="nav flex-column" aria-labelledby="management-nav-heading">
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/subscription.html" aria-label="Subscription">
+                        <i class="bi bi-credit-card" aria-hidden="true"></i>
+                        Subscription
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/settings.html" aria-label="Settings">
+                        <i class="bi bi-gear" aria-hidden="true"></i>
+                        Settings
+                    </a>
+                </li>
+            </ul>
+
+            <hr class="sidebar-divider">
+
+            <div class="sidebar-heading" id="help-nav-heading">
+                Help
+            </div>
+
+            <ul class="nav flex-column" aria-labelledby="help-nav-heading">
+                <li class="nav-item">
+                    <a class="nav-link" href="/saas/support.html" aria-label="Support">
+                        <i class="bi bi-question-circle" aria-hidden="true"></i>
+                        Support
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/saas/documentation.html" aria-current="page" aria-label="Documentation">
+                        <i class="bi bi-file-text" aria-hidden="true"></i>
+                        Documentation
+                    </a>
+                </li>
+            </ul>
+
+            <hr class="sidebar-divider">
+
+            <div class="text-center d-none d-md-inline mt-3">
+                <button class="btn rounded-circle border-0" id="sidebarToggle" aria-label="Toggle Sidebar" aria-expanded="true">
+                    <i class="bi bi-arrow-left-circle" aria-hidden="true"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Content Wrapper -->
+        <div class="dashboard-content">
+            <!-- Topbar -->
+            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow" aria-label="Top Navigation">
+                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3" aria-label="Toggle Sidebar">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown no-arrow">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="User Menu">
+                            <span class="mr-2 d-none d-lg-inline text-gray-600 small">User</span>
+                            <i class="bi bi-person-circle" aria-hidden="true"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+                            <a class="dropdown-item" href="/saas/settings.html">
+                                <i class="bi bi-gear me-2" aria-hidden="true"></i>
+                                Settings
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" id="logoutBtn">
+                                <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>
+                                Logout
+                            </a>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Main Content -->
+            <main id="main-content" class="container-fluid" role="main">
+                <!-- Page Heading -->
+                <div class="d-sm-flex align-items-center justify-content-between mb-4">
+                    <h1 class="h3 mb-0 text-gray-800">Documentation</h1>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="row mb-4">
+                    <div class="col-lg-8 mx-auto">
+                        <div class="input-group input-group-lg shadow">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                            </span>
+                            <input type="text" class="form-control" id="docSearch" placeholder="Search documentation..." aria-label="Search documentation">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documentation Categories -->
+                <div class="row mb-4">
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="card doc-card shadow h-100 text-center p-4" data-category="getting-started">
+                            <div class="category-icon text-primary">
+                                <i class="bi bi-play-circle" aria-hidden="true"></i>
+                            </div>
+                            <h5 class="card-title">Getting Started</h5>
+                            <p class="card-text text-muted">Learn the basics and set up your account</p>
+                            <div class="mt-auto">
+                                <span class="badge bg-primary">12 Articles</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="card doc-card shadow h-100 text-center p-4" data-category="events">
+                            <div class="category-icon text-success">
+                                <i class="bi bi-calendar-event" aria-hidden="true"></i>
+                            </div>
+                            <h5 class="card-title">Event Management</h5>
+                            <p class="card-text text-muted">Create and manage your events</p>
+                            <div class="mt-auto">
+                                <span class="badge bg-success">18 Articles</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="card doc-card shadow h-100 text-center p-4" data-category="ai-agents">
+                            <div class="category-icon text-info">
+                                <i class="bi bi-robot" aria-hidden="true"></i>
+                            </div>
+                            <h5 class="card-title">AI Agents</h5>
+                            <p class="card-text text-muted">Work with AI-powered assistants</p>
+                            <div class="mt-auto">
+                                <span class="badge bg-info">15 Articles</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="card doc-card shadow h-100 text-center p-4" data-category="team">
+                            <div class="category-icon text-warning">
+                                <i class="bi bi-people" aria-hidden="true"></i>
+                            </div>
+                            <h5 class="card-title">Team Collaboration</h5>
+                            <p class="card-text text-muted">Manage your team and permissions</p>
+                            <div class="mt-auto">
+                                <span class="badge bg-warning">10 Articles</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Article Content Area -->
+                <div class="row" id="articleContent" style="display: none;">
+                    <div class="col-lg-3">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                                <h6 class="m-0 font-weight-bold text-primary" id="categoryTitle">Articles</h6>
+                                <button class="btn btn-sm btn-link" id="backToCategories">
+                                    <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                <div id="articleList"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-9">
+                        <div class="card shadow">
+                            <div class="card-body" id="articleBody">
+                                <!-- Article content will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Popular Articles -->
+                <div class="row" id="popularArticles">
+                    <div class="col-12 mb-4">
+                        <div class="card shadow">
+                            <div class="card-header py-3">
+                                <h6 class="m-0 font-weight-bold text-primary">Popular Articles</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-lg-6 mb-3">
+                                        <a href="#" class="article-link" data-article="create-first-event">
+                                            <h6><i class="bi bi-file-text me-2" aria-hidden="true"></i>How to Create Your First Event</h6>
+                                            <p class="text-muted small mb-0">Step-by-step guide to creating events in AI Event Planner</p>
+                                        </a>
+                                    </div>
+                                    <div class="col-lg-6 mb-3">
+                                        <a href="#" class="article-link" data-article="using-ai-agents">
+                                            <h6><i class="bi bi-file-text me-2" aria-hidden="true"></i>Getting Started with AI Agents</h6>
+                                            <p class="text-muted small mb-0">Learn how to use AI agents to plan your events</p>
+                                        </a>
+                                    </div>
+                                    <div class="col-lg-6 mb-3">
+                                        <a href="#" class="article-link" data-article="team-management">
+                                            <h6><i class="bi bi-file-text me-2" aria-hidden="true"></i>Managing Your Team</h6>
+                                            <p class="text-muted small mb-0">Invite team members and set up permissions</p>
+                                        </a>
+                                    </div>
+                                    <div class="col-lg-6 mb-3">
+                                        <a href="#" class="article-link" data-article="templates">
+                                            <h6><i class="bi bi-file-text me-2" aria-hidden="true"></i>Using Event Templates</h6>
+                                            <p class="text-muted small mb-0">Save time with pre-built event templates</p>
+                                        </a>
+                                    </div>
+                                    <div class="col-lg-6 mb-3">
+                                        <a href="#" class="article-link" data-article="calendar-export">
+                                            <h6><i class="bi bi-file-text me-2" aria-hidden="true"></i>Exporting to Calendar Apps</h6>
+                                            <p class="text-muted small mb-0">Sync your events with Google Calendar, Outlook, and more</p>
+                                        </a>
+                                    </div>
+                                    <div class="col-lg-6 mb-3">
+                                        <a href="#" class="article-link" data-article="subscription-plans">
+                                            <h6><i class="bi bi-file-text me-2" aria-hidden="true"></i>Understanding Subscription Plans</h6>
+                                            <p class="text-muted small mb-0">Choose the right plan for your needs</p>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/saas/js/app.js"></script>
+    <script>
+        // Documentation data structure
+        const documentation = {
+            'getting-started': {
+                title: 'Getting Started',
+                articles: [
+                    { id: 'account-setup', title: 'Setting Up Your Account', content: '<h2>Setting Up Your Account</h2><p>Welcome to AI Event Planner! This guide will help you set up your account and get started...</p>' },
+                    { id: 'first-login', title: 'Your First Login', content: '<h2>Your First Login</h2><p>After creating your account, here\'s what you need to know...</p>' },
+                    { id: 'dashboard-overview', title: 'Dashboard Overview', content: '<h2>Dashboard Overview</h2><p>The dashboard is your central hub for managing all event planning activities...</p>' }
+                ]
+            },
+            'events': {
+                title: 'Event Management',
+                articles: [
+                    { id: 'create-first-event', title: 'How to Create Your First Event', content: '<h2>Creating Your First Event</h2><p>Follow these steps to create your first event...</p><ol><li>Navigate to the Events page</li><li>Click "Create New Event"</li><li>Fill in event details</li><li>Save your event</li></ol>' },
+                    { id: 'edit-event', title: 'Editing Events', content: '<h2>Editing Events</h2><p>Learn how to modify existing events...</p>' },
+                    { id: 'calendar-view', title: 'Using Calendar View', content: '<h2>Calendar View</h2><p>The calendar view provides a visual representation of your events...</p>' },
+                    { id: 'calendar-export', title: 'Exporting to Calendar Apps', content: '<h2>Calendar Export</h2><p>Export your events to Google Calendar, Outlook, or any calendar application that supports .ics files...</p>' }
+                ]
+            },
+            'ai-agents': {
+                title: 'AI Agents',
+                articles: [
+                    { id: 'using-ai-agents', title: 'Getting Started with AI Agents', content: '<h2>AI Agents Overview</h2><p>AI Agents are specialized assistants that help you plan different aspects of your event...</p><h3>Available Agents:</h3><ul><li><strong>Coordinator Agent:</strong> Orchestrates the planning process</li><li><strong>Resource Planning Agent:</strong> Helps with venue and resource management</li><li><strong>Financial Agent:</strong> Assists with budgeting</li><li><strong>Marketing Agent:</strong> Develops promotional strategies</li></ul>' },
+                    { id: 'agent-conversation', title: 'Having Conversations with Agents', content: '<h2>Conversing with Agents</h2><p>Learn how to effectively communicate with AI agents...</p>' },
+                    { id: 'agent-tips', title: 'Tips for Working with Agents', content: '<h2>Best Practices</h2><p>Get the most out of AI agents with these tips...</p>' }
+                ]
+            },
+            'team': {
+                title: 'Team Collaboration',
+                articles: [
+                    { id: 'team-management', title: 'Managing Your Team', content: '<h2>Team Management</h2><p>Collaborate effectively with your team members...</p><h3>Roles:</h3><ul><li><strong>Owner:</strong> Full access to all features</li><li><strong>Admin:</strong> Can manage team and events</li><li><strong>Member:</strong> Can view and edit events</li></ul>' },
+                    { id: 'inviting-members', title: 'Inviting Team Members', content: '<h2>Inviting Team Members</h2><p>Add team members to your organization...</p>' },
+                    { id: 'permissions', title: 'Understanding Permissions', content: '<h2>Permissions</h2><p>Learn about different permission levels...</p>' }
+                ]
+            }
+        };
+
+        // Category card click handlers
+        document.querySelectorAll('.doc-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const category = this.getAttribute('data-category');
+                showCategory(category);
+            });
+        });
+
+        // Show category articles
+        function showCategory(categoryKey) {
+            const category = documentation[categoryKey];
+            if (!category) return;
+
+            document.getElementById('categoryTitle').textContent = category.title;
+            const articleList = document.getElementById('articleList');
+            articleList.innerHTML = '';
+
+            category.articles.forEach(article => {
+                const link = document.createElement('a');
+                link.href = '#';
+                link.className = 'article-link';
+                link.innerHTML = `<h6 class="mb-1">${article.title}</h6>`;
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showArticle(article);
+                });
+                articleList.appendChild(link);
+            });
+
+            document.getElementById('popularArticles').style.display = 'none';
+            document.getElementById('articleContent').style.display = 'flex';
+
+            // Show first article by default
+            if (category.articles.length > 0) {
+                showArticle(category.articles[0]);
+            }
+        }
+
+        // Show article content
+        function showArticle(article) {
+            document.getElementById('articleBody').innerHTML = article.content;
+        }
+
+        // Back to categories
+        document.getElementById('backToCategories').addEventListener('click', function() {
+            document.getElementById('articleContent').style.display = 'none';
+            document.getElementById('popularArticles').style.display = 'block';
+        });
+
+        // Popular article links
+        document.querySelectorAll('.article-link[data-article]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const articleId = this.getAttribute('data-article');
+
+                // Find and show the article
+                for (const categoryKey in documentation) {
+                    const category = documentation[categoryKey];
+                    const article = category.articles.find(a => a.id === articleId);
+                    if (article) {
+                        showCategory(categoryKey);
+                        showArticle(article);
+                        break;
+                    }
+                }
+            });
+        });
+
+        // Search functionality
+        document.getElementById('docSearch').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            if (query.length < 2) return;
+
+            // Simple search implementation
+            console.log('Searching for:', query);
+            // TODO: Implement full-text search across all articles
+        });
+    </script>
+</body>
+</html>

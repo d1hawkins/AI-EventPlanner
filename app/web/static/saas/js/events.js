@@ -258,22 +258,50 @@ function getRecurrenceEndDate(formData) {
  * Create a new event
  * @param {Object} eventData - Event data
  */
-function createEvent(eventData) {
-    // In a real application, this would make an API call to create the event
-    // For now, we'll just simulate creation
-    
-    console.log('Creating event:', eventData);
-    
-    // Simulate API call
-    setTimeout(function() {
-        // Redirect to events page
-        showAlert('Event created successfully', 'success');
-        
-        // In a real app, we would redirect after the API call succeeds
+async function createEvent(eventData) {
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        // Make API call to create event
+        const response = await fetch('/api/events', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(eventData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to create event: ${response.statusText}`);
+        }
+
+        const createdEvent = await response.json();
+
+        // Show success message
+        showAlert('Event created successfully!', 'success');
+
+        // Redirect to events page after a short delay
         setTimeout(function() {
             window.location.href = '/saas/events.html';
         }, 1500);
-    }, 1000);
+    } catch (error) {
+        console.error('Error creating event:', error);
+        showAlert('Failed to create event: ' + error.message, 'danger');
+    }
 }
 
 /**
@@ -339,9 +367,11 @@ function initializeEventsPage() {
         });
     }
     
-    // Initialize delete event functionality
+    // Initialize event action button functionality
     initializeDeleteEventButtons();
-    
+    initializeViewEventButtons();
+    initializeEditEventButtons();
+
     // Load events data
     loadEvents();
 }
@@ -411,75 +441,42 @@ function applyFilters() {
  * @param {string} dateRange - Date range filter
  * @param {string} type - Event type filter
  */
-function loadEvents(status = '', dateRange = '', type = '') {
-    // In a real application, this would make an API call to get events
-    // For now, we'll just use sample data
-    
-    // Simulate API call delay
+async function loadEvents(status = '', dateRange = '', type = '') {
     const eventsTable = document.getElementById('eventsTableBody');
     eventsTable.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
-    
-    setTimeout(function() {
-        // Sample data - in a real app, this would come from the API
-        const events = [
-            {
-                id: 1,
-                title: 'Tech Conference 2025',
-                start_date: '2025-04-15',
-                end_date: '2025-04-17',
-                location: 'San Francisco, CA',
-                attendee_count: 500,
-                status: 'planning'
-            },
-            {
-                id: 2,
-                title: 'Company Retreat',
-                start_date: '2025-05-10',
-                end_date: '2025-05-12',
-                location: 'Lake Tahoe, CA',
-                attendee_count: 50,
-                status: 'confirmed'
-            },
-            {
-                id: 3,
-                title: 'Product Launch',
-                start_date: '2025-06-05',
-                end_date: '2025-06-05',
-                location: 'New York, NY',
-                attendee_count: 200,
-                status: 'draft'
-            },
-            {
-                id: 4,
-                title: 'Annual Gala',
-                start_date: '2025-07-20',
-                end_date: '2025-07-20',
-                location: 'Chicago, IL',
-                attendee_count: 300,
-                status: 'confirmed'
-            },
-            {
-                id: 5,
-                title: 'Team Building Workshop',
-                start_date: '2025-08-15',
-                end_date: '2025-08-16',
-                location: 'Austin, TX',
-                attendee_count: 25,
-                status: 'planning'
-            },
-            {
-                id: 6,
-                title: 'Weekly Team Meeting',
-                start_date: '2025-04-01',
-                end_date: '2025-04-01',
-                location: 'Conference Room A',
-                attendee_count: 15,
-                status: 'confirmed',
-                is_recurring: true,
-                recurrence_rule: 'FREQ=WEEKLY;INTERVAL=1;BYDAY=TU'
-            }
-        ];
-        
+
+    try {
+        // Get auth token
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        // Get organization ID from header
+        const orgId = document.querySelector('meta[name="organization-id"]')?.content;
+
+        // Make API call to get events
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        const response = await fetch('/api/events', {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load events: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        let events = data.events || [];
+
         // Apply filters
         let filteredEvents = events;
         
@@ -488,35 +485,18 @@ function loadEvents(status = '', dateRange = '', type = '') {
         }
         
         if (type) {
-            // In a real app, events would have a type property
-            // For now, we'll just simulate this filter
-            if (type === 'conference') {
-                filteredEvents = filteredEvents.filter(event => 
-                    event.title.toLowerCase().includes('conference') || 
-                    event.title.toLowerCase().includes('summit')
-                );
-            } else if (type === 'meeting') {
-                filteredEvents = filteredEvents.filter(event => 
-                    event.title.toLowerCase().includes('meeting')
-                );
-            } else if (type === 'workshop') {
-                filteredEvents = filteredEvents.filter(event => 
-                    event.title.toLowerCase().includes('workshop')
-                );
-            } else if (type === 'social') {
-                filteredEvents = filteredEvents.filter(event => 
-                    event.title.toLowerCase().includes('gala') || 
-                    event.title.toLowerCase().includes('party') ||
-                    event.title.toLowerCase().includes('retreat')
-                );
-            }
+            // Filter by event_type if available
+            filteredEvents = filteredEvents.filter(event => {
+                if (!event.event_type) return false;
+                return event.event_type === type;
+            });
         }
-        
+
         if (dateRange) {
             const now = new Date();
             const thisMonth = now.getMonth();
             const thisYear = now.getFullYear();
-            
+
             if (dateRange === 'upcoming') {
                 filteredEvents = filteredEvents.filter(event => {
                     const eventDate = new Date(event.start_date);
@@ -530,7 +510,7 @@ function loadEvents(status = '', dateRange = '', type = '') {
             } else if (dateRange === 'thisMonth') {
                 filteredEvents = filteredEvents.filter(event => {
                     const eventDate = new Date(event.start_date);
-                    return eventDate.getMonth() === thisMonth && 
+                    return eventDate.getMonth() === thisMonth &&
                            eventDate.getFullYear() === thisYear;
                 });
             } else if (dateRange === 'nextMonth') {
@@ -538,7 +518,7 @@ function loadEvents(status = '', dateRange = '', type = '') {
                     const eventDate = new Date(event.start_date);
                     const nextMonth = (thisMonth + 1) % 12;
                     const yearOfNextMonth = thisMonth === 11 ? thisYear + 1 : thisYear;
-                    return eventDate.getMonth() === nextMonth && 
+                    return eventDate.getMonth() === nextMonth &&
                            eventDate.getFullYear() === yearOfNextMonth;
                 });
             } else if (dateRange === 'thisYear') {
@@ -548,13 +528,18 @@ function loadEvents(status = '', dateRange = '', type = '') {
                 });
             }
         }
-        
+
         // Render events
         renderEvents(filteredEvents);
-        
-        // Initialize delete event buttons
+
+        // Initialize event action buttons
         initializeDeleteEventButtons();
-    }, 500);
+        initializeViewEventButtons();
+        initializeEditEventButtons();
+    } catch (error) {
+        console.error('Error loading events:', error);
+        eventsTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading events: ${error.message}</td></tr>`;
+    }
 }
 
 /**
@@ -592,10 +577,10 @@ function renderEvents(events) {
                 <td><span class="badge ${statusBadgeClass}">${capitalizeFirstLetter(event.status)}</span></td>
                 <td>
                     <div class="btn-group" role="group" aria-label="Event actions">
-                        <a href="#" class="btn btn-primary btn-sm view-event" aria-label="View ${event.title}">
+                        <a href="#" class="btn btn-primary btn-sm view-event" aria-label="View ${event.title}" data-event-id="${event.id}">
                             <i class="bi bi-eye" aria-hidden="true"></i>
                         </a>
-                        <a href="#" class="btn btn-info btn-sm edit-event" aria-label="Edit ${event.title}">
+                        <a href="#" class="btn btn-info btn-sm edit-event" aria-label="Edit ${event.title}" data-event-id="${event.id}">
                             <i class="bi bi-pencil" aria-hidden="true"></i>
                         </a>
                         <a href="#" class="btn btn-danger btn-sm delete-event" aria-label="Delete ${event.title}" data-event-id="${event.id}" data-event-title="${event.title}">
@@ -714,18 +699,173 @@ function initializeDeleteEventButtons() {
  * Delete an event
  * @param {string} eventId - Event ID
  */
-function deleteEvent(eventId) {
-    // In a real application, this would make an API call to delete the event
-    // For now, we'll just simulate deletion
-    
-    // Remove the event from the table
-    const eventRow = document.querySelector(`tr[data-event-id="${eventId}"]`);
-    if (eventRow) {
-        eventRow.remove();
+async function deleteEvent(eventId) {
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        // Make API call to delete event
+        const response = await fetch(`/api/events/${eventId}`, {
+            method: 'DELETE',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to delete event: ${response.statusText}`);
+        }
+
+        // Remove the event from the table
+        const eventRow = document.querySelector(`tr[data-event-id="${eventId}"]`);
+        if (eventRow) {
+            eventRow.remove();
+        }
+
+        // Show success message
+        showAlert('Event deleted successfully', 'success');
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        showAlert('Failed to delete event: ' + error.message, 'danger');
     }
-    
-    // Show success message
-    showAlert('Event deleted successfully', 'success');
+}
+
+/**
+ * Initialize view event buttons
+ */
+function initializeViewEventButtons() {
+    const viewButtons = document.querySelectorAll('.view-event');
+
+    viewButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+
+            const eventId = this.getAttribute('data-event-id');
+            viewEvent(eventId);
+        });
+    });
+}
+
+/**
+ * View event details
+ * @param {string} eventId - Event ID
+ */
+async function viewEvent(eventId) {
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        // Fetch event details from API
+        const response = await fetch(`/api/events/${eventId}`, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load event: ${response.statusText}`);
+        }
+
+        const event = await response.json();
+
+        // Populate the modal with event data
+        document.getElementById('eventTitle').textContent = event.title || 'Untitled Event';
+        document.getElementById('eventDate').textContent = formatDateRange(event.start_date, event.end_date);
+        document.getElementById('eventLocation').textContent = event.location || 'No location specified';
+        document.getElementById('eventAttendees').textContent = event.attendee_count || 0;
+        document.getElementById('eventType').textContent = event.event_type || 'Not specified';
+        document.getElementById('eventStatus').innerHTML = `<span class="badge ${getStatusBadgeClass(event.status)}">${capitalizeFirstLetter(event.status || 'draft')}</span>`;
+        document.getElementById('eventDescription').textContent = event.description || 'No description available';
+
+        // Set event ID on action buttons
+        document.getElementById('editEventBtn').setAttribute('data-event-id', eventId);
+        document.getElementById('deleteEventBtn').setAttribute('data-event-id', eventId);
+
+        // Show the modal
+        const eventDetailsModal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
+        eventDetailsModal.show();
+    } catch (error) {
+        console.error('Error viewing event:', error);
+        showAlert('Failed to load event details: ' + error.message, 'danger');
+    }
+}
+
+/**
+ * Initialize edit event buttons
+ */
+function initializeEditEventButtons() {
+    const editButtons = document.querySelectorAll('.edit-event');
+
+    editButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+
+            const eventId = this.getAttribute('data-event-id');
+            window.location.href = `/saas/events-new.html?id=${eventId}`;
+        });
+    });
+
+    // Also handle the edit button in the event details modal
+    const modalEditBtn = document.getElementById('editEventBtn');
+    if (modalEditBtn) {
+        modalEditBtn.addEventListener('click', function() {
+            const eventId = this.getAttribute('data-event-id');
+            if (eventId) {
+                window.location.href = `/saas/events-new.html?id=${eventId}`;
+            }
+        });
+    }
+
+    // Handle delete button in modal
+    const modalDeleteBtn = document.getElementById('deleteEventBtn');
+    if (modalDeleteBtn) {
+        modalDeleteBtn.addEventListener('click', function() {
+            const eventId = this.getAttribute('data-event-id');
+            if (eventId) {
+                // Close the details modal first
+                const detailsModal = bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal'));
+                if (detailsModal) {
+                    detailsModal.hide();
+                }
+
+                // Find the event title for the delete confirmation
+                const eventTitle = document.getElementById('eventTitle').textContent;
+
+                // Set up delete confirmation modal
+                document.getElementById('deleteEventName').textContent = eventTitle;
+                document.getElementById('confirmDeleteEvent').setAttribute('data-event-id', eventId);
+
+                // Show delete confirmation modal
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteEventModal'));
+                deleteModal.show();
+            }
+        });
+    }
 }
 
 /**
@@ -765,58 +905,7 @@ function exportEvents() {
         })
         .catch(error => {
             console.error('Error exporting calendar:', error);
-            
-            // For demo/development, create a mock ICS file
-            const mockIcsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//AI Event Planner//NONSGML v1.0//EN
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-X-WR-CALNAME:AI Event Planner Calendar
-X-WR-TIMEZONE:America/New_York
-BEGIN:VEVENT
-UID:event-1@aieventplanner.com
-SUMMARY:Tech Conference 2025
-DESCRIPTION:Annual technology conference with industry leaders
-LOCATION:San Francisco, CA
-DTSTART:20250415T000000Z
-DTEND:20250417T235959Z
-STATUS:TENTATIVE
-CATEGORIES:conference
-END:VEVENT
-BEGIN:VEVENT
-UID:event-2@aieventplanner.com
-SUMMARY:Company Retreat
-DESCRIPTION:Team building and strategy planning retreat
-LOCATION:Lake Tahoe, CA
-DTSTART:20250510T000000Z
-DTEND:20250512T235959Z
-STATUS:CONFIRMED
-CATEGORIES:social
-END:VEVENT
-BEGIN:VEVENT
-UID:event-3@aieventplanner.com
-SUMMARY:Product Launch
-DESCRIPTION:Launch event for our new product line
-LOCATION:New York, NY
-DTSTART:20250605T000000Z
-DTEND:20250605T235959Z
-STATUS:TENTATIVE
-CATEGORIES:marketing
-END:VEVENT
-END:VCALENDAR`;
-            
-            const blob = new Blob([mockIcsContent], { type: 'text/calendar' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = 'calendar.ics';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            
-            showAlert('Calendar exported successfully (demo mode)', 'success');
+            showAlert('Failed to export calendar: ' + error.message, 'danger');
         })
         .finally(() => {
             // Clean up

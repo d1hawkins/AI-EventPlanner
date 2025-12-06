@@ -67,12 +67,16 @@ document.addEventListener('DOMContentLoaded', function() {
      * Set up authentication
      */
     function setupAuth() {
-        // Use existing auth setup from agent-ui.js
+        // Check if user is authenticated
         if (!localStorage.getItem('authToken')) {
-            localStorage.setItem('authToken', 'mock-auth-token');
+            // Redirect to login page if not authenticated
+            showError('You must be logged in to use the chat feature.');
+            window.location.href = '/auth/login';
+            return;
         }
         if (!localStorage.getItem('organizationId')) {
-            localStorage.setItem('organizationId', '1');
+            showError('Organization context is required.');
+            return;
         }
     }
     
@@ -679,16 +683,107 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Handle conversation search
      */
-    function handleConversationSearch() {
-        const query = conversationSearch.value.toLowerCase();
-        const items = document.querySelectorAll('.conversation-item');
-        
-        items.forEach(item => {
-            const title = item.querySelector('.conversation-title').textContent.toLowerCase();
-            const preview = item.querySelector('.conversation-preview').textContent.toLowerCase();
-            const matches = title.includes(query) || preview.includes(query);
-            item.style.display = matches ? 'block' : 'none';
-        });
+    async function handleConversationSearch() {
+        const query = conversationSearch.value.trim();
+
+        // If query is empty, show all conversations
+        if (!query) {
+            const items = document.querySelectorAll('.conversation-item');
+            items.forEach(item => {
+                item.style.display = 'block';
+            });
+            return;
+        }
+
+        // For short queries, use client-side filtering
+        if (query.length < 3) {
+            const lowerQuery = query.toLowerCase();
+            const items = document.querySelectorAll('.conversation-item');
+
+            items.forEach(item => {
+                const title = item.querySelector('.conversation-title')?.textContent.toLowerCase() || '';
+                const preview = item.querySelector('.conversation-preview')?.textContent.toLowerCase() || '';
+                const matches = title.includes(lowerQuery) || preview.includes(lowerQuery);
+                item.style.display = matches ? 'block' : 'none';
+            });
+            return;
+        }
+
+        // For longer queries, search via API
+        try {
+            // Get auth token
+            const token = localStorage.getItem('authToken');
+            const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+            if (!token) {
+                // Fall back to client-side search
+                const lowerQuery = query.toLowerCase();
+                const items = document.querySelectorAll('.conversation-item');
+
+                items.forEach(item => {
+                    const title = item.querySelector('.conversation-title')?.textContent.toLowerCase() || '';
+                    const preview = item.querySelector('.conversation-preview')?.textContent.toLowerCase() || '';
+                    const matches = title.includes(lowerQuery) || preview.includes(lowerQuery);
+                    item.style.display = matches ? 'block' : 'none';
+                });
+                return;
+            }
+
+            // Prepare headers
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+
+            if (orgId) {
+                headers['X-Organization-ID'] = orgId;
+            }
+
+            // Search conversations via API
+            const response = await fetch(`/api/agents/conversations/search?q=${encodeURIComponent(query)}`, {
+                method: 'GET',
+                headers: headers
+            });
+
+            if (!response.ok) {
+                throw new Error('Search failed');
+            }
+
+            const searchResults = await response.json();
+            const resultIds = new Set(searchResults.conversations?.map(c => c.id) || []);
+
+            // Filter conversation items based on search results
+            const items = document.querySelectorAll('.conversation-item');
+            items.forEach(item => {
+                const conversationId = item.getAttribute('data-conversation-id');
+                item.style.display = resultIds.has(conversationId) ? 'block' : 'none';
+            });
+
+            // If no results, show message
+            if (resultIds.size === 0) {
+                const emptyState = document.querySelector('.empty-state');
+                if (emptyState) {
+                    const tempText = emptyState.querySelector('.empty-text').textContent;
+                    emptyState.querySelector('.empty-text').textContent = `No results for "${query}"`;
+                    setTimeout(() => {
+                        emptyState.querySelector('.empty-text').textContent = tempText;
+                    }, 3000);
+                }
+            }
+
+        } catch (error) {
+            console.error('Error searching conversations:', error);
+            // Fall back to client-side search on error
+            const lowerQuery = query.toLowerCase();
+            const items = document.querySelectorAll('.conversation-item');
+
+            items.forEach(item => {
+                const title = item.querySelector('.conversation-title')?.textContent.toLowerCase() || '';
+                const preview = item.querySelector('.conversation-preview')?.textContent.toLowerCase() || '';
+                const matches = title.includes(lowerQuery) || preview.includes(lowerQuery);
+                item.style.display = matches ? 'block' : 'none';
+            });
+        }
     }
     
     /**

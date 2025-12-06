@@ -14,17 +14,28 @@ from app.auth.dependencies import create_access_token, get_current_user
 
 router = APIRouter()
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing - use argon2 instead of bcrypt due to Azure bcrypt installation issues
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash."""
+    # Bcrypt has a 72-byte limit, truncate password if needed (must match hash function)
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+        plain_password = password_bytes.decode('utf-8', errors='ignore')
     return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
     """Generate a password hash."""
+    # Bcrypt has a 72-byte limit, truncate password if needed
+    # This is a safe operation as bcrypt security doesn't benefit from passwords > 72 bytes
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+        password = password_bytes.decode('utf-8', errors='ignore')
     return pwd_context.hash(password)
 
 

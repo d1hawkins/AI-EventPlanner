@@ -178,71 +178,68 @@ function initializeSidebar() {
 /**
  * Load team members
  */
-function loadTeamMembers() {
-    // In a real application, this would make an API call to get team members
-    // For now, we'll just use sample data
-    
-    // Simulate API call delay
+async function loadTeamMembers() {
     const teamTable = document.getElementById('teamTableBody');
     if (!teamTable) return;
-    
+
     teamTable.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
-    
-    setTimeout(function() {
-        // Sample data - in a real app, this would come from the API
-        const members = [
-            {
-                id: 1,
-                name: 'John Doe',
-                email: 'john.doe@example.com',
-                role: 'owner',
-                status: 'active',
-                lastActive: 'Now',
-                isCurrentUser: true
-            },
-            {
-                id: 2,
-                name: 'Sarah Johnson',
-                email: 'sarah.johnson@example.com',
-                role: 'admin',
-                status: 'active',
-                lastActive: '2 hours ago'
-            },
-            {
-                id: 3,
-                name: 'Michael Smith',
-                email: 'michael.smith@example.com',
-                role: 'member',
-                status: 'active',
-                lastActive: '1 day ago'
-            },
-            {
-                id: 4,
-                name: 'Emily Davis',
-                email: 'emily.davis@example.com',
-                role: 'member',
-                status: 'active',
-                lastActive: '3 days ago'
-            },
-            {
-                id: 5,
-                name: 'David Wilson',
-                email: 'david.wilson@example.com',
-                role: 'member',
-                status: 'invited',
-                lastActive: '-'
-            }
-        ];
-        
+
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        if (!orgId) {
+            throw new Error('Organization ID not found');
+        }
+
+        // Make API call to get organization details (which includes team members)
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        if (orgId) {
+            headers['X-Organization-ID'] = orgId;
+        }
+
+        const response = await fetch(`/api/subscription/organizations/${orgId}`, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load team members: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Transform organization data to member format
+        // Note: This is a placeholder. In a real app, you'd have a specific endpoint for members
+        const members = [];
+
+        // For now, show a message that team management is being loaded from the backend
+        if (!members.length) {
+            teamTable.innerHTML = '<tr><td colspan="6" class="text-center">No team members found. Use the "Invite Member" button to add team members.</td></tr>';
+            return;
+        }
+
         // Render members
         renderTeamMembers(members);
-        
+
         // Initialize edit member buttons
         initializeEditMemberButtons();
-        
+
         // Initialize remove member buttons
         initializeRemoveMemberButtons();
-    }, 500);
+    } catch (error) {
+        console.error('Error loading team members:', error);
+        teamTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading team members: ${error.message}</td></tr>`;
+    }
 }
 
 /**
@@ -408,39 +405,81 @@ function openEditMemberModal(memberId) {
 /**
  * Save member changes
  */
-function saveMemberChanges() {
-    // Get form values
-    const memberId = document.getElementById('editMemberId').value;
-    const name = document.getElementById('editMemberName').value;
-    const email = document.getElementById('editMemberEmail').value;
-    const role = document.getElementById('editMemberRole').value;
-    
-    // In a real application, this would make an API call to update the member
-    // For now, we'll just update the table
-    
-    const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
-    if (!row) return;
-    
-    // Update row data
-    row.setAttribute('data-member-role', role);
-    
-    // Update name
-    row.querySelector('td:first-child div div:first-child').textContent = name;
-    
-    // Update email
-    row.querySelector('td:nth-child(2)').textContent = email;
-    
-    // Update role
-    const roleBadge = row.querySelector('td:nth-child(3) span');
-    roleBadge.className = `badge ${getRoleBadgeClass(role)}`;
-    roleBadge.textContent = capitalizeFirstLetter(role);
-    
-    // Close modal
-    const editModal = bootstrap.Modal.getInstance(document.getElementById('editMemberModal'));
-    editModal.hide();
-    
-    // Show success message
-    showAlert('Team member updated successfully', 'success');
+async function saveMemberChanges() {
+    try {
+        // Get form values
+        const memberId = document.getElementById('editMemberId').value;
+        const name = document.getElementById('editMemberName').value;
+        const email = document.getElementById('editMemberEmail').value;
+        const role = document.getElementById('editMemberRole').value;
+
+        // Validate input
+        if (!name || !email || !role) {
+            showAlert('All fields are required', 'warning');
+            return;
+        }
+
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            showAlert('Authentication required. Please log in again.', 'danger');
+            return;
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Make API call to update member
+        const response = await fetch(`/api/subscription/organizations/${orgId}/members/${memberId}`, {
+            method: 'PATCH',
+            headers: headers,
+            body: JSON.stringify({
+                name: name,
+                email: email,
+                role: role
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to update member: ${response.statusText}`);
+        }
+
+        // Update the table row with new data
+        const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
+        if (row) {
+            // Update row data
+            row.setAttribute('data-member-role', role);
+
+            // Update name
+            row.querySelector('td:first-child div div:first-child').textContent = name;
+
+            // Update email
+            row.querySelector('td:nth-child(2)').textContent = email;
+
+            // Update role
+            const roleBadge = row.querySelector('td:nth-child(3) span');
+            roleBadge.className = `badge ${getRoleBadgeClass(role)}`;
+            roleBadge.textContent = capitalizeFirstLetter(role);
+        }
+
+        // Close modal
+        const editModal = bootstrap.Modal.getInstance(document.getElementById('editMemberModal'));
+        editModal.hide();
+
+        // Show success message
+        showAlert('Team member updated successfully', 'success');
+
+    } catch (error) {
+        console.error('Error updating team member:', error);
+        showAlert('Failed to update team member: ' + error.message, 'danger');
+    }
 }
 
 /**
@@ -508,20 +547,50 @@ function initializeRemoveMemberButtons() {
  * Remove a member
  * @param {string} memberId - Member ID
  */
-function removeMember(memberId) {
-    // In a real application, this would make an API call to remove the member
-    // For now, we'll just remove the row from the table
-    
-    const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
-    if (row) {
-        row.remove();
+async function removeMember(memberId) {
+    try {
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            showAlert('Authentication required. Please log in again.', 'danger');
+            return;
+        }
+
+        // Prepare headers
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'X-Organization-ID': orgId
+        };
+
+        // Make API call to remove member
+        const response = await fetch(`/api/subscription/organizations/${orgId}/members/${memberId}`, {
+            method: 'DELETE',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || `Failed to remove member: ${response.statusText}`);
+        }
+
+        // Remove the row from the table
+        const row = document.querySelector(`tr[data-member-id="${memberId}"]`);
+        if (row) {
+            row.remove();
+        }
+
+        // Show success message
+        showAlert('Team member removed successfully', 'success');
+
+        // Update team size
+        updateTeamSize();
+
+    } catch (error) {
+        console.error('Error removing team member:', error);
+        showAlert('Failed to remove team member: ' + error.message, 'danger');
     }
-    
-    // Show success message
-    showAlert('Team member removed successfully', 'success');
-    
-    // Update team size
-    updateTeamSize();
 }
 
 /**
@@ -564,96 +633,318 @@ function updateTeamSize() {
  * Export team list
  */
 function exportTeamList() {
-    // In a real application, this would generate a CSV or Excel file
-    // For now, we'll just show a message
-    
-    showAlert('Team list exported successfully', 'success');
+    try {
+        // Get all team member rows from the table
+        const rows = document.querySelectorAll('#teamTableBody tr');
+
+        if (rows.length === 0) {
+            showAlert('No team members to export', 'warning');
+            return;
+        }
+
+        // Create CSV content with headers
+        let csvContent = 'Name,Email,Role,Status\n';
+
+        // Add each team member to CSV
+        rows.forEach(row => {
+            const name = row.querySelector('td:first-child div div:first-child')?.textContent.trim() || '';
+            const email = row.querySelector('td:nth-child(2)')?.textContent.trim() || '';
+            const role = row.querySelector('td:nth-child(3) span')?.textContent.trim() || '';
+            const status = row.querySelector('td:nth-child(4) span')?.textContent.trim() || '';
+
+            // Escape commas and quotes in data
+            const escapeCsv = (str) => {
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            };
+
+            csvContent += `${escapeCsv(name)},${escapeCsv(email)},${escapeCsv(role)},${escapeCsv(status)}\n`;
+        });
+
+        // Create a blob from the CSV content
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+        // Create a link element and trigger download
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().slice(0, 10);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `team_members_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        showAlert('Team list exported successfully', 'success');
+    } catch (error) {
+        console.error('Error exporting team list:', error);
+        showAlert('Failed to export team list: ' + error.message, 'danger');
+    }
 }
 
 /**
  * Send invitations
  */
-function sendInvitations() {
-    // Get form values
-    const emails = document.getElementById('inviteEmails').value;
-    const role = document.getElementById('inviteRole').value;
-    const message = document.getElementById('inviteMessage').value;
-    const sendCopy = document.getElementById('sendCopy').checked;
-    
-    // In a real application, this would make an API call to send invitations
-    // For now, we'll just show a success message
-    
-    // Show success message
-    showAlert('Invitations sent successfully', 'success');
-    
-    // Reset form
-    document.getElementById('inviteForm').reset();
-    document.getElementById('inviteForm').classList.remove('was-validated');
-    
-    // Reload pending invitations
-    loadPendingInvitations();
+async function sendInvitations() {
+    try {
+        // Get form values
+        const emailsText = document.getElementById('inviteEmails').value;
+        const role = document.getElementById('inviteRole').value;
+        const message = document.getElementById('inviteMessage').value;
+        const sendCopy = document.getElementById('sendCopy').checked;
+
+        // Parse emails (one per line)
+        const emails = emailsText.split('\n')
+            .map(email => email.trim())
+            .filter(email => email.length > 0);
+
+        if (emails.length === 0) {
+            throw new Error('Please enter at least one email address');
+        }
+
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token) {
+            throw new Error('Not authenticated');
+        }
+
+        if (!orgId) {
+            throw new Error('Organization ID not found');
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Send invitation for each email
+        const invitationPromises = emails.map(email =>
+            fetch(`/api/subscription/organizations/${orgId}/members/invite`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({
+                    email: email,
+                    role: role,
+                    message: message
+                })
+            })
+        );
+
+        const responses = await Promise.all(invitationPromises);
+
+        // Check for failures
+        const failures = [];
+        for (let i = 0; i < responses.length; i++) {
+            if (!responses[i].ok) {
+                failures.push(emails[i]);
+            }
+        }
+
+        if (failures.length > 0) {
+            throw new Error(`Failed to send invitations to: ${failures.join(', ')}`);
+        }
+
+        // Show success message
+        showAlert(`Successfully sent ${emails.length} invitation(s)!`, 'success');
+
+        // Reset form
+        document.getElementById('inviteForm').reset();
+        document.getElementById('inviteForm').classList.remove('was-validated');
+
+        // Reload pending invitations
+        loadPendingInvitations();
+    } catch (error) {
+        console.error('Error sending invitations:', error);
+        showAlert('Failed to send invitations: ' + error.message, 'danger');
+    }
 }
 
 /**
  * Import team members
  */
-function importTeamMembers() {
-    // Get form values
-    const csvFile = document.getElementById('csvFile').files[0];
-    
-    // In a real application, this would parse the CSV file and make an API call
-    // For now, we'll just show a success message
-    
-    // Show success message
-    showAlert('Team members imported successfully', 'success');
-    
-    // Reset form
-    document.getElementById('bulkImportForm').reset();
-    document.getElementById('bulkImportForm').classList.remove('was-validated');
-    
-    // Reload pending invitations
-    loadPendingInvitations();
+async function importTeamMembers() {
+    try {
+        // Get form values
+        const csvFile = document.getElementById('csvFile').files[0];
+
+        if (!csvFile) {
+            throw new Error('Please select a CSV file');
+        }
+
+        // Get auth token and organization ID
+        const token = localStorage.getItem('authToken');
+        const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+        if (!token || !orgId) {
+            showAlert('Authentication required. Please log in again.', 'danger');
+            return;
+        }
+
+        // Read the CSV file
+        const text = await csvFile.text();
+        const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+        if (lines.length < 2) {
+            throw new Error('CSV file must contain headers and at least one data row');
+        }
+
+        // Parse CSV headers
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const emailIndex = headers.indexOf('email');
+        const nameIndex = headers.indexOf('name');
+        const roleIndex = headers.indexOf('role');
+
+        if (emailIndex === -1) {
+            throw new Error('CSV file must contain an "email" column');
+        }
+
+        // Parse CSV data rows
+        const members = [];
+        const errors = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim());
+
+            if (values.length === 0 || values[0] === '') {
+                continue; // Skip empty lines
+            }
+
+            const email = values[emailIndex] || '';
+            const name = nameIndex !== -1 ? values[nameIndex] : '';
+            const role = roleIndex !== -1 ? values[roleIndex] : 'member';
+
+            if (!email) {
+                errors.push(`Row ${i + 1}: Missing email address`);
+                continue;
+            }
+
+            members.push({ email, name, role });
+        }
+
+        if (members.length === 0) {
+            throw new Error('No valid members found in CSV file. ' + (errors.length > 0 ? errors.join('; ') : ''));
+        }
+
+        // Prepare headers for API calls
+        const apiHeaders = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'X-Organization-ID': orgId
+        };
+
+        // Send invitations for each member
+        const invitationPromises = members.map(member =>
+            fetch(`/api/subscription/organizations/${orgId}/members/invite`, {
+                method: 'POST',
+                headers: apiHeaders,
+                body: JSON.stringify({
+                    email: member.email,
+                    role: member.role,
+                    message: `You have been invited to join our team${member.name ? ' as ' + member.name : ''}`
+                })
+            })
+        );
+
+        const responses = await Promise.all(invitationPromises);
+
+        // Check for failures
+        const failures = [];
+        for (let i = 0; i < responses.length; i++) {
+            if (!responses[i].ok) {
+                failures.push(members[i].email);
+            }
+        }
+
+        // Show appropriate message
+        if (failures.length === 0) {
+            showAlert(`Successfully sent ${members.length} invitation(s)!`, 'success');
+        } else if (failures.length < members.length) {
+            showAlert(`Sent ${members.length - failures.length} invitation(s). Failed: ${failures.join(', ')}`, 'warning');
+        } else {
+            throw new Error(`Failed to send invitations to: ${failures.join(', ')}`);
+        }
+
+        // Reset form
+        document.getElementById('bulkImportForm').reset();
+        document.getElementById('bulkImportForm').classList.remove('was-validated');
+
+        // Close modal
+        const importModal = bootstrap.Modal.getInstance(document.getElementById('bulkImportModal'));
+        if (importModal) {
+            importModal.hide();
+        }
+
+        // Reload pending invitations
+        loadPendingInvitations();
+
+    } catch (error) {
+        console.error('Error importing team members:', error);
+        showAlert('Failed to import team members: ' + error.message, 'danger');
+    }
 }
 
 /**
  * Download CSV template
  */
 function downloadCSVTemplate() {
-    // In a real application, this would generate a CSV file
-    // For now, we'll just show a message
-    
-    showAlert('CSV template downloaded', 'info');
+    try {
+        // Create CSV content with headers
+        const csvContent = 'email,name,role\n' +
+                          'john@example.com,John Smith,member\n' +
+                          'jane@example.com,Jane Doe,admin\n' +
+                          'bob@example.com,Bob Johnson,member\n';
+
+        // Create a blob from the CSV content
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+        // Create a link element and trigger download
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'team_invite_template.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        showAlert('CSV template downloaded successfully', 'success');
+    } catch (error) {
+        console.error('Error downloading CSV template:', error);
+        showAlert('Failed to download CSV template: ' + error.message, 'danger');
+    }
 }
 
 /**
  * Load pending invitations
  */
-function loadPendingInvitations() {
-    // In a real application, this would make an API call to get pending invitations
-    // For now, we'll just use sample data
-    
-    // Simulate API call delay
+async function loadPendingInvitations() {
     const invitationsTable = document.getElementById('invitationsTableBody');
     if (!invitationsTable) return;
-    
+
     invitationsTable.innerHTML = '<tr><td colspan="6" class="text-center">Loading...</td></tr>';
-    
-    setTimeout(function() {
-        // Sample data - in a real app, this would come from the API
-        const invitations = [
-            {
-                id: 1,
-                email: 'david.wilson@example.com',
-                role: 'member',
-                invitedBy: 'John Doe',
-                dateSent: 'Mar 30, 2025',
-                status: 'pending'
-            }
-        ];
-        
+
+    try {
+        // For now, show empty state as the backend doesn't have a dedicated invitations endpoint yet
+        // In a future implementation, you would call GET /api/subscription/organizations/{orgId}/invitations
+        const invitations = [];
+
         // Render invitations
         renderPendingInvitations(invitations);
-    }, 500);
+    } catch (error) {
+        console.error('Error loading invitations:', error);
+        invitationsTable.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading invitations: ${error.message}</td></tr>`;
+    }
 }
 
 /**

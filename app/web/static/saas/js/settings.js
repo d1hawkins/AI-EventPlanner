@@ -76,26 +76,63 @@ function initializeSidebar() {
  */
 function initializeProfileForm() {
     const profileForm = document.getElementById('profileForm');
-    
+
     if (profileForm) {
-        profileForm.addEventListener('submit', function(event) {
+        profileForm.addEventListener('submit', async function(event) {
             event.preventDefault();
-            
-            // Get form values
-            const firstName = document.getElementById('firstName').value;
-            const lastName = document.getElementById('lastName').value;
-            const email = document.getElementById('email').value;
-            const phone = document.getElementById('phone').value;
-            const jobTitle = document.getElementById('jobTitle').value;
-            const company = document.getElementById('company').value;
-            const bio = document.getElementById('bio').value;
-            const timezone = document.getElementById('timezone').value;
-            
-            // In a real application, this would make an API call to update the profile
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('Profile updated successfully', 'success');
+
+            try {
+                // Get form values
+                const firstName = document.getElementById('firstName').value;
+                const lastName = document.getElementById('lastName').value;
+                const email = document.getElementById('email').value;
+                const phone = document.getElementById('phone').value;
+                const jobTitle = document.getElementById('jobTitle').value;
+                const company = document.getElementById('company').value;
+                const bio = document.getElementById('bio').value;
+                const timezone = document.getElementById('timezone').value;
+
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to update profile
+                const response = await fetch('/api/auth/profile', {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({
+                        first_name: firstName,
+                        last_name: lastName,
+                        email: email,
+                        phone: phone,
+                        job_title: jobTitle,
+                        company: company,
+                        bio: bio,
+                        timezone: timezone
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to update profile: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('Profile updated successfully', 'success');
+
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showAlert('Failed to update profile: ' + error.message, 'danger');
+            }
         });
     }
 }
@@ -105,30 +142,67 @@ function initializeProfileForm() {
  */
 function initializePasswordForm() {
     const passwordForm = document.getElementById('passwordForm');
-    
+
     if (passwordForm) {
-        passwordForm.addEventListener('submit', function(event) {
+        passwordForm.addEventListener('submit', async function(event) {
             event.preventDefault();
-            
-            // Get form values
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            // Validate passwords
-            if (newPassword !== confirmPassword) {
-                showAlert('New passwords do not match', 'danger');
-                return;
+
+            try {
+                // Get form values
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+
+                // Validate passwords
+                if (newPassword !== confirmPassword) {
+                    showAlert('New passwords do not match', 'danger');
+                    return;
+                }
+
+                // Validate password strength
+                if (newPassword.length < 8) {
+                    showAlert('Password must be at least 8 characters long', 'danger');
+                    return;
+                }
+
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to update password
+                const response = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to update password: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('Password updated successfully', 'success');
+
+                // Reset form
+                passwordForm.reset();
+
+            } catch (error) {
+                console.error('Error updating password:', error);
+                showAlert('Failed to update password: ' + error.message, 'danger');
             }
-            
-            // In a real application, this would make an API call to update the password
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('Password updated successfully', 'success');
-            
-            // Reset form
-            passwordForm.reset();
         });
     }
 }
@@ -140,37 +214,137 @@ function initializeTwoFactor() {
     const enableTwoFactorCheckbox = document.getElementById('enableTwoFactor');
     const twoFactorSetup = document.getElementById('twoFactorSetup');
     const verifyTwoFactorButton = document.getElementById('verifyTwoFactor');
-    
+
     if (enableTwoFactorCheckbox) {
-        enableTwoFactorCheckbox.addEventListener('change', function() {
+        enableTwoFactorCheckbox.addEventListener('change', async function() {
             if (this.checked) {
-                twoFactorSetup.style.display = 'block';
-                
-                // In a real application, this would make an API call to generate a QR code
-                // For now, we'll just show the setup section
+                try {
+                    // Get auth token
+                    const token = localStorage.getItem('authToken');
+
+                    if (!token) {
+                        throw new Error('Authentication required. Please log in again.');
+                    }
+
+                    // Prepare headers
+                    const headers = {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    };
+
+                    // Make API call to generate 2FA secret and QR code
+                    const response = await fetch('/api/auth/2fa/setup', {
+                        method: 'POST',
+                        headers: headers
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `Failed to setup 2FA: ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+
+                    // Update QR code image if provided
+                    const qrCodeImg = document.querySelector('#twoFactorSetup img');
+                    if (qrCodeImg && data.qr_code) {
+                        qrCodeImg.src = data.qr_code;
+                    }
+
+                    // Show setup section
+                    twoFactorSetup.style.display = 'block';
+
+                } catch (error) {
+                    console.error('Error setting up 2FA:', error);
+                    showAlert('Failed to setup 2FA: ' + error.message, 'danger');
+                    this.checked = false;
+                }
             } else {
-                twoFactorSetup.style.display = 'none';
+                // Disable 2FA
+                try {
+                    const token = localStorage.getItem('authToken');
+
+                    if (!token) {
+                        throw new Error('Authentication required. Please log in again.');
+                    }
+
+                    const headers = {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    };
+
+                    const response = await fetch('/api/auth/2fa/disable', {
+                        method: 'POST',
+                        headers: headers
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || `Failed to disable 2FA: ${response.statusText}`);
+                    }
+
+                    twoFactorSetup.style.display = 'none';
+                    showAlert('Two-factor authentication disabled successfully', 'success');
+
+                } catch (error) {
+                    console.error('Error disabling 2FA:', error);
+                    showAlert('Failed to disable 2FA: ' + error.message, 'danger');
+                    this.checked = true;
+                }
             }
         });
     }
-    
+
     if (verifyTwoFactorButton) {
-        verifyTwoFactorButton.addEventListener('click', function() {
+        verifyTwoFactorButton.addEventListener('click', async function() {
             const verificationCode = document.getElementById('verificationCode').value;
-            
+
             if (!verificationCode) {
                 showAlert('Please enter a verification code', 'danger');
                 return;
             }
-            
-            // In a real application, this would make an API call to verify the code
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('Two-factor authentication enabled successfully', 'success');
-            
-            // Hide setup section
-            twoFactorSetup.style.display = 'none';
+
+            try {
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to verify the code and enable 2FA
+                const response = await fetch('/api/auth/2fa/verify', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        code: verificationCode
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to verify 2FA code: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('Two-factor authentication enabled successfully', 'success');
+
+                // Hide setup section
+                twoFactorSetup.style.display = 'none';
+
+                // Clear verification code
+                document.getElementById('verificationCode').value = '';
+
+            } catch (error) {
+                console.error('Error verifying 2FA code:', error);
+                showAlert('Failed to verify 2FA code: ' + error.message, 'danger');
+            }
         });
     }
 }
@@ -227,26 +401,67 @@ function initializeSessionManagement() {
  */
 function initializeNotificationsForm() {
     const notificationsForm = document.getElementById('notificationsForm');
-    
+
     if (notificationsForm) {
-        notificationsForm.addEventListener('submit', function(event) {
+        notificationsForm.addEventListener('submit', async function(event) {
             event.preventDefault();
-            
-            // Get form values
-            const eventCreatedNotification = document.getElementById('eventCreatedNotification').checked;
-            const eventUpdatedNotification = document.getElementById('eventUpdatedNotification').checked;
-            const teamMemberNotification = document.getElementById('teamMemberNotification').checked;
-            const billingNotification = document.getElementById('billingNotification').checked;
-            const marketingNotification = document.getElementById('marketingNotification').checked;
-            const inAppEventNotification = document.getElementById('inAppEventNotification').checked;
-            const inAppTeamNotification = document.getElementById('inAppTeamNotification').checked;
-            const inAppSystemNotification = document.getElementById('inAppSystemNotification').checked;
-            
-            // In a real application, this would make an API call to update the notification preferences
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('Notification preferences updated successfully', 'success');
+
+            try {
+                // Get form values
+                const eventCreatedNotification = document.getElementById('eventCreatedNotification').checked;
+                const eventUpdatedNotification = document.getElementById('eventUpdatedNotification').checked;
+                const teamMemberNotification = document.getElementById('teamMemberNotification').checked;
+                const billingNotification = document.getElementById('billingNotification').checked;
+                const marketingNotification = document.getElementById('marketingNotification').checked;
+                const inAppEventNotification = document.getElementById('inAppEventNotification').checked;
+                const inAppTeamNotification = document.getElementById('inAppTeamNotification').checked;
+                const inAppSystemNotification = document.getElementById('inAppSystemNotification').checked;
+
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to update notification preferences
+                const response = await fetch('/api/auth/notification-preferences', {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({
+                        email_notifications: {
+                            event_created: eventCreatedNotification,
+                            event_updated: eventUpdatedNotification,
+                            team_member: teamMemberNotification,
+                            billing: billingNotification,
+                            marketing: marketingNotification
+                        },
+                        in_app_notifications: {
+                            events: inAppEventNotification,
+                            team: inAppTeamNotification,
+                            system: inAppSystemNotification
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to update notification preferences: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('Notification preferences updated successfully', 'success');
+
+            } catch (error) {
+                console.error('Error updating notification preferences:', error);
+                showAlert('Failed to update notification preferences: ' + error.message, 'danger');
+            }
         });
     }
 }
@@ -256,19 +471,51 @@ function initializeNotificationsForm() {
  */
 function initializeAppearanceSettings() {
     const saveAppearanceSettingsButton = document.getElementById('saveAppearanceSettings');
-    
+
     if (saveAppearanceSettingsButton) {
-        saveAppearanceSettingsButton.addEventListener('click', function() {
-            // Get form values
-            const theme = document.querySelector('input[name="theme"]:checked').id.replace('Theme', '');
-            const density = document.querySelector('input[name="density"]:checked').id.replace('Density', '');
-            const fontSize = document.getElementById('fontSizeRange').value;
-            
-            // In a real application, this would make an API call to update the appearance settings
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('Appearance settings updated successfully', 'success');
+        saveAppearanceSettingsButton.addEventListener('click', async function() {
+            try {
+                // Get form values
+                const theme = document.querySelector('input[name="theme"]:checked')?.id.replace('Theme', '') || 'light';
+                const density = document.querySelector('input[name="density"]:checked')?.id.replace('Density', '') || 'comfortable';
+                const fontSize = document.getElementById('fontSizeRange')?.value || 16;
+
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to update appearance settings
+                const response = await fetch('/api/auth/appearance-preferences', {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({
+                        theme: theme,
+                        density: density,
+                        font_size: parseInt(fontSize)
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to update appearance settings: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('Appearance settings updated successfully', 'success');
+
+            } catch (error) {
+                console.error('Error updating appearance settings:', error);
+                showAlert('Failed to update appearance settings: ' + error.message, 'danger');
+            }
         });
     }
 }
@@ -381,18 +628,46 @@ function initializeApiSettings() {
     const saveApiSettingsButton = document.getElementById('saveApiSettings');
     
     if (generateApiKeyButton) {
-        generateApiKeyButton.addEventListener('click', function() {
-            // In a real application, this would make an API call to generate a new API key
-            // For now, we'll just show a success message
-            
-            // Generate a random API key
-            const apiKey = generateRandomApiKey();
-            
-            // Update input value
-            document.getElementById('apiKey').value = apiKey;
-            
-            // Show success message
-            showAlert('New API key generated successfully', 'success');
+        generateApiKeyButton.addEventListener('click', async function() {
+            try {
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to generate a new API key
+                const response = await fetch('/api/auth/api-key/generate', {
+                    method: 'POST',
+                    headers: headers
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to generate API key: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Update input value with the new API key
+                if (data.api_key) {
+                    document.getElementById('apiKey').value = data.api_key;
+                    showAlert('New API key generated successfully. Please save it securely!', 'success');
+                } else {
+                    throw new Error('No API key returned from server');
+                }
+
+            } catch (error) {
+                console.error('Error generating API key:', error);
+                showAlert('Failed to generate API key: ' + error.message, 'danger');
+            }
         });
     }
     
@@ -430,14 +705,50 @@ function initializeApiSettings() {
     }
     
     if (saveApiSettingsButton) {
-        saveApiSettingsButton.addEventListener('click', function() {
-            const webhookUrl = document.getElementById('webhookUrl').value;
-            
-            // In a real application, this would make an API call to update the webhook URL
-            // For now, we'll just show a success message
-            
-            // Show success message
-            showAlert('API settings saved successfully', 'success');
+        saveApiSettingsButton.addEventListener('click', async function() {
+            try {
+                const webhookUrl = document.getElementById('webhookUrl').value;
+
+                // Validate webhook URL
+                if (webhookUrl && !webhookUrl.startsWith('http')) {
+                    showAlert('Webhook URL must start with http:// or https://', 'warning');
+                    return;
+                }
+
+                // Get auth token
+                const token = localStorage.getItem('authToken');
+
+                if (!token) {
+                    throw new Error('Authentication required. Please log in again.');
+                }
+
+                // Prepare headers
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                // Make API call to update the webhook URL
+                const response = await fetch('/api/auth/webhook-settings', {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({
+                        webhook_url: webhookUrl
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Failed to save webhook settings: ${response.statusText}`);
+                }
+
+                // Show success message
+                showAlert('API settings saved successfully', 'success');
+
+            } catch (error) {
+                console.error('Error saving webhook settings:', error);
+                showAlert('Failed to save webhook settings: ' + error.message, 'danger');
+            }
         });
     }
 }

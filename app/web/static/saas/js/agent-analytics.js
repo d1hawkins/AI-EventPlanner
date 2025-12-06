@@ -684,62 +684,151 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Export analytics data as CSV
      */
-    function exportCSV() {
-        // Get filter values for filename
-        const startDate = document.getElementById('startDate').value || 'all';
-        const endDate = document.getElementById('endDate').value || 'all';
-        const agentType = document.getElementById('agentType').value || 'all-agents';
-        
-        // Create filename
-        const filename = `agent-analytics-${agentType}-${startDate}-to-${endDate}.csv`;
-        
-        // Get table data
-        const table = document.getElementById('agentUsageTable');
-        let csvContent = "data:text/csv;charset=utf-8,";
-        
-        // Add headers
-        const headers = [];
-        table.querySelectorAll('thead th').forEach(th => {
-            headers.push(th.textContent);
-        });
-        csvContent += headers.join(',') + '\r\n';
-        
-        // Add rows
-        table.querySelectorAll('tbody tr').forEach(tr => {
-            const row = [];
-            tr.querySelectorAll('td').forEach((td, index) => {
-                // For the last column (Usage %), extract just the percentage number
-                if (index === 4) {
-                    const percentText = td.textContent.trim();
-                    const percentMatch = percentText.match(/(\d+)%/);
-                    row.push(percentMatch ? percentMatch[1] : '0');
-                } else {
-                    row.push(td.textContent);
-                }
+    async function exportCSV() {
+        try {
+            // Get filter values
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const agentType = document.getElementById('agentType').value;
+
+            // Get auth token
+            const token = localStorage.getItem('authToken');
+            const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+            if (!token) {
+                throw new Error('Authentication required. Please log in again.');
+            }
+
+            // Prepare headers
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+
+            if (orgId) {
+                headers['X-Organization-ID'] = orgId;
+            }
+
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            if (agentType) params.append('agent_type', agentType);
+            params.append('format', 'csv');
+
+            // Fetch analytics data from API
+            const response = await fetch(`/api/agents/analytics/export?${params.toString()}`, {
+                method: 'GET',
+                headers: headers
             });
-            csvContent += row.join(',') + '\r\n';
-        });
-        
-        // Create download link
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement('a');
-        link.setAttribute('href', encodedUri);
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        
-        // Trigger download
-        link.click();
-        
-        // Clean up
-        document.body.removeChild(link);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Failed to export analytics: ${response.statusText}`);
+            }
+
+            // Get CSV data from response
+            const csvData = await response.text();
+
+            // Create filename
+            const filename = `agent-analytics-${agentType || 'all'}-${startDate || 'all'}-to-${endDate || 'all'}.csv`;
+
+            // Create download link
+            const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+
+            // Trigger download
+            link.click();
+
+            // Clean up
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            showAlert('Analytics exported successfully as CSV', 'success');
+
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+            showAlert('Failed to export analytics: ' + error.message, 'danger');
+        }
     }
-    
+
     /**
      * Export analytics data as PDF
      */
-    function exportPDF() {
-        // Alert user that this feature is not implemented
-        alert('PDF export functionality will be implemented in a future update.');
+    async function exportPDF() {
+        try {
+            // Get filter values
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const agentType = document.getElementById('agentType').value;
+
+            // Get auth token
+            const token = localStorage.getItem('authToken');
+            const orgId = localStorage.getItem('organizationId') || document.querySelector('meta[name="organization-id"]')?.content;
+
+            if (!token) {
+                throw new Error('Authentication required. Please log in again.');
+            }
+
+            // Prepare headers
+            const headers = {
+                'Authorization': `Bearer ${token}`
+            };
+
+            if (orgId) {
+                headers['X-Organization-ID'] = orgId;
+            }
+
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            if (agentType) params.append('agent_type', agentType);
+            params.append('format', 'pdf');
+
+            // Fetch analytics PDF from API
+            const response = await fetch(`/api/agents/analytics/export?${params.toString()}`, {
+                method: 'GET',
+                headers: headers
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Failed to export analytics: ${response.statusText}`);
+            }
+
+            // Get PDF blob from response
+            const pdfBlob = await response.blob();
+
+            // Create filename
+            const filename = `agent-analytics-${agentType || 'all'}-${startDate || 'all'}-to-${endDate || 'all'}.pdf`;
+
+            // Create download link
+            const url = URL.createObjectURL(pdfBlob);
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+
+            // Trigger download
+            link.click();
+
+            // Clean up
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            showAlert('Analytics exported successfully as PDF', 'success');
+
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            showAlert('Failed to export analytics: ' + error.message, 'danger');
+        }
     }
     
     /**
